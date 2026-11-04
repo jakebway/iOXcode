@@ -74,12 +74,14 @@ jobs:
           } | tee ci-out/xcodes.txt
           SEL=$(echo "$CANDS" | tail -1)
           sudo xcode-select -s "$SEL/Contents/Developer"
+          echo "DEVELOPER_DIR=$SEL/Contents/Developer" >> "$GITHUB_ENV"
+          export DEVELOPER_DIR="$SEL/Contents/Developer"
           echo "selected: $SEL" | tee -a ci-out/xcodes.txt
           xcodebuild -version | tee -a ci-out/xcodes.txt
           xcrun --sdk iphoneos --show-sdk-path | tee -a ci-out/xcodes.txt
           FREE=$(df -g / | tail -1 | awk '{print $4}')
           echo "free GB before cleanup: $FREE" | tee -a ci-out/xcodes.txt
-          if [ "$FREE" -lt 80 ]; then
+          if [ "$FREE" -lt 45 ]; then
             for x in $(ls -d /Applications/Xcode*.app); do
               [ "$x" = "$SEL" ] || { echo "removing $x"; sudo rm -rf "$x"; }
             done
