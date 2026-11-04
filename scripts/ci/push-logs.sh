@@ -2,7 +2,7 @@
 # Publishes small CI log files to the ci-logs branch so they can be read without a GitHub login.
 # usage: push-logs.sh <dir> <label>      (env: GITHUB_TOKEN, GITHUB_REPOSITORY)
 set -u
-SRC=$1; LABEL=$2
+SRC=$(cd "$1" && pwd) || { echo "no such dir: $1"; exit 0; }; LABEL=$2
 W=$(mktemp -d); cd "$W" || exit 0
 git init -q
 git config user.name "iOXcode CI"; git config user.email "ci@users.noreply.github.com"
