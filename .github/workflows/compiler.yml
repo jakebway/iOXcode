@@ -130,6 +130,16 @@ jobs:
           echo "build script exit code: $rc"
           exit 0
 
+      - name: Show the result on the run page
+        if: always()
+        run: |
+          {
+            echo "## Compiler build (exit code ${{ steps.build.outputs.rc }})"
+            echo '```'; cat ci-out/STATUS.md 2>/dev/null | tail -60; echo '```'
+            for f in ci-out/*.errors; do [ -f "$f" ] && { echo "### $(basename "$f")"; echo '```'; head -80 "$f" | cut -c1-240; echo '```'; }; done
+            [ -f ci-out/configure.tail ] && { echo "### configure (tail)"; echo '```'; tail -25 ci-out/configure.tail | cut -c1-240; echo '```'; }
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Publish logs to the ci-logs branch
         if: always()
         env:
@@ -150,6 +160,10 @@ jobs:
           name: compiler-dist
           path: dist/
           retention-days: 30
+
+      - name: Fail the run if the build failed
+        if: steps.build.outputs.rc != '0' && steps.build.outputs.rc != '124'
+        run: exit 1
 
       - name: Continue automatically if only time ran out
         if: always() && steps.build.outputs.rc == '124'
