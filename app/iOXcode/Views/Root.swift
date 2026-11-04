@@ -14,8 +14,6 @@ struct RootView: View {
 
 struct ProjectsView: View {
     @EnvironmentObject var model: AppModel
-    @State private var pickingFolder = false
-    @State private var pickingZip = false
     @State private var choosing = false
     var body: some View {
         NavigationView {
@@ -38,15 +36,9 @@ struct ProjectsView: View {
             .navigationTitle("iOXcode")
             .toolbar { Button { choosing = true } label: { Image(systemName: "plus") } }
             .confirmationDialog("Add a project", isPresented: $choosing) {
-                Button("Choose a folder") { pickingFolder = true }
-                Button("Choose a .zip file") { pickingZip = true }
+                Button("Choose a folder") { FilePicker.present(types: [.folder], copy: false) { model.importProject($0) } }
+                Button("Choose a .zip file") { FilePicker.present(types: [.zip], copy: true) { model.importProject($0) } }
                 Button("Cancel", role: .cancel) {}
-            }
-            .fullScreenCover(isPresented: $pickingFolder) {
-                DocumentPicker(types: [.folder], copy: false, onPick: { u in pickingFolder = false; model.importProject(u) }, onCancel: { pickingFolder = false })
-            }
-            .fullScreenCover(isPresented: $pickingZip) {
-                DocumentPicker(types: [.zip], copy: true, onPick: { u in pickingZip = false; model.importProject(u) }, onCancel: { pickingZip = false })
             }
         }
         .sheet(isPresented: $model.shareIPA) {
@@ -78,7 +70,6 @@ struct ConsoleView: View {
 
 struct SetupView: View {
     @EnvironmentObject var model: AppModel
-    @State private var pickingSDK = false
     var body: some View {
         NavigationView {
             Form {
@@ -87,14 +78,11 @@ struct SetupView: View {
                 }
                 Section("iPhone SDK pack") {
                     Text(model.importing ? model.importMessage : model.sdkStatus)
-                    Button("Import SDK pack (.zip)") { pickingSDK = true }.disabled(model.importing)
+                    Button("Import SDK pack (.zip)") { FilePicker.present(types: [.zip], copy: true) { model.importSDK($0, scoped: false) } }.disabled(model.importing)
                 }
             }
             .navigationTitle("Setup")
             .onAppear { model.refresh() }
-            .fullScreenCover(isPresented: $pickingSDK) {
-                DocumentPicker(types: [.zip], copy: true, onPick: { u in pickingSDK = false; model.importSDK(u, scoped: false) }, onCancel: { pickingSDK = false })
-            }
         }
     }
 }
