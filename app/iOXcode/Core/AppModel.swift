@@ -96,6 +96,24 @@ final class AppModel: ObservableObject {
                     try fm.moveItem(at: tmp, to: dest)
                 }
             }
+            // GitHub wraps artifacts in a zip: if the only thing inside is another zip, unpack that one instead
+            if !isDir.boolValue {
+                let inner = (try? fm.contentsOfDirectory(at: dest, includingPropertiesForKeys: nil)) ?? []
+                if inner.count == 1, inner[0].pathExtension.lowercased() == "zip" {
+                    let tmp = dest.appendingPathExtension("inner")
+                    try? fm.removeItem(at: tmp)
+                    try Zip.extract(inner[0], to: tmp)
+                    try fm.removeItem(at: dest)
+                    try fm.moveItem(at: tmp, to: dest)
+                    let kids2 = try fm.contentsOfDirectory(at: dest, includingPropertiesForKeys: nil)
+                    if kids2.count == 1, (try? kids2[0].resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                        let t2 = dest.appendingPathExtension("tmp")
+                        try fm.moveItem(at: kids2[0], to: t2)
+                        try fm.removeItem(at: dest)
+                        try fm.moveItem(at: t2, to: dest)
+                    }
+                }
+            }
             console.line("Imported project \(name)")
         } catch { console.line("Import failed: \(error)") }
         refresh()
