@@ -40,7 +40,8 @@ final class AppModel: ObservableObject {
     func refresh() {
         migrateMisplacedSDK()
         projects = Project.all()
-        if let l = SDKLayout.locate() { sdkStatus = "Ready (\(l.sdk.lastPathComponent))" } else { sdkStatus = "Not installed" }
+        if let l = SDKLayout.locate() { sdkStatus = "Ready (\(l.sdk.lastPathComponent))" }
+        else { sdkStatus = SDKLayout.problem().map { "Not installed: \($0)" } ?? "Not installed" }
         if Paths.compilerLibrary == nil { compilerStatus = "Missing from this app" }
         else if CompilerHost.shared.isLoaded { compilerStatus = "Loaded (ABI \(CompilerHost.shared.abiVersion))" }
         else { compilerStatus = "Present" }

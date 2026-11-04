@@ -14,7 +14,7 @@ struct SDKLayout {
         for case let u as URL in en {
             let p = u.path
             if sdk == nil, u.lastPathComponent.hasSuffix(".sdk"), u.lastPathComponent.hasPrefix("iPhoneOS") { sdk = u; en.skipDescendants(); continue }
-            if swift == nil, p.hasSuffix("usr/lib/swift"), fm.fileExists(atPath: p + "/shims") { swift = u; en.skipDescendants(); continue }
+            if swift == nil, p.hasSuffix("usr/lib/swift"), fm.fileExists(atPath: p + "/iphoneos") { swift = u; en.skipDescendants(); continue }
             if clang == nil, p.hasSuffix("usr/lib/clang") {
                 let vs = (try? fm.contentsOfDirectory(atPath: p)) ?? []
                 if let v = vs.sorted().last { clang = u.appendingPathComponent(v) }
@@ -23,6 +23,20 @@ struct SDKLayout {
         }
         guard let s = sdk, let sw = swift else { return nil }
         return SDKLayout(sdk: s, swiftResource: sw, clangResource: clang)
+    }
+
+    /// Says what is missing, for the Setup screen.
+    static func problem() -> String? {
+        let fm = FileManager.default
+        guard let en = fm.enumerator(at: Paths.sdkRoot, includingPropertiesForKeys: nil, options: [.skipsPackageDescendants]) else { return "No SDK pack imported yet" }
+        var hasSDK = false, hasSwift = false
+        for case let u as URL in en {
+            if u.lastPathComponent.hasPrefix("iPhoneOS"), u.lastPathComponent.hasSuffix(".sdk") { hasSDK = true; en.skipDescendants(); continue }
+            if u.path.hasSuffix("usr/lib/swift"), fm.fileExists(atPath: u.path + "/iphoneos") { hasSwift = true }
+        }
+        if !hasSDK { return "The zip has no iPhoneOS.sdk folder" }
+        if !hasSwift { return "The zip has no usr/lib/swift/iphoneos folder" }
+        return nil
     }
 }
 
