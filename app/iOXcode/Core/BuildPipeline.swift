@@ -66,7 +66,10 @@ final class BuildPipeline {
                "-module-name", m.name, "-parse-as-library", "-swift-version", m.swiftVersion,
                "-resource-dir", layout.swiftResource.path,
                "-module-cache-path", moduleCache.path,
-               "-enable-objc-interop", "-color-diagnostics",
+               "-enable-objc-interop", "-no-color-diagnostics",
+               "-Xllvm", "-aarch64-use-tbi", "-stack-check", "-empty-abi-descriptor", "-disable-clang-spi",
+               "-no-auto-bridging-header-chaining",
+               "-target-sdk-version", sdkVersion(layout.sdk), "-target-sdk-name", "iphoneos" + sdkVersion(layout.sdk),
                "-o", obj.path]
         if let clang = layout.clangResource { fe += ["-Xcc", "-resource-dir", "-Xcc", clang.path] }
         switch m.optimization {
@@ -90,14 +93,17 @@ final class BuildPipeline {
                             "-platform_version", "ios", m.minOS, sdkVersion(layout.sdk),
                             "-syslibroot", layout.sdk.path,
                             "-L", layout.sdk.appendingPathComponent("usr/lib/swift").path,
-                            "-L", layout.swiftResource.appendingPathComponent("iphoneos").path,
-                            "-L", layout.swiftResource.deletingLastPathComponent().appendingPathComponent("swift-5.0/iphoneos").path]
+                            "-L", layout.swiftResource.appendingPathComponent("iphoneos").path]
         for d in m.libraryDirs { ld += ["-L", project.url.appendingPathComponent(d).path] }
         for l in m.libraries { ld += ["-l" + l] }
         for f in m.frameworks { ld += ["-framework", f] }
         ld += ["-lSystem", "-lc++", "-lobjc",
                "-rpath", "/usr/lib/swift", "-rpath", "@executable_path/Frameworks",
-               "-dead_strip", "-e", "_main", obj.path, "-o", exe.path]
+               "-dead_strip", "-e", "_main", obj.path]
+        // Apple's own link line also adds the back-deployment pack
+        let compat = layout.swiftResource.appendingPathComponent("iphoneos/libswiftCompatibilityPacks.a")
+        if fm.fileExists(atPath: compat.path) { ld.append(compat.path) }
+        ld += ["-o", exe.path]
         ld += m.linkerFlags
         log.log("-- linking")
         let r2 = CompilerHost.shared.link(ld)
