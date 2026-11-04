@@ -26,20 +26,31 @@ enum SDKDownloader {
         req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         let (data, resp) = try await URLSession.shared.data(for: req)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
-        guard code == 200 else {
-            throw BuildError.message(code == 404 ? "Repo or release not found (or the token cannot see it). Run the SDK workflow first."
-                                                  : "GitHub said \(code). Check the token.")
+        if code == 200,
+           let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let assets = json["assets"] as? [[String: Any]],
+           let asset = assets.first(where: { ($0["name"] as? String) == "sdk-pack.zip" }),
+           let id = asset["id"] as? Int {
+            var dl = URLRequest(url: URL(string: "https://api.github.com/repos/\(repo)/releases/assets/\(id)")!)
+            dl.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            dl.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+            return try await save(dl)
         }
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let assets = json["assets"] as? [[String: Any]],
-              let asset = assets.first(where: { ($0["name"] as? String) == "sdk-pack.zip" }),
-              let id = asset["id"] as? Int else { throw BuildError.message("The release has no sdk-pack.zip.") }
-        var dl = URLRequest(url: URL(string: "https://api.github.com/repos/\(repo)/releases/assets/\(id)")!)
-        dl.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        dl.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
-        let (tmp, r2) = try await URLSession.shared.download(for: dl)
-        guard (r2 as? HTTPURLResponse)?.statusCode == 200 else { throw BuildError.message("Download failed.") }
+        // No release: use the sdk-pack.zip file committed in the repo.
+        var raw = URLRequest(url: URL(string: "https://api.github.com/repos/\(repo)/contents/sdk-pack.zip")!)
+        raw.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        raw.setValue("application/vnd.github.raw", forHTTPHeaderField: "Accept")
+        return try await save(raw)
+    }
+
+    private static func save(_ req: URLRequest) async throws -> URL {
+        let (tmp, r) = try await URLSession.shared.download(for: req)
+        let code = (r as? HTTPURLResponse)?.statusCode ?? 0
+        guard code == 200 else {
+            throw BuildError.message(code == 404 ? "Pack not found (or the token cannot see the repo)." : "GitHub said \(code). Check the token.")
+        }
         let dest = Paths.caches.appendingPathComponent("sdk-pack.zip")
+        Paths.ensure(Paths.caches)
         try? FileManager.default.removeItem(at: dest)
         try FileManager.default.moveItem(at: tmp, to: dest)
         return dest
