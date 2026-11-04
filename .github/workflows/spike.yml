@@ -12,6 +12,11 @@ on:
       ref:
         description: "jakebway/tamaios branch or commit to measure"
         default: main
+      runner:
+        description: "macOS runner (try another if one is stuck in the queue)"
+        type: choice
+        default: macos-14
+        options: [macos-14, macos-15, macos-latest]
 
 permissions:
   contents: read
