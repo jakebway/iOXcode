@@ -1,0 +1,59 @@
+name: TamaiOS project - make a folder iOXcode can build
+
+# Produces TamaiOS-project.zip: the whole ios/ folder (Swift sources, generated Xcode project,
+# the prebuilt Rust library) so it can be imported into iOXcode on the phone as one zip.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: jakebway/tamaios
+          lfs: true
+          path: tamaios
+
+      - name: Tools
+        run: brew install xcodegen
+
+      - name: Emulator core and patches
+        working-directory: tamaios
+        run: |
+          set -euo pipefail
+          git clone https://github.com/oreo-fox/tg18-emu upstream
+          git -C upstream checkout 41204c92e98a8882d5c90a9876d8990f3b63e285
+          git -C upstream apply ../patches/radio.patch
+          git -C upstream apply ../patches/ir_partner.patch
+
+      - name: Rust library for iOS
+        working-directory: tamaios
+        run: |
+          set -euo pipefail
+          rustup target add aarch64-apple-ios
+          (cd ffi && IPHONEOS_DEPLOYMENT_TARGET=16.0 cargo build --release --target aarch64-apple-ios)
+          mkdir -p ios/lib
+          cp ffi/target/aarch64-apple-ios/release/libtamaios.a ios/lib/
+
+      - name: Generate the Xcode project and bundle firmware/assets that are in the repo
+        working-directory: tamaios
+        run: |
+          set -euo pipefail
+          mkdir -p ios/TamaiOS/BundledFirmware ios/TamaiOS/BundledAssets
+          for f in firmware/*.bin; do [ -f "$f" ] && cp "$f" ios/TamaiOS/BundledFirmware/ || true; done
+          for f in assets/*.zip; do [ -f "$f" ] && cp "$f" ios/TamaiOS/BundledAssets/ || true; done
+          (cd ios && xcodegen generate)
+          (cd ios && zip -qry ../../TamaiOS-project.zip . -x '*.DS_Store')
+          ls -lh ../TamaiOS-project.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TamaiOS-project
+          path: TamaiOS-project.zip
+          retention-days: 30

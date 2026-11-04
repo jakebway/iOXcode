@@ -113,6 +113,20 @@ enum XcodeProjectReader {
         }
         m.swiftFlags = (str("OTHER_SWIFT_FLAGS") ?? "").split(separator: " ").map(String.init).filter { !$0.hasPrefix("$") && !$0.isEmpty }
         m.linkerFlags = []
+        // OTHER_LDFLAGS: -lname, -framework Name, everything else is passed through
+        var extraLibs: [String] = [], extraFrameworks: [String] = []
+        do {
+            let toks = expand(str("OTHER_LDFLAGS") ?? "").split(separator: " ").map(String.init).filter { $0 != "" && $0 != "$(inherited)" && $0 != "-ObjC" }
+            var i = 0
+            while i < toks.count {
+                let t = toks[i]
+                if t == "-framework", i + 1 < toks.count { extraFrameworks.append(toks[i + 1]); i += 2; continue }
+                if t.hasPrefix("-l") && t.count > 2 { extraLibs.append(String(t.dropFirst(2))) }
+                else if !t.hasPrefix("$") { m.linkerFlags.append(t) }
+                i += 1
+            }
+        }
+        if (str("OTHER_LDFLAGS") ?? "").contains("-ObjC") { m.linkerFlags.append("-ObjC") }
 
         // build phases
         var swiftFiles: [String] = []
@@ -151,8 +165,8 @@ enum XcodeProjectReader {
         if !skippedSources.isEmpty { warnings.append("C/Objective-C files are not compiled yet (\(skippedSources.count)): \(skippedSources.prefix(3).joined(separator: ", "))") }
         m.swiftFiles = swiftFiles
         m.resources = resources
-        m.frameworks = frameworks
-        m.libraries = libs
+        m.frameworks = frameworks + extraFrameworks
+        m.libraries = libs + extraLibs
         // library search paths from build settings
         var dirs = libDirs
         if let ls = str("LIBRARY_SEARCH_PATHS") {

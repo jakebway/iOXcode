@@ -63,7 +63,12 @@ final class BuildPipeline {
             throw BuildError.message("No iPhone SDK found. Open Setup and import the SDK pack first.")
         }
         let files = project.swiftFiles(for: m)
-        guard !files.isEmpty else { throw BuildError.message("No .swift files found in the project.") }
+        guard !files.isEmpty else {
+            if let listed = m.swiftFiles, !listed.isEmpty {
+                throw BuildError.message("The project file lists \(listed.count) Swift files (for example \(listed[0])) but they are not in what you imported. Import the whole folder: the source files and the .xcodeproj together.")
+            }
+            throw BuildError.message("No .swift files found in the project.")
+        }
         log.log("\(files.count) Swift files, SDK \(layout.sdk.lastPathComponent)")
         for w in project.warnings { log.log("note: \(w)") }
 
