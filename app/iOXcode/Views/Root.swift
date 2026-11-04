@@ -14,7 +14,9 @@ struct RootView: View {
 
 struct ProjectsView: View {
     @EnvironmentObject var model: AppModel
-    @State private var picking = false
+    @State private var pickingFolder = false
+    @State private var pickingZip = false
+    @State private var choosing = false
     var body: some View {
         NavigationView {
             List {
@@ -34,13 +36,21 @@ struct ProjectsView: View {
                 }
             }
             .navigationTitle("iOXcode")
-            .toolbar { Button { picking = true } label: { Image(systemName: "plus") } }
-            .fileImporter(isPresented: $picking, allowedContentTypes: [.folder, .zip]) { r in
-                if case .success(let u) = r { model.importProject(u) }
+            .toolbar { Button { choosing = true } label: { Image(systemName: "plus") } }
+            .confirmationDialog("Add a project", isPresented: $choosing) {
+                Button("Choose a folder") { pickingFolder = true }
+                Button("Choose a .zip file") { pickingZip = true }
+                Button("Cancel", role: .cancel) {}
             }
-            .sheet(isPresented: $model.shareIPA) {
-                if let u = model.lastIPA { ShareSheet(items: [u]) }
+            .fullScreenCover(isPresented: $pickingFolder) {
+                DocumentPicker(types: [.folder], copy: false) { model.importProject($0) }
             }
+            .fullScreenCover(isPresented: $pickingZip) {
+                DocumentPicker(types: [.zip], copy: true) { model.importProject($0) }
+            }
+        }
+        .sheet(isPresented: $model.shareIPA) {
+            if let u = model.lastIPA { ShareSheet(items: [u]) }
         }
     }
 }
@@ -91,8 +101,8 @@ struct SetupView: View {
                 Section { Button("Refresh") { model.refresh() } }
             }
             .navigationTitle("Setup")
-            .fileImporter(isPresented: $pickingSDK, allowedContentTypes: [.zip]) { r in
-                if case .success(let u) = r { model.importSDK(u) }
+            .fullScreenCover(isPresented: $pickingSDK) {
+                DocumentPicker(types: [.zip], copy: true) { model.importSDK($0, scoped: false) }
             }
         }
     }
