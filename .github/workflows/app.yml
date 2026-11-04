@@ -95,3 +95,4 @@ jobs:
           name: iOXcode-ipa
           path: iOXcode.ipa
           retention-days: 30
+# rebuilt with the full compiler bundle
