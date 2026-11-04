@@ -1,4 +1,4 @@
-snapshot: 2026-11-04T20:52:16Z  elapsed: 4506s  disk: 34Gi free
+snapshot: 2026-11-04T21:17:19Z  elapsed: 6009s  disk: 34Gi free
 --- cmark-ios.log (last 25 lines)
 [15/28] Building C object src/CMakeFiles/libcmark-gfm.dir/man.c.o
 [16/28] Building C object src/CMakeFiles/libcmark-gfm.dir/inlines.c.o
