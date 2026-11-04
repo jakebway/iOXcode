@@ -10,6 +10,25 @@ enum Zip {
         Int(d[o]) | Int(d[o + 1]) << 8 | Int(d[o + 2]) << 16 | Int(d[o + 3]) << 24
     }
 
+    /// File names inside a zip, read from the central directory only (fast, no unpacking).
+    static func names(_ zip: URL) -> [String] {
+        guard let data = try? Data(contentsOf: zip, options: .alwaysMapped), data.count > 22 else { return [] }
+        var eocd = -1
+        var i = data.count - 22
+        while i >= max(0, data.count - 70_000) { if u32(data, i) == 0x06054b50 { eocd = i; break }; i -= 1 }
+        guard eocd >= 0 else { return [] }
+        let count = u16(data, eocd + 10)
+        var p = u32(data, eocd + 16)
+        var out: [String] = []
+        for _ in 0..<count {
+            guard p + 46 <= data.count, u32(data, p) == 0x02014b50 else { break }
+            let nlen = u16(data, p + 28), xlen = u16(data, p + 30), clen = u16(data, p + 32)
+            out.append(String(decoding: data[(p + 46)..<(p + 46 + nlen)], as: UTF8.self))
+            p += 46 + nlen + xlen + clen
+        }
+        return out
+    }
+
     static func extract(_ zip: URL, to dest: URL, progress: ((Int, Int) -> Void)? = nil) throws {
         let data = try Data(contentsOf: zip, options: .alwaysMapped)
         var eocd = -1

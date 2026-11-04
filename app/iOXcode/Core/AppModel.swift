@@ -18,7 +18,26 @@ final class AppModel: ObservableObject {
         refresh()
     }
 
+    static func isSDKPath(_ name: String) -> Bool {
+        let first = name.split(separator: "/").first.map(String.init) ?? ""
+        return first.hasPrefix("iPhoneOS") && first.hasSuffix(".sdk")
+    }
+
+    /// If an SDK pack ended up in the project list (added with the + button), move it to its proper place.
+    private func migrateMisplacedSDK() {
+        let fm = FileManager.default
+        for p in Project.all() {
+            let kids = (try? fm.contentsOfDirectory(atPath: p.url.path)) ?? []
+            if kids.contains(where: { Self.isSDKPath($0) }) {
+                try? fm.removeItem(at: Paths.sdkRoot)
+                try? fm.moveItem(at: p.url, to: Paths.sdkRoot)
+            }
+        }
+        Paths.ensure(Paths.sdkRoot)
+    }
+
     func refresh() {
+        migrateMisplacedSDK()
         projects = Project.all()
         if let l = SDKLayout.locate() { sdkStatus = "Ready (\(l.sdk.lastPathComponent))" } else { sdkStatus = "Not installed" }
         if Paths.compilerLibrary == nil { compilerStatus = "Missing from this app" }
@@ -49,12 +68,17 @@ final class AppModel: ObservableObject {
 
     /// Imports a project folder or a .zip chosen in Files.
     func importProject(_ url: URL) {
+        let fm = FileManager.default
+        var isDir: ObjCBool = false
+        fm.fileExists(atPath: url.path, isDirectory: &isDir)
+        // An SDK pack is not a project: store it quietly in the background.
+        if !isDir.boolValue, Zip.names(url).contains(where: { Self.isSDKPath($0) }) {
+            importSDK(url, scoped: true)
+            return
+        }
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        let fm = FileManager.default
         do {
-            var isDir: ObjCBool = false
-            fm.fileExists(atPath: url.path, isDirectory: &isDir)
             let name = url.deletingPathExtension().lastPathComponent
             let dest = Paths.projects.appendingPathComponent(name, isDirectory: true)
             try? fm.removeItem(at: dest)
