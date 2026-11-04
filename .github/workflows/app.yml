@@ -53,7 +53,18 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ID/zip" > /tmp/compiler.zip
           mkdir -p /tmp/compiler && unzip -oq /tmp/compiler.zip -d /tmp/compiler
           ls -lh /tmp/compiler
-          echo "COMPILER_DYLIB=$(ls /tmp/compiler/libSwiftCompilerBridge.dylib)" >> "$GITHUB_ENV"
+          D=/tmp/compiler/libSwiftCompilerBridge.dylib
+          echo "COMPILER_DYLIB=$D" >> "$GITHUB_ENV"
+          {
+            echo "### Compiler library check"; echo '```'
+            file "$D"; lipo -info "$D" 2>&1 || true
+            otool -l "$D" | grep -A4 -E "LC_BUILD_VERSION|LC_VERSION_MIN" | head -8
+            echo "--- exported compiler entry points"
+            nm -gU "$D" 2>/dev/null | grep -E "swift_compiler_" | head -12
+            echo "--- libraries it needs"
+            otool -L "$D" | head -20
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Build the app (unsigned)
         run: |
