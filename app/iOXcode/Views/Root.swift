@@ -79,28 +79,19 @@ struct ConsoleView: View {
 struct SetupView: View {
     @EnvironmentObject var model: AppModel
     @State private var pickingSDK = false
-    @State private var repo = UserDefaults.standard.string(forKey: "sdk-repo") ?? "jakebway/ioxcode-sdk"
-    @State private var token = Keychain.get("github-token") ?? ""
     var body: some View {
         NavigationView {
             Form {
                 Section("Compiler") {
                     Text(model.compilerStatus)
-                    Button("Load compiler") { model.loadCompiler() }
-                    Text("Memory available: \(CompilerHost.shared.availableMemoryMB) MB").font(.caption).foregroundColor(.secondary)
                 }
                 Section("iPhone SDK pack") {
-                    Text(model.sdkStatus)
-                    TextField("Private repo (owner/name)", text: $repo).autocapitalization(.none).disableAutocorrection(true)
-                    SecureField("GitHub token (read-only)", text: $token)
-                    Button("Download SDK pack") { model.downloadSDK(repo: repo, token: token) }
-                        .disabled(model.importing || token.isEmpty)
-                    Button("Or import a .zip from Files") { pickingSDK = true }.disabled(model.importing)
-                    if !model.importMessage.isEmpty { Text(model.importMessage).font(.caption) }
+                    Text(model.importing ? model.importMessage : model.sdkStatus)
+                    Button("Import SDK pack (.zip)") { pickingSDK = true }.disabled(model.importing)
                 }
-                Section { Button("Refresh") { model.refresh() } }
             }
             .navigationTitle("Setup")
+            .onAppear { model.refresh() }
             .fullScreenCover(isPresented: $pickingSDK) {
                 DocumentPicker(types: [.zip], copy: true) { model.importSDK($0, scoped: false) }
             }
