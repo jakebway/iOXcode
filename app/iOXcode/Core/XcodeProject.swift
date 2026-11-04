@@ -116,7 +116,13 @@ enum XcodeProjectReader {
         // OTHER_LDFLAGS: -lname, -framework Name, everything else is passed through
         var extraLibs: [String] = [], extraFrameworks: [String] = []
         do {
-            let toks = expand(str("OTHER_LDFLAGS") ?? "").split(separator: " ").map(String.init).filter { $0 != "" && $0 != "$(inherited)" && $0 != "-ObjC" }
+            let raw: String = expand(str("OTHER_LDFLAGS") ?? "")
+            let pieces: [String] = raw.split(separator: " ").map { String($0) }
+            var toks: [String] = []
+            for piece in pieces {
+                if piece.isEmpty || piece == "$(inherited)" || piece == "-ObjC" { continue }
+                toks.append(piece)
+            }
             var i = 0
             while i < toks.count {
                 let t = toks[i]
