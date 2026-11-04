@@ -1,0 +1,85 @@
+name: App - build the iOXcode IPA
+
+# Builds the iOXcode app (unsigned IPA for FlareStore) and puts the finished compiler inside it.
+# Needs a successful "Compiler" run first (it provides the compiler-dist artifact).
+
+on:
+  workflow_dispatch:
+    inputs:
+      with_compiler:
+        description: "Embed the compiler (turn off to test the app without it)"
+        type: boolean
+        default: true
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - ".github/workflows/app.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: app
+  cancel-in-progress: true
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pick the newest stable Xcode
+        run: |
+          SEL=$(ls -d /Applications/Xcode*.app | grep -viE 'beta|rc|preview' | sort -V | tail -1)
+          SEL=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$SEL")
+          sudo xcode-select -s "$SEL/Contents/Developer"
+          echo "DEVELOPER_DIR=$SEL/Contents/Developer" >> "$GITHUB_ENV"
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Get the newest compiler build
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.with_compiler }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=compiler-dist&per_page=1" --jq '.artifacts[0].id // empty')
+          if [ -z "$ID" ]; then echo "::warning::No compiler-dist artifact yet. Building the app WITHOUT the compiler."; exit 0; fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ID/zip" > /tmp/compiler.zip
+          mkdir -p /tmp/compiler && unzip -oq /tmp/compiler.zip -d /tmp/compiler
+          ls -lh /tmp/compiler
+          echo "COMPILER_DYLIB=$(ls /tmp/compiler/libSwiftCompilerBridge.dylib)" >> "$GITHUB_ENV"
+
+      - name: Build the app (unsigned)
+        run: |
+          cd app
+          xcodegen generate
+          xcodebuild -project iOXcode.xcodeproj -scheme iOXcode -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            | tail -60
+
+      - name: Assemble the IPA
+        run: |
+          APP=$(ls -d app/build/Build/Products/Release-iphoneos/iOXcode.app)
+          if [ -n "${COMPILER_DYLIB:-}" ]; then
+            mkdir -p "$APP/Frameworks"
+            cp "$COMPILER_DYLIB" "$APP/Frameworks/"
+            echo "compiler embedded: $(ls -lh "$APP/Frameworks/libSwiftCompilerBridge.dylib" | awk '{print $5}')"
+          else
+            echo "no compiler embedded"
+          fi
+          rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
+          zip -qry iOXcode.ipa Payload
+          ls -lh iOXcode.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iOXcode-ipa
+          path: iOXcode.ipa
+          retention-days: 30
