@@ -1,0 +1,17 @@
+# Codemagic: free macOS build minutes, used here only to run the measurement spike.
+# Manual start only (no triggers), so it never burns minutes by itself.
+workflows:
+  spike:
+    name: Spike - measure an on-device Swift build
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      xcode: latest
+    scripts:
+      - name: Measure
+        script: bash scripts/spike.sh
+    artifacts:
+      - tamaios/out/SUMMARY.md
+      - tamaios/out/*.time
+      - tamaios/out/*.log
+      - tamaios/out/*.trace.json
