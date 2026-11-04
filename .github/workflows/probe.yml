@@ -1,0 +1,103 @@
+name: Probe - exact compiler/linker arguments and SDK sizes
+
+# Cheap and quick (a few minutes). Prints what Apple's own swiftc would run for TamaiOS (the frontend
+# arguments and the linker arguments) and how big the pieces of the iPhone SDK are. The host app copies
+# these argument shapes. Logs go to the ci-logs branch. Nothing here is published except small text.
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: "macOS runner"
+        type: choice
+        default: macos-15
+        options: [macos-15, macos-14, macos-latest]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ${{ inputs.runner || 'macos-15' }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcodes and SDKs
+        run: |
+          mkdir -p ci-out
+          {
+            for x in $(ls -d /Applications/Xcode*.app | sort -V); do
+              echo "$x: $(DEVELOPER_DIR=$x/Contents/Developer xcrun swiftc --version 2>&1 | head -1) | SDKs: $(ls $x/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs 2>/dev/null | tr '\n' ' ')"
+            done
+            echo; df -h / | tail -1
+          } 2>&1 | tee ci-out/xcodes.txt
+
+      - name: Pick the newest stable Xcode
+        run: |
+          SEL=$(ls -d /Applications/Xcode*.app | grep -viE 'beta|rc|preview' | sort -V | tail -1)
+          sudo xcode-select -s "$SEL/Contents/Developer"
+          echo "selected $SEL" | tee -a ci-out/xcodes.txt
+          xcrun --sdk iphoneos --show-sdk-path | tee -a ci-out/xcodes.txt
+
+      - name: SDK size breakdown
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          FE=$(xcrun -f swift-frontend); TC=$(dirname "$(dirname "$FE")")
+          {
+            echo "SDK: $SDK"
+            echo "--- top level (MB)"
+            du -sm "$SDK"/* "$SDK"/usr/* "$SDK"/System/Library/* 2>/dev/null | sort -rn | head -30
+            echo "--- frameworks: count and total"
+            ls "$SDK/System/Library/Frameworks" | wc -l
+            du -sm "$SDK/System/Library/Frameworks"
+            echo "--- biggest frameworks (MB)"
+            du -sm "$SDK"/System/Library/Frameworks/*.framework | sort -rn | head -25
+            echo "--- toolchain pieces the compiler needs at run time"
+            du -sm "$TC/lib/clang" "$TC/lib/swift/shims" "$TC/lib/swift/iphoneos" "$TC/lib/swift/clang" 2>/dev/null
+            ls "$TC/lib/swift/iphoneos" | head -40
+            ls "$TC/lib/swift-5.0/iphoneos" 2>/dev/null | head
+            find "$TC/lib/clang" -maxdepth 2 | head -5
+          } 2>&1 | tee ci-out/sdk-sizes.txt
+
+      - name: Frontend and linker commands for TamaiOS (swiftc -###)
+        run: |
+          git clone --depth 1 https://github.com/jakebway/tamaios tamaios-src
+          cd tamaios-src
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          SRC=$(find ios/TamaiOS -name '*.swift' | sort)
+          for opt in -Onone -O; do
+            echo "################ swiftc -### $opt (whole module, executable)" > ../ci-out/commands$opt.txt
+            swiftc -### -wmo $opt -parse-as-library -swift-version 5 \
+              -target arm64-apple-ios16.0 -sdk "$SDK" \
+              -import-objc-header ios/TamaiOS/Bridge.h -module-name TamaiOS \
+              -emit-executable -o /tmp/TamaiOS.bin $SRC >> ../ci-out/commands$opt.txt 2>&1
+          done
+          echo "################ swiftc -### -emit-object (single frontend job, Onone)" > ../ci-out/commands-emit-object.txt
+          swiftc -### -wmo -Onone -parse-as-library -swift-version 5 -target arm64-apple-ios16.0 -sdk "$SDK" \
+            -import-objc-header ios/TamaiOS/Bridge.h -module-name TamaiOS -emit-object -o /tmp/TamaiOS.o $SRC \
+            >> ../ci-out/commands-emit-object.txt 2>&1
+          wc -c ../ci-out/commands*.txt
+
+      - name: A tiny SwiftUI app, linked the normal way, for comparison (-v)
+        run: |
+          mkdir -p /tmp/tiny && cd /tmp/tiny
+          cat > App.swift <<'EOF'
+          import SwiftUI
+          @main struct TinyApp: App { var body: some Scene { WindowGroup { Text("hi") } } }
+          EOF
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          swiftc -v -target arm64-apple-ios16.0 -sdk "$SDK" -parse-as-library App.swift -o tiny > "$GITHUB_WORKSPACE/ci-out/tiny-v.txt" 2>&1 || true
+          file tiny >> "$GITHUB_WORKSPACE/ci-out/tiny-v.txt" 2>&1 || true
+          otool -l tiny | grep -A4 -E "LC_BUILD_VERSION|LC_RPATH|LC_LOAD_DYLIB" | head -60 >> "$GITHUB_WORKSPACE/ci-out/tiny-v.txt" 2>&1 || true
+          tail -5 "$GITHUB_WORKSPACE/ci-out/tiny-v.txt"
+
+      - name: Publish logs to the ci-logs branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "probe-${{ github.run_id }}"
