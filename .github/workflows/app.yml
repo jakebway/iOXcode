@@ -17,7 +17,7 @@ on:
       - ".github/workflows/app.yml"
 
 permissions:
-  contents: read
+  contents: write
   actions: read
 
 concurrency:
@@ -69,12 +69,24 @@ jobs:
 
       - name: Build the app (unsigned)
         run: |
+          set -o pipefail
+          mkdir -p ci-out
           cd app
           xcodegen generate
           xcodebuild -project iOXcode.xcodeproj -scheme iOXcode -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            | tail -60
+            > ../ci-out/xcodebuild.log 2>&1 || rc=$?
+          cd ..
+          grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)" ci-out/xcodebuild.log | sort -u | head -60 > ci-out/errors.txt || true
+          { echo "### Build errors"; echo '```'; cat ci-out/errors.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit ${rc:-0}
+
+      - name: Publish the build log
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "app-${{ github.run_id }}"
 
       - name: Assemble the IPA
         run: |
