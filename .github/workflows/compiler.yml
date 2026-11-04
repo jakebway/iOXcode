@@ -114,6 +114,9 @@ jobs:
 
       - name: Build the compiler (stages, within the time budget)
         id: build
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          LOG_LABEL: ${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           START=$(cat /tmp/job-start)
           export BUDGET_SECONDS=$(( 20100 - ($(date +%s) - START) ))

@@ -15,6 +15,26 @@ S=$OUT/STATUS.md
 say() { printf '%s\n' "$*" | tee -a "$S"; }
 left() { echo $(( BUDGET - ($(date +%s) - START) )); }
 
+# Heartbeat: every 25 minutes publish a snapshot of the logs, so a long build can be watched.
+heartbeat() {
+  while true; do
+    sleep 1500
+    {
+      echo "snapshot: $(date -u +%FT%TZ)  elapsed: $(( $(date +%s) - START ))s  disk: $(df -h / | tail -1 | awk '{print $4" free"}')"
+      for f in "$OUT"/*.log; do
+        [ -f "$f" ] && { echo "--- $(basename "$f") (last 25 lines)"; tail -25 "$f" | cut -c1-300; }
+      done
+    } > "$OUT/progress.txt" 2>&1
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+      mkdir -p "$OUT/../ci-live" && cp "$S" "$OUT/progress.txt" "$OUT/../ci-live/" 2>/dev/null
+      "$HERE/push-logs.sh" "$OUT/../ci-live" "${LOG_LABEL:-live}-live" >/dev/null 2>&1
+    fi
+  done
+}
+heartbeat &
+HEARTBEAT_PID=$!
+trap 'kill $HEARTBEAT_PID 2>/dev/null' EXIT
+
 say "# Compiler build status"
 say "started: $(date -u +%FT%TZ)  budget: ${BUDGET}s  jobs: $JOBS"
 say "bootstrap: $BOOTSTRAP_ROOT"
