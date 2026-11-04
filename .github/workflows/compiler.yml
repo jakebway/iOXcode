@@ -72,7 +72,7 @@ jobs:
               echo "$x: $(DEVELOPER_DIR=$x/Contents/Developer xcrun swiftc --version 2>&1 | head -1)"
             done
           } | tee ci-out/xcodes.txt
-          SEL=$(echo "$CANDS" | tail -1)
+          SEL=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$(echo "$CANDS" | tail -1)")
           sudo xcode-select -s "$SEL/Contents/Developer"
           echo "DEVELOPER_DIR=$SEL/Contents/Developer" >> "$GITHUB_ENV"
           export DEVELOPER_DIR="$SEL/Contents/Developer"
@@ -81,9 +81,10 @@ jobs:
           xcrun --sdk iphoneos --show-sdk-path | tee -a ci-out/xcodes.txt
           FREE=$(df -g / | tail -1 | awk '{print $4}')
           echo "free GB before cleanup: $FREE" | tee -a ci-out/xcodes.txt
-          if [ "$FREE" -lt 45 ]; then
+          if [ "$FREE" -lt 30 ]; then
             for x in $(ls -d /Applications/Xcode*.app); do
-              [ "$x" = "$SEL" ] || { echo "removing $x"; sudo rm -rf "$x"; }
+              R=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$x")
+              [ "$R" = "$SEL" ] || { echo "removing $x"; sudo rm -rf "$x"; }
             done
             sudo rm -rf /Library/Developer/CoreSimulator/Volumes/* /Library/Developer/CoreSimulator/Images/* 2>/dev/null || true
             rm -rf "$HOME/Library/Android" "$HOME/Library/Developer/Xcode/DerivedData" 2>/dev/null || true
