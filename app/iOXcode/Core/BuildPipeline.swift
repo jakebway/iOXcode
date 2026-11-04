@@ -51,6 +51,7 @@ final class BuildPipeline {
         let files = project.swiftFiles(for: m)
         guard !files.isEmpty else { throw BuildError.message("No .swift files found in the project.") }
         log.log("\(files.count) Swift files, SDK \(layout.sdk.lastPathComponent)")
+        for w in project.warnings { log.log("note: \(w)") }
 
         let work = Paths.work.appendingPathComponent(m.name, isDirectory: true)
         try? fm.removeItem(at: work)
@@ -77,7 +78,7 @@ final class BuildPipeline {
         case "size": fe += ["-Osize"]
         default: fe += ["-Onone"]
         }
-        if let h = m.bridgingHeader { fe += ["-import-objc-header", project.url.appendingPathComponent(h).path] }
+        if let h = m.bridgingHeader { fe += ["-import-objc-header", project.root.appendingPathComponent(h).path] }
         fe += m.swiftFlags
         log.log("-- compiling Swift")
         let r1 = CompilerHost.shared.frontend(fe)
@@ -94,7 +95,7 @@ final class BuildPipeline {
                             "-syslibroot", layout.sdk.path,
                             "-L", layout.sdk.appendingPathComponent("usr/lib/swift").path,
                             "-L", layout.swiftResource.appendingPathComponent("iphoneos").path]
-        for d in m.libraryDirs { ld += ["-L", project.url.appendingPathComponent(d).path] }
+        for d in m.libraryDirs { ld += ["-L", project.root.appendingPathComponent(d).path] }
         for l in m.libraries { ld += ["-l" + l] }
         for f in m.frameworks { ld += ["-framework", f] }
         ld += ["-lSystem", "-lc++", "-lobjc",
@@ -113,16 +114,22 @@ final class BuildPipeline {
 
         // 3. bundle
         log.log("-- packaging")
-        try writeInfoPlist(m, to: app.appendingPathComponent("Info.plist"))
+        var iconFromCatalog: URL?
         for r in m.resources {
-            let src = project.url.appendingPathComponent(r)
+            let src = project.root.appendingPathComponent(r)
+            let ext = src.pathExtension.lowercased()
+            if ext == "xcassets" { iconFromCatalog = iconFromCatalog ?? Assets.extract(catalog: src, into: app, log: log); continue }
+            if ["storyboard", "xib"].contains(ext) { log.log("note: \(src.lastPathComponent) is not compiled yet (no interface compiler on device)"); continue }
             let dst = app.appendingPathComponent(src.lastPathComponent)
             try? fm.removeItem(at: dst)
             if fm.fileExists(atPath: src.path) { try fm.copyItem(at: src, to: dst) }
             else { log.log("warning: resource not found: \(r)") }
         }
-        if let icon = m.icon {
-            let src = project.url.appendingPathComponent(icon)
+        var m2 = m
+        if m2.icon == nil, let ic = iconFromCatalog { try? fm.copyItem(at: ic, to: app.appendingPathComponent("AppIcon60x60@2x.png")); m2.icon = "-" }
+        try writeInfoPlist(m2, to: app.appendingPathComponent("Info.plist"), base: project.root)
+        if let icon = m.icon, icon != "-" {
+            let src = project.root.appendingPathComponent(icon)
             if fm.fileExists(atPath: src.path) { try? fm.copyItem(at: src, to: app.appendingPathComponent("AppIcon60x60@2x.png")) }
         }
         try fm.createDirectory(at: Paths.output, withIntermediateDirectories: true)
@@ -140,7 +147,7 @@ final class BuildPipeline {
         return v.isEmpty ? "18.0" : v
     }
 
-    private func writeInfoPlist(_ m: Manifest, to url: URL) throws {
+    private func writeInfoPlist(_ m: Manifest, to url: URL, base: URL) throws {
         var d: [String: Any] = [
             "CFBundleExecutable": m.name,
             "CFBundleIdentifier": m.bundleId,
@@ -158,11 +165,62 @@ final class BuildPipeline {
             "UIRequiredDeviceCapabilities": ["arm64"],
             "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"],
         ]
+        if let f = m.infoPlistFile,
+           let data = try? Data(contentsOf: base.appendingPathComponent(f)),
+           let extra = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {
+            for (k, v) in extra {
+                if let sv = v as? String, sv.contains("$(") { continue }   // build variables: keep our own values
+                d[k] = v
+            }
+        }
         if m.icon != nil {
             d["CFBundleIcons"] = ["CFBundlePrimaryIcon": ["CFBundleIconFiles": ["AppIcon60x60"], "CFBundleIconName": "AppIcon"]]
         }
         for (k, v) in m.infoPlist { d[k] = v }
         let data = try PropertyListSerialization.data(fromPropertyList: d, format: .xml, options: 0)
         try data.write(to: url)
+    }
+}
+
+/// No asset compiler exists on the phone, so images are copied out of the catalog as plain files
+/// (UIImage(named:) and Image("name") find them), and the biggest app icon is used for the home screen.
+enum Assets {
+    static func extract(catalog: URL, into app: URL, log: LogSink) -> URL? {
+        let fm = FileManager.default
+        var icon: URL?
+        var iconSize = 0
+        guard let en = fm.enumerator(at: catalog, includingPropertiesForKeys: nil) else { return nil }
+        var colorSets = 0
+        for case let u as URL in en {
+            let ext = u.pathExtension
+            if ext == "appiconset" {
+                for f in (try? fm.contentsOfDirectory(at: u, includingPropertiesForKeys: [.fileSizeKey])) ?? [] where f.pathExtension.lowercased() == "png" {
+                    let size = (try? f.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+                    if size > iconSize { iconSize = size; icon = f }
+                }
+            } else if ext == "imageset" {
+                let name = u.deletingPathExtension().lastPathComponent
+                let files = ((try? fm.contentsOfDirectory(at: u, includingPropertiesForKeys: nil)) ?? [])
+                    .filter { ["png", "jpg", "jpeg"].contains($0.pathExtension.lowercased()) }
+                // use scale suffixes the loader understands when the catalog has several sizes
+                if let json = try? Data(contentsOf: u.appendingPathComponent("Contents.json")),
+                   let obj = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
+                   let images = obj["images"] as? [[String: Any]] {
+                    for im in images {
+                        guard let fn = im["filename"] as? String else { continue }
+                        let scale = (im["scale"] as? String) ?? "1x"
+                        let suffix = scale == "1x" ? "" : "@" + scale
+                        let e = (fn as NSString).pathExtension
+                        let dst = app.appendingPathComponent(name + suffix + "." + e)
+                        try? fm.removeItem(at: dst)
+                        try? fm.copyItem(at: u.appendingPathComponent(fn), to: dst)
+                    }
+                } else if let f = files.first {
+                    try? fm.copyItem(at: f, to: app.appendingPathComponent(name + "." + f.pathExtension))
+                }
+            } else if ext == "colorset" { colorSets += 1 }
+        }
+        if colorSets > 0 { log.log("note: \(colorSets) named colors in \(catalog.lastPathComponent) are not available (Color(\"name\") needs a compiled catalog)") }
+        return icon
     }
 }
