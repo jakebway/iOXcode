@@ -1,0 +1,164 @@
+name: Compiler - build the Swift compiler for iPhone
+
+# Builds the Swift frontend, Clang importer, LLVM (arm64) and LLD (Mach-O) as an iOS dylib that an
+# app calls in-process (no subprocesses, no JIT). The build is far longer than one 6 hour job, so it
+# works in stages, stops itself before the limit, saves a compiler cache, and starts the next run
+# automatically (up to max_attempts). Small logs go to the ci-logs branch after every run.
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: "macOS runner"
+        type: choice
+        default: macos-15
+        options: [macos-15, macos-14, macos-latest]
+      attempt:
+        description: "Which attempt this is (the workflow sets this when it continues itself)"
+        default: "1"
+      max_attempts:
+        description: "Stop continuing automatically after this many runs"
+        default: "14"
+  push:
+    branches: [main]
+    paths:
+      - "compiler/**"
+      - "scripts/ci/**"
+      - ".github/workflows/compiler.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: compiler
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runner || 'macos-15' }}
+    timeout-minutes: 355
+    env:
+      CCACHE_DIR: /Users/runner/.ccache-ci
+      CCACHE_MAXSIZE: 5G
+      CCACHE_COMPRESS: "1"
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Machine facts
+        run: |
+          date +%s > /tmp/job-start
+          mkdir -p ci-out
+          {
+            echo "# machine"
+            echo "cpus: $(sysctl -n hw.ncpu)  ram: $(( $(sysctl -n hw.memsize) / 1073741824 )) GB  arch: $(uname -m)"
+            sw_vers
+            df -h /
+            echo "--- Xcodes"
+            ls -d /Applications/Xcode*.app
+            echo "--- cmake/ninja/ccache"
+            command -v cmake ninja ccache || true
+            cmake --version | head -1 || true
+          } 2>&1 | tee ci-out/machine.txt
+
+      - name: Pick Xcode and free disk space
+        run: |
+          set -u
+          CANDS=$(ls -d /Applications/Xcode*.app | grep -viE 'beta|rc|preview|release_candidate' | sort -V)
+          {
+            for x in $CANDS; do
+              echo "$x: $(DEVELOPER_DIR=$x/Contents/Developer xcrun swiftc --version 2>&1 | head -1)"
+            done
+          } | tee ci-out/xcodes.txt
+          SEL=$(echo "$CANDS" | tail -1)
+          sudo xcode-select -s "$SEL/Contents/Developer"
+          echo "selected: $SEL" | tee -a ci-out/xcodes.txt
+          xcodebuild -version | tee -a ci-out/xcodes.txt
+          xcrun --sdk iphoneos --show-sdk-path | tee -a ci-out/xcodes.txt
+          FREE=$(df -g / | tail -1 | awk '{print $4}')
+          echo "free GB before cleanup: $FREE" | tee -a ci-out/xcodes.txt
+          if [ "$FREE" -lt 80 ]; then
+            for x in $(ls -d /Applications/Xcode*.app); do
+              [ "$x" = "$SEL" ] || { echo "removing $x"; sudo rm -rf "$x"; }
+            done
+            sudo rm -rf /Library/Developer/CoreSimulator/Volumes/* /Library/Developer/CoreSimulator/Images/* 2>/dev/null || true
+            rm -rf "$HOME/Library/Android" "$HOME/Library/Developer/Xcode/DerivedData" 2>/dev/null || true
+          fi
+          echo "free GB after cleanup: $(df -g / | tail -1 | awk '{print $4}')" | tee -a ci-out/xcodes.txt
+
+      - name: Install build tools
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1
+          for t in cmake ninja ccache; do command -v $t >/dev/null || brew install $t; done
+          cmake --version | head -1; ninja --version; ccache --version | head -1
+
+      - name: Install the Swift release toolchain used to bootstrap
+        run: |
+          set -eu
+          URL=https://download.swift.org/swift-6.4.0-release/xcode/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE-osx.pkg
+          curl -fL --retry 3 --retry-delay 5 -o /tmp/swift.pkg "$URL"
+          sudo installer -pkg /tmp/swift.pkg -target / > /tmp/installer.log 2>&1 || { tail -20 /tmp/installer.log; exit 1; }
+          TC=$(ls -d /Library/Developer/Toolchains/swift-6.4*RELEASE.xctoolchain | head -1)
+          echo "BOOTSTRAP_ROOT=$TC/usr" >> "$GITHUB_ENV"
+          "$TC/usr/bin/swiftc" --version 2>&1 | tee ci-out/bootstrap.txt
+          rm -f /tmp/swift.pkg
+
+      - name: Restore compiler cache
+        uses: actions/cache/restore@v4
+        with:
+          path: /Users/runner/.ccache-ci
+          key: ccache-v1-none-${{ github.run_id }}
+          restore-keys: ccache-v1-
+
+      - name: Build the compiler (stages, within the time budget)
+        id: build
+        run: |
+          START=$(cat /tmp/job-start)
+          export BUDGET_SECONDS=$(( 20100 - ($(date +%s) - START) ))
+          export JOBS=3
+          ccache -z >/dev/null 2>&1 || true
+          set +e
+          scripts/ci/build-compiler.sh
+          rc=$?
+          ccache -s 2>&1 | tee ci-out/ccache.txt
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          echo "build script exit code: $rc"
+          exit 0
+
+      - name: Publish logs to the ci-logs branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "${{ github.run_id }}-${{ github.run_attempt }}"
+
+      - name: Save compiler cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: /Users/runner/.ccache-ci
+          key: ccache-v1-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.attempt || '0' }}
+
+      - name: Upload the compiler
+        if: steps.build.outputs.rc == '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiler-dist
+          path: dist/
+          retention-days: 30
+
+      - name: Continue automatically if only time ran out
+        if: always() && steps.build.outputs.rc == '124'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          N=$(( ${{ inputs.attempt || 1 }} + 1 ))
+          MAX=${{ inputs.max_attempts || 14 }}
+          if [ "$N" -le "$MAX" ]; then
+            gh workflow run compiler.yml --ref main \
+              -f runner="${{ inputs.runner || 'macos-15' }}" -f attempt="$N" -f max_attempts="$MAX"
+            echo "started attempt $N of $MAX"
+          else
+            echo "reached max attempts ($MAX); not continuing"
+          fi

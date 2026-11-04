@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "swiftVersion": "6.4.0",
+  "compilerHost": "arm64-apple-ios18.0",
+  "programTarget": "arm64-apple-ios16.0",
+  "sources": [
+    {
+      "name": "swift",
+      "repository": "https://github.com/swiftlang/swift.git",
+      "revision": "b8189d766d86ad7fc8106787d6ce9e402f38dd72",
+      "license": "Apache-2.0 WITH Swift-exception",
+      "archiveSHA256": "e8c3a9053c10906b492ceeb175e1e6c2d0693a0863a6fafee638b182ae97d3ee"
+    },
+    {
+      "name": "llvm-project",
+      "repository": "https://github.com/swiftlang/llvm-project.git",
+      "revision": "903b9faaae5c43ecc9b7e33f8db9c94c7429374a",
+      "license": "Apache-2.0 WITH LLVM-exception",
+      "archiveSHA256": "b18a9af1b0a41d38b309d76b5e2fab5bc1b60a06aed95063c9256c5d6815ddf8"
+    },
+    {
+      "name": "swift-syntax",
+      "repository": "https://github.com/swiftlang/swift-syntax.git",
+      "revision": "050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf",
+      "license": "Apache-2.0 WITH Swift-exception",
+      "archiveSHA256": "2112986ef9432364bc75f400e501138eadb3719cb43d15fb861c67d8286f0ad6"
+    },
+    {
+      "name": "swift-cmark",
+      "repository": "https://github.com/swiftlang/swift-cmark.git",
+      "revision": "924936d0427cb25a61169739a7660230bffa6ea6",
+      "license": "BSD-2-Clause AND MIT",
+      "archiveSHA256": "1c51659bd47c34df1c8976f893adc43ba039a98f6eac4fa95d53d1e08ba6072a"
+    },
+    {
+      "name": "string-processing",
+      "repository": "https://github.com/swiftlang/swift-experimental-string-processing.git",
+      "revision": "bf9cd9a0cfb0481f0825509aeb81ff3135bac250",
+      "license": "Apache-2.0 WITH Swift-exception",
+      "archiveSHA256": "5579ce5ca464037f2d3247ea52228693ea853892b18f3157402afe904270a7fe"
+    }
+  ]
+}

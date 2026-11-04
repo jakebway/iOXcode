@@ -1,0 +1,105 @@
+include(ExternalProject)
+include("${CMAKE_CURRENT_LIST_DIR}/ConfigurationInputs.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/SwiftRelease.cmake")
+
+if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" OR NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
+  message(FATAL_ERROR "Native compiler production currently requires an Apple silicon Mac.")
+endif()
+set(TOOLCHAIN_CACHE_ROOT "${CMAKE_BINARY_DIR}/native" CACHE PATH "Ignored source and build storage.")
+set(TOOLCHAIN_BOOTSTRAP_ROOT "" CACHE PATH "The Swift release toolchain's usr directory.")
+set(TOOLCHAIN_PLATFORM "device" CACHE STRING "The native compiler runs on a device or simulator.")
+set_property(CACHE TOOLCHAIN_PLATFORM PROPERTY STRINGS device simulator)
+set(TOOLCHAIN_BUILD_JOBS 4 CACHE STRING "Maximum jobs within the active native build stage.")
+if(NOT TOOLCHAIN_BUILD_JOBS MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR "TOOLCHAIN_BUILD_JOBS must be a positive integer.")
+endif()
+if(NOT EXISTS "${TOOLCHAIN_BOOTSTRAP_ROOT}/bin/swiftc")
+  message(FATAL_ERROR "Set TOOLCHAIN_BOOTSTRAP_ROOT to the pinned Swift toolchain usr directory.")
+endif()
+find_program(TOOLCHAIN_NINJA NAMES ninja REQUIRED)
+find_program(TOOLCHAIN_PATCH NAMES patch REQUIRED)
+get_filename_component(TOOLCHAIN_CACHE_ROOT "${TOOLCHAIN_CACHE_ROOT}" ABSOLUTE)
+set(TOOLCHAIN_SOURCE_ROOT "${TOOLCHAIN_CACHE_ROOT}/sources")
+include("${CMAKE_CURRENT_LIST_DIR}/Inputs.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/NativeLibraries.cmake")
+file(SHA256 "${TOOLCHAIN_LOCK_FILE}" lock_digest)
+toolchain_native_compiler_identity(TOOLCHAIN_NATIVE_COMPILER_IDENTITY)
+string(SHA256 input_digest
+  "${lock_digest}${TOOLCHAIN_PATCH_SHA256}${TOOLCHAIN_METADATA_PATCH_SHA256}${TOOLCHAIN_RESTRICTED_SWIFT_PATCH_SHA256}${TOOLCHAIN_RESTRICTED_LLVM_PATCH_SHA256}${TOOLCHAIN_NATIVE_COMPILER_IDENTITY}")
+set(TOOLCHAIN_BUILD_ROOT "${TOOLCHAIN_CACHE_ROOT}/build/${input_digest}")
+string(APPEND TOOLCHAIN_BUILD_ROOT "/${TOOLCHAIN_PLATFORM}")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  "${TOOLCHAIN_LOCK_FILE}" "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/DisableImmediateExecution.patch"
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch"
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedSwiftNativeProfile.patch"
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedLLVMNativeProfile.patch")
+
+execute_process(COMMAND "${TOOLCHAIN_BOOTSTRAP_ROOT}/bin/swiftc" --version
+  OUTPUT_VARIABLE bootstrap_version COMMAND_ERROR_IS_FATAL ANY)
+toolchain_matches_swift_release(bootstrap_matches "${bootstrap_version}" "${TOOLCHAIN_SWIFT_VERSION}")
+if(NOT bootstrap_matches)
+  message(FATAL_ERROR "The bootstrap compiler must match Swift ${TOOLCHAIN_SWIFT_VERSION}.")
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/SourceCache.cmake")
+set(source_targets "")
+foreach(name IN LISTS TOOLCHAIN_SOURCE_NAMES)
+  toolchain_add_source("${name}")
+  list(APPEND source_targets source-${name})
+endforeach()
+add_custom_target(toolchain-sources DEPENDS ${source_targets})
+
+function(toolchain_native_stage name source profile)
+  set(stage_arguments
+    "-DTOOLCHAIN_PLATFORM:STRING=${TOOLCHAIN_PLATFORM}"
+    "-DTOOLCHAIN_BUILD_ROOT:PATH=${TOOLCHAIN_BUILD_ROOT}"
+    "-DTOOLCHAIN_SOURCE_ROOT:PATH=${TOOLCHAIN_SOURCE_ROOT}"
+    "-DTOOLCHAIN_NINJA:FILEPATH=${TOOLCHAIN_NINJA}")
+  if(name STREQUAL "swift-ios")
+    list(APPEND stage_arguments
+      "-DTOOLCHAIN_BOOTSTRAP_ROOT:PATH=${TOOLCHAIN_BOOTSTRAP_ROOT}"
+      "-DCMAKE_PROJECT_Swift_INCLUDE:FILEPATH=${TOOLCHAIN_REPOSITORY_ROOT}/CMake/IncludeBridge.cmake")
+  endif()
+  ExternalProject_Add(${name}
+    PREFIX "${TOOLCHAIN_BUILD_ROOT}/projects/${name}"
+    SOURCE_DIR "${source}"
+    BINARY_DIR "${TOOLCHAIN_BUILD_ROOT}/${name}"
+    DOWNLOAD_COMMAND ""
+    UPDATE_COMMAND ""
+    CMAKE_GENERATOR Ninja
+    CMAKE_ARGS ${stage_arguments}
+      -C "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/Profiles/${profile}.cmake"
+    BUILD_COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR>
+      --parallel "${TOOLCHAIN_BUILD_JOBS}" --target ${ARGN}
+    BUILD_ALWAYS TRUE
+    INSTALL_COMMAND ""
+    EXCLUDE_FROM_ALL TRUE)
+  set(configuration_inputs
+    "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/Profiles/${profile}.cmake"
+    "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/Profiles/Common.cmake"
+    "${TOOLCHAIN_LOCK_FILE}"
+    "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/Inputs.cmake")
+  if(name STREQUAL "llvm-ios")
+    list(APPEND configuration_inputs
+      "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/IncludeAppleFileSystemMetadata.cmake")
+  endif()
+  if(name STREQUAL "llvm-ios" OR name STREQUAL "swift-ios")
+    list(APPEND configuration_inputs
+      "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/Profiles/RestrictedNative.cmake")
+  endif()
+  toolchain_watch_configuration(${name} ${configuration_inputs})
+endfunction()
+
+toolchain_native_stage(host-tools "${TOOLCHAIN_LLVM_SOURCE}/llvm" HostTools llvm-tblgen clang-tblgen)
+add_dependencies(host-tools source-llvm-project)
+toolchain_native_stage(llvm-ios "${TOOLCHAIN_LLVM_SOURCE}/llvm" LLVM-IOS ${TOOLCHAIN_NATIVE_LIBRARIES})
+add_dependencies(llvm-ios host-tools)
+toolchain_native_stage(cmark-ios "${TOOLCHAIN_CMARK_SOURCE}" CmarkIOS libcmark-gfm)
+add_dependencies(cmark-ios source-swift-cmark llvm-ios)
+toolchain_native_stage(swift-ios "${TOOLCHAIN_SWIFT_SOURCE}" SwiftIOS SwiftCompilerBridge)
+add_dependencies(swift-ios source-swift source-swift-syntax source-string-processing cmark-ios)
+add_custom_target(toolchain-compiler DEPENDS swift-ios)
+
+message(STATUS "Compiler host ${TOOLCHAIN_COMPILER_HOST}. Program target ${TOOLCHAIN_PROGRAM_TARGET}.")
+message(STATUS "Native build root ${TOOLCHAIN_BUILD_ROOT}")
+message(STATUS "Compiler production is explicit. Build toolchain-compiler only with a resource budget.")
