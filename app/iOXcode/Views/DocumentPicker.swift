@@ -7,6 +7,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
     let types: [UTType]
     let copy: Bool
     let onPick: (URL) -> Void
+    var onCancel: () -> Void = {}
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
         let vc = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: copy)
@@ -19,6 +20,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
 
     final class Coordinator: NSObject, UIDocumentPickerDelegate {
         let onPick: (URL) -> Void
+    var onCancel: () -> Void = {}
         init(_ onPick: @escaping (URL) -> Void) { self.onPick = onPick }
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
             if let u = urls.first { onPick(u) }

@@ -43,10 +43,10 @@ struct ProjectsView: View {
                 Button("Cancel", role: .cancel) {}
             }
             .fullScreenCover(isPresented: $pickingFolder) {
-                DocumentPicker(types: [.folder], copy: false) { model.importProject($0) }
+                DocumentPicker(types: [.folder], copy: false, onPick: { u in pickingFolder = false; model.importProject(u) }, onCancel: { pickingFolder = false })
             }
             .fullScreenCover(isPresented: $pickingZip) {
-                DocumentPicker(types: [.zip], copy: true) { model.importProject($0) }
+                DocumentPicker(types: [.zip], copy: true, onPick: { u in pickingZip = false; model.importProject(u) }, onCancel: { pickingZip = false })
             }
         }
         .sheet(isPresented: $model.shareIPA) {
@@ -93,7 +93,7 @@ struct SetupView: View {
             .navigationTitle("Setup")
             .onAppear { model.refresh() }
             .fullScreenCover(isPresented: $pickingSDK) {
-                DocumentPicker(types: [.zip], copy: true) { model.importSDK($0, scoped: false) }
+                DocumentPicker(types: [.zip], copy: true, onPick: { u in pickingSDK = false; model.importSDK(u, scoped: false) }, onCancel: { pickingSDK = false })
             }
         }
     }
