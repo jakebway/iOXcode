@@ -1,0 +1,162 @@
+import Foundation
+
+struct SDKLayout {
+    let sdk: URL            // iPhoneOS.sdk
+    let swiftResource: URL  // usr/lib/swift  (shims, iphoneos stdlib modules)
+    let clangResource: URL? // usr/lib/clang/<version>
+
+    static func locate() -> SDKLayout? {
+        let fm = FileManager.default
+        guard let en = fm.enumerator(at: Paths.sdkRoot, includingPropertiesForKeys: nil, options: [.skipsPackageDescendants]) else { return nil }
+        var sdk: URL?
+        var swift: URL?
+        var clang: URL?
+        for case let u as URL in en {
+            let p = u.path
+            if sdk == nil, u.lastPathComponent.hasSuffix(".sdk"), u.lastPathComponent.hasPrefix("iPhoneOS") { sdk = u; en.skipDescendants(); continue }
+            if swift == nil, p.hasSuffix("usr/lib/swift"), fm.fileExists(atPath: p + "/shims") { swift = u; en.skipDescendants(); continue }
+            if clang == nil, p.hasSuffix("usr/lib/clang") {
+                let vs = (try? fm.contentsOfDirectory(atPath: p)) ?? []
+                if let v = vs.sorted().last { clang = u.appendingPathComponent(v) }
+                en.skipDescendants()
+            }
+        }
+        guard let s = sdk, let sw = swift else { return nil }
+        return SDKLayout(sdk: s, swiftResource: sw, clangResource: clang)
+    }
+}
+
+enum BuildError: Error, CustomStringConvertible {
+    case message(String)
+    var description: String { if case .message(let s) = self { return s }; return "error" }
+}
+
+final class BuildPipeline {
+    let project: Project
+    let log: LogSink
+    init(project: Project, log: LogSink) { self.project = project; self.log = log }
+
+    /// Returns the finished .ipa.
+    func run() throws -> URL {
+        let fm = FileManager.default
+        let m = project.manifest
+        let t0 = Date()
+        log.log("== Building \(m.name) (\(m.bundleId))")
+        log.log("memory available: \(CompilerHost.shared.availableMemoryMB) MB")
+
+        if let err = CompilerHost.shared.load() { throw BuildError.message(err) }
+        guard let layout = SDKLayout.locate() else {
+            throw BuildError.message("No iPhone SDK found. Open Setup and import the SDK pack first.")
+        }
+        let files = project.swiftFiles(for: m)
+        guard !files.isEmpty else { throw BuildError.message("No .swift files found in the project.") }
+        log.log("\(files.count) Swift files, SDK \(layout.sdk.lastPathComponent)")
+
+        let work = Paths.work.appendingPathComponent(m.name, isDirectory: true)
+        try? fm.removeItem(at: work)
+        let moduleCache = Paths.caches.appendingPathComponent("ModuleCache", isDirectory: true)
+        try fm.createDirectory(at: work, withIntermediateDirectories: true)
+        try fm.createDirectory(at: moduleCache, withIntermediateDirectories: true)
+
+        // 1. compile all Swift to one object (whole module)
+        let obj = work.appendingPathComponent("\(m.name).o")
+        let target = "arm64-apple-ios\(m.minOS)"
+        var fe: [String] = ["-c"] + files.map { $0.path }
+        fe += ["-target", target, "-sdk", layout.sdk.path,
+               "-module-name", m.name, "-parse-as-library", "-swift-version", m.swiftVersion,
+               "-resource-dir", layout.swiftResource.path,
+               "-module-cache-path", moduleCache.path,
+               "-enable-objc-interop", "-color-diagnostics",
+               "-o", obj.path]
+        if let clang = layout.clangResource { fe += ["-Xcc", "-resource-dir", "-Xcc", clang.path] }
+        switch m.optimization {
+        case "speed": fe += ["-O"]
+        case "size": fe += ["-Osize"]
+        default: fe += ["-Onone"]
+        }
+        if let h = m.bridgingHeader { fe += ["-import-objc-header", project.url.appendingPathComponent(h).path] }
+        fe += m.swiftFlags
+        log.log("-- compiling Swift")
+        let r1 = CompilerHost.shared.frontend(fe)
+        if !r1.message.isEmpty { log.log(r1.message) }
+        guard r1.exitCode == 0 else { throw BuildError.message("Swift compile failed (exit \(r1.exitCode))") }
+        log.log("compiled in \(Int(Date().timeIntervalSince(t0)))s")
+
+        // 2. link
+        let app = work.appendingPathComponent("Payload/\(m.name).app", isDirectory: true)
+        try fm.createDirectory(at: app, withIntermediateDirectories: true)
+        let exe = app.appendingPathComponent(m.name)
+        var ld: [String] = ["ld64.lld", "-arch", "arm64",
+                            "-platform_version", "ios", m.minOS, sdkVersion(layout.sdk),
+                            "-syslibroot", layout.sdk.path,
+                            "-L", layout.sdk.appendingPathComponent("usr/lib/swift").path,
+                            "-L", layout.swiftResource.appendingPathComponent("iphoneos").path,
+                            "-L", layout.swiftResource.deletingLastPathComponent().appendingPathComponent("swift-5.0/iphoneos").path]
+        for d in m.libraryDirs { ld += ["-L", project.url.appendingPathComponent(d).path] }
+        for l in m.libraries { ld += ["-l" + l] }
+        for f in m.frameworks { ld += ["-framework", f] }
+        ld += ["-lSystem", "-lc++", "-lobjc",
+               "-rpath", "/usr/lib/swift", "-rpath", "@executable_path/Frameworks",
+               "-dead_strip", "-e", "_main", obj.path, "-o", exe.path]
+        ld += m.linkerFlags
+        log.log("-- linking")
+        let r2 = CompilerHost.shared.link(ld)
+        if !r2.message.isEmpty { log.log(r2.message) }
+        guard r2.exitCode == 0 else { throw BuildError.message("Link failed (exit \(r2.exitCode))") }
+        chmod(exe.path, 0o755)
+
+        // 3. bundle
+        log.log("-- packaging")
+        try writeInfoPlist(m, to: app.appendingPathComponent("Info.plist"))
+        for r in m.resources {
+            let src = project.url.appendingPathComponent(r)
+            let dst = app.appendingPathComponent(src.lastPathComponent)
+            try? fm.removeItem(at: dst)
+            if fm.fileExists(atPath: src.path) { try fm.copyItem(at: src, to: dst) }
+            else { log.log("warning: resource not found: \(r)") }
+        }
+        if let icon = m.icon {
+            let src = project.url.appendingPathComponent(icon)
+            if fm.fileExists(atPath: src.path) { try? fm.copyItem(at: src, to: app.appendingPathComponent("AppIcon60x60@2x.png")) }
+        }
+        try fm.createDirectory(at: Paths.output, withIntermediateDirectories: true)
+        let ipa = Paths.output.appendingPathComponent("\(m.name).ipa")
+        try Zip.create(from: work.appendingPathComponent("Payload").deletingLastPathComponent().appendingPathComponent("Payload"), to: ipa, prefix: "Payload")
+        let attrs = try? fm.attributesOfItem(atPath: ipa.path)
+        let size = (attrs?[.size] as? NSNumber)?.intValue ?? 0
+        log.log("== Done in \(Int(Date().timeIntervalSince(t0)))s: \(ipa.lastPathComponent) (\(size / 1024) KB)")
+        return ipa
+    }
+
+    private func sdkVersion(_ sdk: URL) -> String {
+        let name = sdk.deletingPathExtension().lastPathComponent // iPhoneOS26.2
+        let v = name.replacingOccurrences(of: "iPhoneOS", with: "")
+        return v.isEmpty ? "18.0" : v
+    }
+
+    private func writeInfoPlist(_ m: Manifest, to url: URL) throws {
+        var d: [String: Any] = [
+            "CFBundleExecutable": m.name,
+            "CFBundleIdentifier": m.bundleId,
+            "CFBundleName": m.displayName ?? m.name,
+            "CFBundleDisplayName": m.displayName ?? m.name,
+            "CFBundleShortVersionString": m.version,
+            "CFBundleVersion": m.build,
+            "CFBundlePackageType": "APPL",
+            "CFBundleInfoDictionaryVersion": "6.0",
+            "MinimumOSVersion": m.minOS,
+            "CFBundleSupportedPlatforms": ["iPhoneOS"],
+            "UIDeviceFamily": [1, 2],
+            "LSRequiresIPhoneOS": true,
+            "UILaunchScreen": [String: Any](),
+            "UIRequiredDeviceCapabilities": ["arm64"],
+            "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"],
+        ]
+        if m.icon != nil {
+            d["CFBundleIcons"] = ["CFBundlePrimaryIcon": ["CFBundleIconFiles": ["AppIcon60x60"], "CFBundleIconName": "AppIcon"]]
+        }
+        for (k, v) in m.infoPlist { d[k] = v }
+        let data = try PropertyListSerialization.data(fromPropertyList: d, format: .xml, options: 0)
+        try data.write(to: url)
+    }
+}
