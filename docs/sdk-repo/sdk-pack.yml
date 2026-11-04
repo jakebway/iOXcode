@@ -1,0 +1,39 @@
+name: SDK pack - package the iPhone SDK for iOXcode
+
+# Put this file in a PRIVATE repo (Apple's SDK may not be shared publicly).
+# It builds sdk-pack.zip from the newest stable Xcode and publishes it as a release asset,
+# which the iOXcode app downloads with one button.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pack:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - name: Build the pack
+        run: |
+          set -eu
+          SEL=$(ls -d /Applications/Xcode*.app | grep -viE 'beta|rc|preview' | sort -V | tail -1)
+          SEL=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$SEL")
+          export DEVELOPER_DIR="$SEL/Contents/Developer"
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          TC=$DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr
+          P=pack; mkdir -p $P/usr/lib/swift $P/usr/lib/clang
+          cp -R "$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$SDK")" "$P/$(basename "$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$SDK")")"
+          for d in shims iphoneos clang; do [ -e "$TC/lib/swift/$d" ] && cp -R "$TC/lib/swift/$d" "$P/usr/lib/swift/$d"; done
+          mkdir -p $P/usr/lib/swift-5.0 && [ -d "$TC/lib/swift-5.0/iphoneos" ] && cp -R "$TC/lib/swift-5.0/iphoneos" "$P/usr/lib/swift-5.0/iphoneos" || true
+          cp -R "$TC/lib/clang/"* "$P/usr/lib/clang/"
+          echo "Xcode: $(xcodebuild -version | tr '\n' ' ')" > $P/PACK-INFO.txt
+          du -sh $P; (cd $P && zip -qry ../sdk-pack.zip .); ls -lh sdk-pack.zip
+
+      - name: Publish as a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="sdk-$(date +%Y%m%d-%H%M)"
+          gh release create "$TAG" sdk-pack.zip --repo "$GITHUB_REPOSITORY" --title "SDK pack $TAG" --notes "iPhone SDK pack for iOXcode"

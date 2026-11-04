@@ -75,10 +75,10 @@ final class AppModel: ObservableObject {
         refresh()
     }
 
-    func importSDK(_ url: URL) {
+    func importSDK(_ url: URL, scoped useScope: Bool = true) {
         importing = true
         importMessage = "Unpacking…"
-        let scoped = url.startAccessingSecurityScopedResource()
+        let scoped = useScope && url.startAccessingSecurityScopedResource()
         DispatchQueue.global(qos: .userInitiated).async {
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             do {
@@ -90,6 +90,22 @@ final class AppModel: ObservableObject {
                 DispatchQueue.main.async { self.importMessage = "Done"; self.importing = false; self.refresh() }
             } catch {
                 DispatchQueue.main.async { self.importMessage = "Failed: \(error)"; self.importing = false }
+            }
+        }
+    }
+
+    func downloadSDK(repo: String, token: String) {
+        guard !importing else { return }
+        Keychain.set("github-token", token)
+        UserDefaults.standard.set(repo, forKey: "sdk-repo")
+        importing = true; importMessage = "Downloading…"
+        Task {
+            do {
+                let zip = try await SDKDownloader.download(repo: repo, token: token)
+                await MainActor.run { self.importMessage = "Unpacking…" }
+                importSDK(zip, scoped: false)
+            } catch {
+                importMessage = "Failed: \(error)"; importing = false
             }
         }
     }

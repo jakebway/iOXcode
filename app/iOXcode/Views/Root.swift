@@ -69,6 +69,8 @@ struct ConsoleView: View {
 struct SetupView: View {
     @EnvironmentObject var model: AppModel
     @State private var pickingSDK = false
+    @State private var repo = UserDefaults.standard.string(forKey: "sdk-repo") ?? "jakebway/ioxcode-sdk"
+    @State private var token = Keychain.get("github-token") ?? ""
     var body: some View {
         NavigationView {
             Form {
@@ -79,7 +81,11 @@ struct SetupView: View {
                 }
                 Section("iPhone SDK pack") {
                     Text(model.sdkStatus)
-                    Button("Import SDK pack (.zip)") { pickingSDK = true }.disabled(model.importing)
+                    TextField("Private repo (owner/name)", text: $repo).autocapitalization(.none).disableAutocorrection(true)
+                    SecureField("GitHub token (read-only)", text: $token)
+                    Button("Download SDK pack") { model.downloadSDK(repo: repo, token: token) }
+                        .disabled(model.importing || token.isEmpty)
+                    Button("Or import a .zip from Files") { pickingSDK = true }.disabled(model.importing)
                     if !model.importMessage.isEmpty { Text(model.importMessage).font(.caption) }
                 }
                 Section { Button("Refresh") { model.refresh() } }
