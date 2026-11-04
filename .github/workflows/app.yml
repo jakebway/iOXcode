@@ -90,6 +90,19 @@ jobs:
           zip -qry iOXcode.ipa Payload
           ls -lh iOXcode.ipa
 
+      - name: Check the IPA is well formed
+        run: |
+          {
+            echo "### IPA check"; echo '```'
+            unzip -tq iOXcode.ipa | tail -1
+            ls -l iOXcode.ipa | awk '{print "size: " $5/1048576 " MB"}'
+            unzip -l iOXcode.ipa | awk 'NR>3{print $4}' | cut -d/ -f1-3 | sort -u | head -40
+            for f in Payload/iOXcode.app/Frameworks/*.dylib; do
+              echo "$(basename "$f"): $(vtool -show-build "$f" 2>/dev/null | grep -E 'platform|minos' | tr -s ' ' | tr '\n' ' ')"
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/upload-artifact@v4
         with:
           name: iOXcode-ipa
