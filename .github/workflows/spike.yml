@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   measure:
-    runs-on: macos-15
+    runs-on: ${{ inputs.runner || 'macos-14' }}
     timeout-minutes: 60
     defaults:
       run:
