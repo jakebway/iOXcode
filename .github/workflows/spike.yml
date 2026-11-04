@@ -1,0 +1,193 @@
+name: Spike - measure an on-device Swift build
+
+# Not a release build. Checks out the public jakebway/tamaios repo as the test subject and measures
+# what an on-device Swift compile of it would need:
+# compiler memory + time (cold/warm module cache, -Onone and -O), which SDK files are
+# actually read, and whether lld (the open-source Mach-O linker) can link the result.
+# Run it from the Actions tab (Run workflow), optionally with another tamaios branch or commit.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "jakebway/tamaios branch or commit to measure"
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: tamaios
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: jakebway/tamaios
+          ref: ${{ inputs.ref || 'main' }}
+          path: tamaios
+          lfs: false
+
+      - name: Toolchain and SDK facts
+        run: |
+          mkdir -p out
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          FE=$(xcrun -f swift-frontend)
+          TC=$(dirname "$(dirname "$FE")")
+          {
+            echo "## Toolchain"
+            xcodebuild -version
+            swift --version 2>&1
+            echo "SDK: $SDK ($(xcrun --sdk iphoneos --show-sdk-version))"
+            echo "toolchain: $TC"
+            ls -lh "$FE" "$(xcrun -f clang)"
+            echo "clang resource headers: $(du -sh "$TC/lib/clang" | cut -f1)"
+            echo "swift lib dir: $(du -sh "$TC/lib/swift" | cut -f1)"
+            echo "full iPhoneOS SDK: $(du -sh "$SDK" | cut -f1)"
+          } 2>&1 | tee out/toolchain.txt
+
+      - name: Build the Rust core (same steps as build.yml)
+        run: |
+          set -euo pipefail
+          git clone https://github.com/oreo-fox/tg18-emu upstream
+          git -C upstream checkout 41204c92e98a8882d5c90a9876d8990f3b63e285
+          git -C upstream apply ../patches/radio.patch
+          git -C upstream apply ../patches/ir_partner.patch
+          rustup target add aarch64-apple-ios
+          cd ffi
+          IPHONEOS_DEPLOYMENT_TARGET=16.0 cargo build --release --target aarch64-apple-ios
+          mkdir -p ../ios/lib
+          cp target/aarch64-apple-ios/release/libtamaios.a ../ios/lib/
+          ls -lh ../ios/lib/ | tee -a ../out/toolchain.txt
+
+      - name: Compile only the Swift (what the phone would do)
+        run: |
+          set +e
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          SRC=$(find ios/TamaiOS -name '*.swift' | sort)
+          echo "$SRC" | wc -l | xargs echo "swift files:" | tee out/compile-summary.txt
+          run() { # name, extra flags, fresh-cache?
+            local name=$1 flags=$2 fresh=$3
+            [ "$fresh" = "cold" ] && rm -rf out/mc
+            /usr/bin/time -l swiftc -wmo $flags -parse-as-library -swift-version 5 \
+              -target arm64-apple-ios16.0 -sdk "$SDK" \
+              -import-objc-header ios/TamaiOS/Bridge.h -module-name TamaiOS \
+              -module-cache-path out/mc -emit-object -o "out/$name.o" \
+              -emit-loaded-module-trace-path "out/$name.trace.json" \
+              $SRC > "out/$name.log" 2> "out/$name.time"
+            local rc=$?
+            {
+              echo "== $name ($fresh cache) exit=$rc =="
+              grep -E "real|maximum resident set size|peak memory footprint" "out/$name.time"
+              tail -3 "out/$name.log"
+            } | tee -a out/compile-summary.txt
+          }
+          run Onone-cold "-Onone" cold
+          run Onone-warm "-Onone" warm
+          run O-cold "-O" cold
+          run O-warm "-O" warm
+          exit 0
+
+      - name: Which SDK files does the compile actually read
+        run: |
+          set +e
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          python3 - "$SDK" <<'PY' | tee out/sdk-needed.txt
+          import json, os, sys
+          sdk = os.path.realpath(sys.argv[1])
+          seen = set()
+          try:
+              raw = open("out/O-cold.trace.json").read()
+              for line in raw.splitlines():
+                  line = line.strip()
+                  if not line:
+                      continue
+                  try:
+                      doc = json.loads(line)
+                  except Exception:
+                      continue
+                  def walk(x):
+                      if isinstance(x, str):
+                          if x.startswith("/"):
+                              seen.add(x)
+                      elif isinstance(x, list):
+                          for y in x: walk(y)
+                      elif isinstance(x, dict):
+                          for y in x.values(): walk(y)
+                  walk(doc)
+          except Exception as e:
+              print("trace not readable:", e)
+          def size(path):
+              total = 0
+              for r, _, fs in os.walk(path):
+                  for f in fs:
+                      try: total += os.path.getsize(os.path.join(r, f))
+                      except OSError: pass
+              return total
+          roots = {}
+          for p in seen:
+              rp = os.path.realpath(p)
+              if not rp.startswith(sdk): continue
+              rel = os.path.relpath(rp, sdk)
+              parts = rel.split(os.sep)
+              if "System/Library/Frameworks" in rel and len(parts) >= 4:
+                  key = os.sep.join(parts[:4])
+              elif rel.startswith("usr/lib/swift") and len(parts) >= 4:
+                  key = os.sep.join(parts[:4])
+              else:
+                  key = os.sep.join(parts[:3])
+              roots[key] = os.path.join(sdk, key)
+          tot = 0
+          for k in sorted(roots):
+              s = size(roots[k]) if os.path.isdir(roots[k]) else os.path.getsize(roots[k])
+              tot += s
+              print(f"{s/1e6:8.1f} MB  {k}")
+          print(f"\nloaded-module trace paths in SDK: {len(seen)}")
+          print(f"sum of directories touched: {tot/1e6:.1f} MB (lower bound: C headers and .tbd stubs read via the clang importer may be missing from the trace)")
+          PY
+
+      - name: Link with lld (the open-source Mach-O linker)
+        continue-on-error: true
+        run: |
+          set +e
+          brew install lld 2>&1 | tail -2
+          LLD=$(brew --prefix lld)/bin/ld64.lld
+          ls -l "$LLD"
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          SDKV=$(xcrun --sdk iphoneos --show-sdk-version)
+          FE=$(xcrun -f swift-frontend); TC=$(dirname "$(dirname "$FE")")
+          "$LLD" -arch arm64 -platform_version ios 16.0 "$SDKV" -syslibroot "$SDK" \
+            -L "$SDK/usr/lib/swift" -L "$TC/lib/swift/iphoneos" -L "$TC/lib/swift-5.0/iphoneos" \
+            -L ios/lib -ltamaios -lSystem -lc++ -rpath /usr/lib/swift -rpath @executable_path/Frameworks \
+            -dead_strip -e _main out/O-cold.o -o out/TamaiOS.bin 2>&1 | tee out/lld.log
+          echo "lld exit: ${PIPESTATUS[0]}" | tee -a out/lld.log
+          ls -lh out/TamaiOS.bin 2>&1 | tee -a out/lld.log
+          file out/TamaiOS.bin | tee -a out/lld.log
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "# On-device build spike"
+            echo '```'; cat out/toolchain.txt; echo '```'
+            echo "## Compile (swift-frontend peak memory is the maximum resident set size, in bytes)"
+            echo '```'; cat out/compile-summary.txt 2>/dev/null; echo '```'
+            echo "## SDK files read"
+            echo '```'; cat out/sdk-needed.txt 2>/dev/null; echo '```'
+            echo "## lld link"
+            echo '```'; cat out/lld.log 2>/dev/null; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ondevice-spike-results
+          path: |
+            tamaios/out/*.txt
+            tamaios/out/*.time
+            tamaios/out/*.log
+            tamaios/out/*.trace.json
+          retention-days: 14
