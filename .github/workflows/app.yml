@@ -55,6 +55,7 @@ jobs:
           ls -lh /tmp/compiler
           D=/tmp/compiler/libSwiftCompilerBridge.dylib
           echo "COMPILER_DYLIB=$D" >> "$GITHUB_ENV"
+          echo "COMPILER_DIR=/tmp/compiler" >> "$GITHUB_ENV"
           {
             echo "### Compiler library check"; echo '```'
             file "$D"; lipo -info "$D" 2>&1 || true
@@ -80,8 +81,8 @@ jobs:
           APP=$(ls -d app/build/Build/Products/Release-iphoneos/iOXcode.app)
           if [ -n "${COMPILER_DYLIB:-}" ]; then
             mkdir -p "$APP/Frameworks"
-            cp "$COMPILER_DYLIB" "$APP/Frameworks/"
-            echo "compiler embedded: $(ls -lh "$APP/Frameworks/libSwiftCompilerBridge.dylib" | awk '{print $5}')"
+            cp "$COMPILER_DIR"/*.dylib "$APP/Frameworks/"
+            echo "compiler embedded:"; ls -lh "$APP/Frameworks/"
           else
             echo "no compiler embedded"
           fi

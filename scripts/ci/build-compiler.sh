@@ -74,7 +74,37 @@ done
 
 say ""; say "## collect"
 mkdir -p "$ROOT/dist"
-find "$BUILD" -name 'libSwiftCompilerBridge.dylib' -print -exec cp {} "$ROOT/dist/" \; | tee -a "$S"
+BRIDGE=$(find "$BUILD" -name 'libSwiftCompilerBridge.dylib' | head -1)
+[ -n "$BRIDGE" ] || { say "bridge dylib not found"; exit 1; }
+cp "$BRIDGE" "$ROOT/dist/"
+# the bridge depends on companion dylibs (@rpath/...): copy the whole closure next to it
+python3 - "$BUILD" "$ROOT/dist" "$BRIDGE" <<'PY' 2>&1 | tee -a "$S"
+import os, shutil, subprocess, sys
+build, dist, bridge = sys.argv[1:4]
+index = {}
+for r, _, fs in os.walk(build):
+    for f in fs:
+        if f.endswith('.dylib'):
+            index.setdefault(f, os.path.join(r, f))
+todo = [bridge]; seen = {os.path.basename(bridge)}; missing = []; absolute = []
+while todo:
+    p = todo.pop()
+    out = subprocess.run(['otool', '-L', p], capture_output=True, text=True).stdout.splitlines()[1:]
+    for line in out:
+        name = line.strip().split(' ')[0]
+        if name.startswith(('@rpath/', '@loader_path/', '@executable_path/')):
+            base = os.path.basename(name)
+            if base in seen: continue
+            seen.add(base)
+            if base in index:
+                shutil.copy(index[base], dist); todo.append(index[base]); print('bundled', base)
+            else:
+                missing.append(base)
+        elif not name.startswith(('/usr/lib/', '/System/')):
+            absolute.append(name)
+print('missing:', missing or 'none')
+print('non-system absolute deps:', sorted(set(absolute)) or 'none')
+PY
 ls -lh "$ROOT/dist" | tee -a "$S"
 say "ALL STAGES DONE"
 exit 0
