@@ -1,2 +1,1 @@
-** BUILD FAILED **
-/Users/runner/work/iOXcode/iOXcode/app/iOXcode/Core/XcodeProject.swift:119:17: error: the compiler is unable to type-check this expression in reasonable time; try breaking up the expression into distinct sub-expressions
+** BUILD SUCCEEDED **
