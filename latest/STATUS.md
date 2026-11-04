@@ -22,3 +22,10 @@ llvm-ios: ok in 2747s
 cmark-ios: ok in 5s
 
 ## swift-ios (time left 16902s, disk: 35Gi free)
+swift-ios: ok in 4281s
+
+## collect
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/build/55a329f9d685404d50d437ef9abfa9eadda9586d98dcd87f9c32f7ca782c847d/device/swift-ios/lib/libSwiftCompilerBridge.dylib
+total 293432
+-rwxr-xr-x  1 runner  staff   143M Nov  4 21:39 libSwiftCompilerBridge.dylib
+ALL STAGES DONE
