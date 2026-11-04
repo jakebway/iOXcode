@@ -67,7 +67,9 @@ final class BuildPipeline {
             if let listed = m.swiftFiles, !listed.isEmpty {
                 throw BuildError.message("The project file lists \(listed.count) Swift files (for example \(listed[0])) but they are not in what you imported. Import the whole folder: the source files and the .xcodeproj together.")
             }
-            throw BuildError.message("No .swift files found in the project.")
+            let kids = ((try? fm.contentsOfDirectory(atPath: project.url.path)) ?? []).sorted()
+            let shown = kids.prefix(12).joined(separator: ", ")
+            throw BuildError.message("No .swift files and no .xcodeproj found. The imported folder contains: \(kids.isEmpty ? "nothing" : shown). Import the folder that holds your Swift files or the .xcodeproj.")
         }
         log.log("\(files.count) Swift files, SDK \(layout.sdk.lastPathComponent)")
         for w in project.warnings { log.log("note: \(w)") }
