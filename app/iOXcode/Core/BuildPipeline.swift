@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 struct SDKLayout {
     let sdk: URL            // iPhoneOS.sdk
@@ -159,11 +160,11 @@ final class BuildPipeline {
             else { log.log("warning: resource not found: \(r)") }
         }
         var m2 = m
-        if m2.icon == nil, let ic = iconFromCatalog { try? fm.copyItem(at: ic, to: app.appendingPathComponent("AppIcon60x60@2x.png")); m2.icon = "-" }
+        if m2.icon == nil, let ic = iconFromCatalog { IconWriter.write(ic, into: app, log: log); m2.icon = "-" }
         try writeInfoPlist(m2, to: app.appendingPathComponent("Info.plist"), base: project.root)
         if let icon = m.icon, icon != "-" {
             let src = project.root.appendingPathComponent(icon)
-            if fm.fileExists(atPath: src.path) { try? fm.copyItem(at: src, to: app.appendingPathComponent("AppIcon60x60@2x.png")) }
+            if fm.fileExists(atPath: src.path) { IconWriter.write(src, into: app, log: log) }
         }
         try fm.createDirectory(at: Paths.output, withIntermediateDirectories: true)
         let ipa = Paths.output.appendingPathComponent("\(m.name).ipa")
@@ -207,7 +208,7 @@ final class BuildPipeline {
             }
         }
         if m.icon != nil {
-            d["CFBundleIcons"] = ["CFBundlePrimaryIcon": ["CFBundleIconFiles": ["AppIcon60x60"], "CFBundleIconName": "AppIcon"]]
+            d["CFBundleIcons"] = ["CFBundlePrimaryIcon": ["CFBundleIconFiles": ["AppIcon60x60", "AppIcon76x76"]]]
         }
         for (k, v) in m.infoPlist { d[k] = v }
         let data = try PropertyListSerialization.data(fromPropertyList: d, format: .xml, options: 0)
@@ -255,5 +256,23 @@ enum Assets {
         }
         if colorSets > 0 { log.log("note: \(colorSets) named colors in \(catalog.lastPathComponent) are not available (Color(\"name\") needs a compiled catalog)") }
         return icon
+    }
+}
+
+/// The home screen only accepts loose icons at their exact pixel sizes, so the big source image is
+/// scaled to each size (flattened onto black, since icons can't be transparent).
+enum IconWriter {
+    static func write(_ source: URL, into app: URL, log: LogSink) {
+        guard let img = UIImage(contentsOfFile: source.path) else { log.log("warning: could not read app icon"); return }
+        let sizes: [(String, CGFloat)] = [("AppIcon60x60@2x", 120), ("AppIcon60x60@3x", 180), ("AppIcon76x76@2x", 152), ("AppIcon76x76@2x~ipad", 152)]
+        for (name, px) in sizes {
+            let fmt = UIGraphicsImageRendererFormat()
+            fmt.scale = 1; fmt.opaque = true
+            let out = UIGraphicsImageRenderer(size: CGSize(width: px, height: px), format: fmt).image { ctx in
+                UIColor.black.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: px, height: px))
+                img.draw(in: CGRect(x: 0, y: 0, width: px, height: px))
+            }
+            if let d = out.pngData() { try? d.write(to: app.appendingPathComponent(name + ".png")) }
+        }
     }
 }
