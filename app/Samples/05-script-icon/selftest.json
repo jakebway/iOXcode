@@ -1,0 +1,1 @@
+{"title": "Build script (Python + Pillow) draws the app icon", "expect": ["Info.plist", "AppIcon60x60@2x.png", "AppIcon60x60@3x.png"]}

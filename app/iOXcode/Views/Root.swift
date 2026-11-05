@@ -104,6 +104,12 @@ struct SetupView: View {
                 Section("Compiler") {
                     Text(model.compilerStatus)
                 }
+                Section("Test report") {
+                    if model.testing { HStack { ProgressView(); Text(model.testStatus).padding(.leading, 8) } }
+                    Button("Run quick test (samples)") { model.runSelfTest(includeRepos: false) }.disabled(model.testing || model.building)
+                    Button("Run full test (samples + GitHub apps)") { model.runSelfTest(includeRepos: true) }.disabled(model.testing || model.building)
+                    if let u = model.reportURL { Button("Share last report") { model.lastIPA = u; model.shareIPA = true } }
+                }
                 Section("iPhone SDK pack") {
                     Text(model.importing ? model.importMessage : model.sdkStatus)
                     Button("Import SDK pack (.zip)") { FilePicker.present(types: [.zip], copy: true) { model.importSDK($0, scoped: false) } }.disabled(model.importing)

@@ -9,6 +9,9 @@ targets:
     platform: iOS
     sources:
       - path: iOXcode
+      - path: Samples
+        type: folder
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jakebway.ioxcode

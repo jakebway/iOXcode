@@ -49,6 +49,34 @@ final class AppModel: ObservableObject {
         else { compilerStatus = "Present" }
     }
 
+    @Published var testing = false
+    @Published var testStatus = ""
+    @Published var reportURL: URL?
+
+    /// The test report: builds the sample projects (and, if asked, real GitHub repos) and writes a report.
+    func runSelfTest(includeRepos: Bool) {
+        guard !building, !testing else { return }
+        testing = true
+        testStatus = "Starting…"
+        console.clear()
+        console.line("Test report is running. This takes a few minutes.")
+        if let e = CompilerHost.shared.load() { console.line(e) }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let r = SelfTest.run(includeRepos: includeRepos) { msg in
+                Task { @MainActor in self.testStatus = msg; self.console.line(msg) }
+            }
+            DispatchQueue.main.async {
+                self.console.line(r.text)
+                self.reportURL = r.file
+                self.testing = false
+                self.testStatus = ""
+                self.lastIPA = r.file
+                self.shareIPA = true
+                self.tab = 1
+            }
+        }
+    }
+
     func loadCompiler() {
         if let e = CompilerHost.shared.load() { compilerStatus = e; console.line(e) }
         else { compilerStatus = "Loaded (ABI \(CompilerHost.shared.abiVersion))" }
