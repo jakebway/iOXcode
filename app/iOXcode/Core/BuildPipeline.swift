@@ -232,7 +232,7 @@ final class BuildPipeline {
             if files.isEmpty { continue }
             log.log("-- module \(name) (\(files.count) files)")
             let o = work.appendingPathComponent("pkg-\(name).o")
-            var fe = ["-c"] + files + common + ["-module-name", name, "-swift-version", "5",
+            var fe = ["-c"] + files + common + ["-module-name", name, "-package-name", (mod["package"] as? String) ?? name, "-swift-version", "5",
                       "-emit-module", "-emit-module-path", moduleDir.appendingPathComponent("\(name).swiftmodule").path,
                       "-I", moduleDir.path, "-o", o.path, "-O"]
             for d in (mod["defines"] as? [String]) ?? [] { fe += ["-D", d] }
