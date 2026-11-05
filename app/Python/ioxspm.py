@@ -358,7 +358,7 @@ def parse_dependency(dep):
                     req = {"kind": "branch", "value": inner}
                 elif v.name == "revision":
                     req = {"kind": "revision", "value": inner}
-    return {"url": url, "name": dep.get("name"), "req": req}
+    return {"url": url, "name": dep.get("name"), "req": req, "local": bool(dep.get("path") and not dep.get("url"))}
 
 
 # ---------------------------------------------------------------- GitHub access
@@ -558,7 +558,10 @@ def resolve(request_path):
         order.append(key)
         for dep in man["deps"]:
             if dep["url"]:
-                queue.append({"url": dep["url"], "req": dep["req"]})
+                u = dep["url"]
+                if dep.get("local"):
+                    u = os.path.normpath(os.path.join(d, u))
+                queue.append({"url": u, "req": dep["req"]})
         notes.append("package %s %s" % (man["name"], ref))
 
     # index every target by (package key, name) and products by name

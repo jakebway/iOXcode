@@ -178,16 +178,66 @@ enum XcodeProjectReader {
                 }
             }
         }
+        // Folder-synced groups (Xcode 16+): every file in the folder belongs to the target, except listed exceptions.
+        var syncedDirs: [String] = []
+        var syncedExcludes: [String] = []
+        for gid in (target.value["fileSystemSynchronizedGroups"] as? [String]) ?? [] {
+            guard let g = objects[gid], let dir = resolve(gid) else { continue }
+            syncedDirs.append(dir)
+            for eid in (g["exceptions"] as? [String]) ?? [] {
+                guard let ex = objects[eid], (ex["target"] as? String) == nil || (ex["target"] as? String) == target.key else { continue }
+                for e in (ex["membershipExceptions"] as? [String]) ?? [] { syncedExcludes.append(dir + "/" + e) }
+            }
+        }
+        if !syncedDirs.isEmpty {
+            let fm = FileManager.default
+            let ex = syncedExcludes.map { root.appendingPathComponent($0).standardizedFileURL.path }
+            for d in syncedDirs {
+                let base = root.appendingPathComponent(d)
+                guard let en = fm.enumerator(at: base, includingPropertiesForKeys: nil) else { continue }
+                for case let u as URL in en {
+                    if u.lastPathComponent.hasPrefix(".") { en.skipDescendants(); continue }
+                    let path = u.standardizedFileURL.path
+                    if ex.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) { en.skipDescendants(); continue }
+                    if u.pathExtension == "swift" { swiftFiles.append(String(path.dropFirst(root.standardizedFileURL.path.count + 1))) }
+                }
+            }
+            m.sources = syncedDirs
+            m.excludes = syncedExcludes
+            m.sourceResources = true
+        }
+
+        // Swift packages that live inside the project folder (referenced by path)
+        var localDirs: [String: String] = [:]      // relative dir -> Package.swift text
+        func addLocal(_ rel: String) {
+            let pkg = root.appendingPathComponent(rel).appendingPathComponent("Package.swift")
+            if let t = try? String(contentsOf: pkg, encoding: .utf8) { localDirs[rel] = t }
+        }
+        for (id, o) in objects {
+            if (o["isa"] as? String) == "XCLocalSwiftPackageReference", let rel = o["relativePath"] as? String { addLocal(rel) }
+            else if (o["isa"] as? String) == "PBXFileReference", (o["lastKnownFileType"] as? String) == "wrapper", let rel = resolve(id) { addLocal(rel) }
+        }
+
         // Swift packages: XCRemoteSwiftPackageReference + the products this target links
         var wanted: [String: [String]] = [:]     // package reference id -> product names
         for pid in (target.value["packageProductDependencies"] as? [String]) ?? [] {
-            guard let dep = objects[pid], let pname = dep["productName"] as? String, let pref = dep["package"] as? String else { continue }
-            wanted[pref, default: []].append(pname)
+            guard let dep = objects[pid], let pname = dep["productName"] as? String else { continue }
+            if let pref = dep["package"] as? String { wanted[pref, default: []].append(pname) }
+            else if let rel = localDirs.first(where: { $0.value.contains("\"\(pname)\"") })?.key { wanted["local:" + rel, default: []].append(pname) }
         }
         var packages: [PackageRef] = []
         for (id, products) in wanted {
+            if id.hasPrefix("local:") {
+                let rel = String(id.dropFirst(6))
+                let abs = root.appendingPathComponent(rel).standardizedFileURL.path
+                packages.append(PackageRef(name: (rel as NSString).lastPathComponent, url: abs, kind: "local", value: "", products: products))
+                continue
+            }
             guard let o = objects[id] else { continue }
-            if let url = o["repositoryURL"] as? String {
+            if let rel = o["relativePath"] as? String {
+                let abs = root.appendingPathComponent(rel).standardizedFileURL.path
+                packages.append(PackageRef(name: (rel as NSString).lastPathComponent, url: abs, kind: "local", value: "", products: products))
+            } else if let url = o["repositoryURL"] as? String {
                 var kind = "branch", value = "HEAD"
                 if let r = o["requirement"] as? [String: Any] {
                     switch r["kind"] as? String ?? "" {
@@ -201,8 +251,6 @@ enum XcodeProjectReader {
                     }
                 }
                 packages.append(PackageRef(name: (url as NSString).lastPathComponent.replacingOccurrences(of: ".git", with: ""), url: url, kind: kind, value: value, products: products))
-            } else if let rel = o["relativePath"] as? String {
-                warnings.append("local Swift package \(rel) is not supported yet")
             }
         }
         m.packages = packages
