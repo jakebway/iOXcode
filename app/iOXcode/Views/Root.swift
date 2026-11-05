@@ -9,6 +9,9 @@ struct RootView: View {
             ConsoleView().tabItem { Label("Console", systemImage: "terminal") }.tag(1)
             SetupView().tabItem { Label("Setup", systemImage: "gearshape") }.tag(2)
         }
+        .sheet(isPresented: $model.shareIPA) {
+            if let u = model.lastIPA { ShareSheet(items: [u]) }
+        }
         .alert(model.notice ?? "", isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
             Button("OK", role: .cancel) {}
         }
@@ -40,9 +43,6 @@ struct ProjectsView: View {
             .onAppear { model.refresh() }
             .refreshable { model.refresh() }
         }
-        .sheet(isPresented: $model.shareIPA) {
-            if let u = model.lastIPA { ShareSheet(items: [u]) }
-        }
     }
 }
 
@@ -50,19 +50,35 @@ struct ConsoleView: View {
     @EnvironmentObject var model: AppModel
     var body: some View {
         NavigationView {
+            ConsoleBody(console: model.console, building: model.building)
+                .navigationTitle(model.building ? "Building…" : "Console")
+                .toolbar {
+                    if let u = model.lastIPA, !model.building {
+                        Button { model.shareIPA = true } label: { Image(systemName: "square.and.arrow.up") }
+                            .help(u.lastPathComponent)
+                    }
+                    Button { UIPasteboard.general.string = model.console.text } label: { Image(systemName: "doc.on.doc") }
+                }
+        }
+    }
+}
+
+/// Watches the Console object itself, so new lines show up while a build is running.
+struct ConsoleBody: View {
+    @ObservedObject var console: Console
+    let building: Bool
+    var body: some View {
+        ScrollViewReader { proxy in
             ScrollView {
-                Text(model.console.text.isEmpty ? "Build output appears here." : model.console.text)
-                    .font(.system(size: 11, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .leading).padding()
-                    .textSelection(.enabled)
-            }
-            .navigationTitle(model.building ? "Building…" : "Console")
-            .toolbar {
-                if let u = model.lastIPA, !model.building {
-                    Button { model.shareIPA = true } label: { Image(systemName: "square.and.arrow.up") }
-                    .help(u.lastPathComponent)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(console.text.isEmpty ? (building ? "Starting…" : "Build output appears here.") : String(console.text.suffix(30_000)))
+                        .font(.system(size: 11, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                    Color.clear.frame(height: 1).id("end")
                 }
             }
+            .onChange(of: console.text) { _ in proxy.scrollTo("end", anchor: .bottom) }
         }
     }
 }

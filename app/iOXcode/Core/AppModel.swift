@@ -59,7 +59,14 @@ final class AppModel: ObservableObject {
         building = true
         tab = 1
         console.clear()
-        let sink = LogSink { [weak self] s in Task { @MainActor in self?.console.line(s) } }
+        let logURL = Paths.output.appendingPathComponent("last-build.log")
+        try? FileManager.default.createDirectory(at: Paths.output, withIntermediateDirectories: true)
+        FileManager.default.createFile(atPath: logURL.path, contents: nil)
+        let logFile = try? FileHandle(forWritingTo: logURL)
+        let sink = LogSink { [weak self] s in
+            logFile?.write(Data((s.hasSuffix("\n") ? s : s + "\n").utf8))
+            Task { @MainActor in self?.console.line(s) }
+        }
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let ipa = try BuildPipeline(project: p, log: sink).run()
