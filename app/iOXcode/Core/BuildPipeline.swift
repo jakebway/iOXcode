@@ -102,7 +102,8 @@ final class BuildPipeline {
             try? fm.createSymbolicLink(atPath: resourceDir.appendingPathComponent("clang").path, withDestinationPath: c.path)
             log.log("clang headers: \(c == bundled ? "built-in (matching)" : "from the SDK pack (may not match)")")
         }
-        var fe: [String] = ["-c"] + files.map { $0.path }
+        let sourcesForCompile = PreviewStripper.prepare(files, root: project.root, work: work, log: log)
+        var fe: [String] = ["-c"] + sourcesForCompile.map { $0.path }
         fe += ["-target", target, "-sdk", layout.sdk.path,
                "-module-name", m.name, "-parse-as-library", "-swift-version", m.swiftVersion,
                "-resource-dir", resourceDir.path,
@@ -117,6 +118,7 @@ final class BuildPipeline {
         case "size": fe += ["-Osize"]
         default: fe += ["-Onone"]
         }
+        fe += MacroPlugins.arguments(log: log)
         if let h = m.bridgingHeader { fe += ["-import-objc-header", project.root.appendingPathComponent(h).path] }
         fe += m.swiftFlags
         log.log("-- compiling Swift")
@@ -334,5 +336,112 @@ enum Generator {
         guard needed(project), PythonHost.shared.isAvailable else { return }
         let r = PythonHost.shared.run(.shell("python3 -c 'import ioxgen; ioxgen.generate(\".\")'"), cwd: project.url, log: nil)
         if r.exitCode != 0 { log?.log("note: could not read project.yml / workflows: \(r.message.suffix(400))") }
+    }
+}
+
+/// Swift macros (@Observable, @TaskLocal, @OptionSet ...) are expanded by plugin libraries that ship inside
+/// the app as frameworks and are loaded in-process through the plugin server.
+enum MacroPlugins {
+    static func arguments(log: LogSink) -> [String] {
+        guard let fw = Bundle.main.privateFrameworksURL else { return [] }
+        let fm = FileManager.default
+        func binary(_ name: String) -> String? {
+            let p = fw.appendingPathComponent("\(name).framework/\(name)").path
+            return fm.fileExists(atPath: p) ? p : nil
+        }
+        guard let server = binary("SwiftInProcPluginServer") else {
+            log.log("note: Swift macros are not available in this build of the app (no plugin server inside)")
+            return []
+        }
+        var args = ["-in-process-plugin-server-path", server]
+        var names: [String] = []
+        for module in ["ObservationMacros", "SwiftMacros"] {
+            if let b = binary(module) { args += ["-load-resolved-plugin", "\(b)##\(module)"]; names.append(module) }
+        }
+        if !names.isEmpty { log.log("macros: \(names.joined(separator: ", "))") }
+        return args
+    }
+}
+
+/// `#Preview { ... }` only feeds Xcode's canvas, and its macro ships with Xcode, not with the SDK:
+/// those blocks are removed from a copy of each file before compiling.
+enum PreviewStripper {
+    static func prepare(_ files: [URL], root: URL, work: URL, log: LogSink) -> [URL] {
+        let fm = FileManager.default
+        let dir = work.appendingPathComponent("sources", isDirectory: true)
+        var out: [URL] = []
+        var changed = 0
+        for f in files {
+            guard let text = try? String(contentsOf: f, encoding: .utf8), text.contains("#Preview") else { out.append(f); continue }
+            let stripped = strip(text)
+            if stripped == text { out.append(f); continue }
+            var rel = f.standardizedFileURL.path
+            let base = root.standardizedFileURL.path + "/"
+            if rel.hasPrefix(base) { rel = String(rel.dropFirst(base.count)) } else { rel = f.lastPathComponent }
+            let dst = dir.appendingPathComponent(rel)
+            try? fm.createDirectory(at: dst.deletingLastPathComponent(), withIntermediateDirectories: true)
+            do { try stripped.write(to: dst, atomically: true, encoding: .utf8); out.append(dst); changed += 1 }
+            catch { out.append(f) }
+        }
+        if changed > 0 { log.log("removed #Preview blocks from \(changed) file(s)") }
+        return out
+    }
+
+    static func strip(_ text: String) -> String {
+        let chars = Array(text)
+        var result = ""
+        var i = 0
+        let n = chars.count
+        let key = Array("#Preview")
+        func matches(_ at: Int) -> Bool {
+            guard at + key.count <= n else { return false }
+            for k in 0..<key.count where chars[at + k] != key[k] { return false }
+            return true
+        }
+        // returns the index just after the balanced group starting at `start` (which holds the opener)
+        func skipBalanced(_ start: Int) -> Int {
+            let open = chars[start]
+            let close: Character = open == "{" ? "}" : open == "(" ? ")" : "]"
+            var depth = 0
+            var j = start
+            while j < n {
+                let c = chars[j]
+                if c == "\"" {
+                    // string literal (single-line or """ multi-line)
+                    if j + 2 < n, chars[j + 1] == "\"", chars[j + 2] == "\"" {
+                        j += 3
+                        while j + 2 < n, !(chars[j] == "\"" && chars[j + 1] == "\"" && chars[j + 2] == "\"") { j += chars[j] == "\\" ? 2 : 1 }
+                        j += 3; continue
+                    }
+                    j += 1
+                    while j < n, chars[j] != "\"", chars[j] != "\n" { j += chars[j] == "\\" ? 2 : 1 }
+                    j += 1; continue
+                }
+                if c == "/", j + 1 < n, chars[j + 1] == "/" { while j < n, chars[j] != "\n" { j += 1 }; continue }
+                if c == "/", j + 1 < n, chars[j + 1] == "*" {
+                    j += 2
+                    while j + 1 < n, !(chars[j] == "*" && chars[j + 1] == "/") { j += 1 }
+                    j += 2; continue
+                }
+                if c == open { depth += 1 }
+                else if c == close { depth -= 1; if depth == 0 { return j + 1 } }
+                j += 1
+            }
+            return n
+        }
+        func skipSpaces(_ at: Int) -> Int { var j = at; while j < n, chars[j] == " " || chars[j] == "\t" || chars[j] == "\n" || chars[j] == "\r" { j += 1 }; return j }
+        while i < n {
+            if matches(i), i == 0 || !(chars[i - 1].isLetter || chars[i - 1].isNumber || chars[i - 1] == "_") {
+                var j = i + key.count
+                var k = skipSpaces(j)
+                if k < n, chars[k] == "(" { j = skipBalanced(k); k = skipSpaces(j) }
+                if k < n, chars[k] == "{" { j = skipBalanced(k) } else { j = max(j, i + key.count) }
+                result += "// #Preview removed by iOXcode\n"
+                i = j
+                continue
+            }
+            result.append(chars[i]); i += 1
+        }
+        return result
     }
 }

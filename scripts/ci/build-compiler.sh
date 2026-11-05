@@ -77,16 +77,26 @@ mkdir -p "$ROOT/dist"
 BRIDGE=$(find "$BUILD" -name 'libSwiftCompilerBridge.dylib' | head -1)
 [ -n "$BRIDGE" ] || { say "bridge dylib not found"; exit 1; }
 cp "$BRIDGE" "$ROOT/dist/"
-# the bridge depends on companion dylibs (@rpath/...): copy the whole closure next to it
-python3 - "$BUILD" "$ROOT/dist" "$BRIDGE" <<'PY' 2>&1 | tee -a "$S"
+# macro plugins: the in-process plugin server and the macro libraries (built for iPhone, loaded by the compiler)
+mkdir -p "$ROOT/dist/plugins"
+EXTRA=()
+for n in SwiftInProcPluginServer ObservationMacros SwiftMacros; do
+  f=$(find "$BUILD" -name "lib$n.dylib" | head -1)
+  if [ -n "$f" ]; then cp "$f" "$ROOT/dist/plugins/"; EXTRA+=("$f"); say "plugin: $n"; else say "plugin missing: $n"; fi
+done
+# every dylib depends on companion dylibs (@rpath/...): copy the whole closure next to the bridge
+python3 - "$BUILD" "$ROOT/dist" "$BRIDGE" "${EXTRA[@]}" <<'PY' 2>&1 | tee -a "$S"
 import os, shutil, subprocess, sys
 build, dist, bridge = sys.argv[1:4]
+extra = sys.argv[4:]
 index = {}
 for r, _, fs in os.walk(build):
     for f in fs:
         if f.endswith('.dylib'):
             index.setdefault(f, os.path.join(r, f))
-todo = [bridge]; seen = {os.path.basename(bridge)}; missing = []; absolute = []
+todo = [bridge] + extra
+seen = {os.path.basename(bridge)} | {os.path.basename(e) for e in extra}
+missing = []; absolute = []
 while todo:
     p = todo.pop()
     out = subprocess.run(['otool', '-L', p], capture_output=True, text=True).stdout.splitlines()[1:]
@@ -105,6 +115,6 @@ while todo:
 print('missing:', missing or 'none')
 print('non-system absolute deps:', sorted(set(absolute)) or 'none')
 PY
-ls -lh "$ROOT/dist" | tee -a "$S"
+ls -lh "$ROOT/dist" "$ROOT/dist/plugins" | tee -a "$S"
 say "ALL STAGES DONE"
 exit 0

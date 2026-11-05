@@ -132,6 +132,29 @@ jobs:
           if [ -n "${COMPILER_DYLIB:-}" ]; then
             mkdir -p "$APP/Frameworks"
             cp "$COMPILER_DIR"/*.dylib "$APP/Frameworks/"
+            # macro plugins must be frameworks (the compiler only loads plugins from Frameworks/<Name>.framework/<Name>)
+            for d in "$COMPILER_DIR"/plugins/lib*.dylib; do
+              [ -f "$d" ] || continue
+              n=$(basename "$d" .dylib); n=${n#lib}
+              fw="$APP/Frameworks/$n.framework"; mkdir -p "$fw"
+              cp "$d" "$fw/$n"
+              install_name_tool -id "@rpath/$n.framework/$n" "$fw/$n"
+              install_name_tool -add_rpath "@loader_path/.." "$fw/$n" 2>/dev/null || true
+              cat > "$fw/Info.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>CFBundleExecutable</key><string>$n</string>
+          <key>CFBundleIdentifier</key><string>com.jakebway.ioxcode.plugin.$n</string>
+          <key>CFBundleName</key><string>$n</string>
+          <key>CFBundlePackageType</key><string>FMWK</string>
+          <key>CFBundleShortVersionString</key><string>1.0</string>
+          <key>CFBundleVersion</key><string>1</string>
+          <key>MinimumOSVersion</key><string>16.0</string>
+          </dict></plist>
+          PLIST
+              echo "plugin framework: $n"
+            done
             echo "compiler embedded:"; ls -lh "$APP/Frameworks/"
           else
             echo "no compiler embedded"
