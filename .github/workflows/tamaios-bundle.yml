@@ -48,7 +48,9 @@ jobs:
           mkdir -p ios/TamaiOS/BundledFirmware ios/TamaiOS/BundledAssets
           for f in firmware/*.bin; do [ -f "$f" ] && cp "$f" ios/TamaiOS/BundledFirmware/ || true; done
           for f in assets/*.zip; do [ -f "$f" ] && cp "$f" ios/TamaiOS/BundledAssets/ || true; done
+          python3 -m pip install --quiet pillow || python3 -m pip install --quiet --break-system-packages pillow
           python3 tools/icon.py ios/TamaiOS/Assets.xcassets/AppIcon.appiconset/icon.png
+          python3 tools/town.py ios/TamaiOS/TownBackground.png 1680 || true
           (cd ios && xcodegen generate)
           (cd ios && zip -qry ../../TamaiOS-project.zip . -x '*.DS_Store')
           ls -lh ../TamaiOS-project.zip
