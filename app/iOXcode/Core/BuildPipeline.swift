@@ -210,7 +210,7 @@ final class BuildPipeline {
         let fm = FileManager.default
         log.log("-- resolving Swift packages")
         let req: [String: Any] = [
-            "work": work.path, "cache": Paths.caches.appendingPathComponent("Packages").path,
+            "work": work.path, "root": project.root.path, "cache": Paths.caches.appendingPathComponent("Packages").path,
             "packages": m.packages.map { ["url": $0.url, "req": ["kind": $0.kind, "value": $0.value]] },
             "products": m.packages.flatMap { p in (p.products.isEmpty ? [p.name] : p.products).map { ["name": $0, "package": p.name] } },
         ]

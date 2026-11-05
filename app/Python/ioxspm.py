@@ -445,6 +445,34 @@ def pick_tag(tags, req):
     return pool[-1][1] if pool else None
 
 
+_PINS = {}
+
+
+def load_pins(root):
+    """Package.resolved the way Xcode finds it: project workspace, then .xcworkspace, then the folder itself."""
+    import glob
+    paths = (sorted(glob.glob(os.path.join(root, "*.xcodeproj", "project.xcworkspace", "xcshareddata", "swiftpm", "Package.resolved"))) +
+             sorted(glob.glob(os.path.join(root, "*.xcworkspace", "xcshareddata", "swiftpm", "Package.resolved"))) +
+             [os.path.join(root, "Package.resolved")])
+    pins = {}
+    for path in paths:
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except Exception:
+            continue
+        items = data.get("pins") or (data.get("object") or {}).get("pins") or []
+        for pin in items:
+            loc = pin.get("location") or pin.get("repositoryURL") or ""
+            gp = github_parts(loc)
+            st = pin.get("state") or {}
+            if gp and st.get("revision"):
+                pins.setdefault("/".join(gp).lower(), (st["revision"], st.get("version") or st.get("branch")))
+    return pins
+
+
 def fetch_package(url, req, cache_dir, notes):
     gp = github_parts(url)
     if not gp:
@@ -453,8 +481,12 @@ def fetch_package(url, req, cache_dir, notes):
     owner, repo = gp
     ref = None
     kind = req["kind"]
+    pin = _PINS.get((owner + "/" + repo).lower())
     try:
-        if kind in ("from", "minor", "exact"):
+        if pin:
+            ref = pin[0]
+            notes.append("%s/%s: pinned by Package.resolved at %s" % (owner, repo, pin[1] or ref[:8]))
+        elif kind in ("from", "minor", "exact"):
             tags, heads, head = list_refs(owner, repo)
             tag = pick_tag(tags, req)
             if tag:
@@ -538,6 +570,8 @@ def resolve(request_path):
         req = json.load(f)
     work = req["work"]
     cache = req.get("cache") or os.path.join(work, "packages")
+    global _PINS
+    _PINS = load_pins(req["root"]) if req.get("root") else {}
     os.makedirs(cache, exist_ok=True)
     notes = []
     packages = {}       # url key -> {"dir", "manifest"}
