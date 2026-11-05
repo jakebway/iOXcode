@@ -103,7 +103,7 @@ final class BuildPipeline {
                "-module-cache-path", moduleCache.path,
                "-enable-objc-interop", "-no-color-diagnostics",
                "-Xllvm", "-aarch64-use-tbi", "-empty-abi-descriptor", "-disable-clang-spi",
-               "-no-auto-bridging-header-chaining",
+               "-no-auto-bridging-header-chaining", "-enable-cross-import-overlays",
                "-target-sdk-version", sdkVersion(layout.sdk), "-target-sdk-name", "iphoneos" + sdkVersion(layout.sdk),
                "-o", obj.path]
         switch m.optimization {
