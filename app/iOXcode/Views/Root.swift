@@ -17,12 +17,11 @@ struct RootView: View {
 
 struct ProjectsView: View {
     @EnvironmentObject var model: AppModel
-    @State private var choosing = false
     var body: some View {
         NavigationView {
             List {
                 if model.projects.isEmpty {
-                    Text("No projects yet. Tap + and pick a folder or a .zip of your app.").foregroundColor(.secondary)
+                    Text("No projects yet. Tap + and pick a .zip of your project. Or copy a project folder into Files > On My iPhone > iOXcode > iOXcode > Projects, then pull down to refresh.").foregroundColor(.secondary)
                 }
                 ForEach(model.projects) { p in
                     VStack(alignment: .leading, spacing: 6) {
@@ -37,12 +36,9 @@ struct ProjectsView: View {
                 }
             }
             .navigationTitle("iOXcode")
-            .toolbar { Button { choosing = true } label: { Image(systemName: "plus") } }
-            .confirmationDialog("Add a project", isPresented: $choosing) {
-                Button("Choose a folder") { FilePicker.present(types: [.folder], copy: false) { model.importProject($0) } }
-                Button("Choose a .zip file") { FilePicker.present(types: [.zip], copy: true) { model.importProject($0) } }
-                Button("Cancel", role: .cancel) {}
-            }
+            .toolbar { Button { FilePicker.present(types: [.zip], copy: true) { model.importProject($0) } } label: { Image(systemName: "plus") } }
+            .onAppear { model.refresh() }
+            .refreshable { model.refresh() }
         }
         .sheet(isPresented: $model.shareIPA) {
             if let u = model.lastIPA { ShareSheet(items: [u]) }

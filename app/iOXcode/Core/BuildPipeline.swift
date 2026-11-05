@@ -89,7 +89,7 @@ final class BuildPipeline {
                "-resource-dir", layout.swiftResource.path,
                "-module-cache-path", moduleCache.path,
                "-enable-objc-interop", "-no-color-diagnostics",
-               "-Xllvm", "-aarch64-use-tbi", "-stack-check", "-empty-abi-descriptor", "-disable-clang-spi",
+               "-Xllvm", "-aarch64-use-tbi", "-empty-abi-descriptor", "-disable-clang-spi",
                "-no-auto-bridging-header-chaining",
                "-target-sdk-version", sdkVersion(layout.sdk), "-target-sdk-name", "iphoneos" + sdkVersion(layout.sdk),
                "-o", obj.path]
