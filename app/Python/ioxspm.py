@@ -647,6 +647,11 @@ def resolve(request_path):
         state[mid] = 1
         k, name = mid
         td = modules[mid]
+        if td["kind"] in ("macro", "plugin", "testTarget", "executableTarget", "systemLibrary", "binaryTarget"):
+            # not built on iPhone; its own dependencies (swift-syntax for macros) are not needed either
+            notes.append("%s (%s) is a %s target; not built on iPhone yet" % (name, packages[k]["manifest"]["name"], td["kind"]))
+            state[mid] = 2
+            return
         for d in td["deps"]:
             if d["kind"] == "target" or (d["kind"] == "byName" and (k, d["name"]) in modules):
                 if (k, d["name"]) in modules:
