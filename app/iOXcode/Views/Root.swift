@@ -31,8 +31,12 @@ struct ProjectsView: View {
                 }
                 ForEach(model.projects) { p in
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(p.name).font(.headline)
-                        Text(p.manifest.bundleId).font(.caption).foregroundColor(.secondary)
+                        NavigationLink(destination: FileBrowserView(folder: p.url, projectRoot: p.url, title: p.name)) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(p.name).font(.headline)
+                                Text(p.manifest.bundleId).font(.caption).foregroundColor(.secondary)
+                            }
+                        }
                         HStack {
                             Button("Build IPA") { model.build(p) }
                                 .buttonStyle(.borderedProminent).disabled(model.building)
