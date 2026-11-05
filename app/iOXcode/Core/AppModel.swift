@@ -126,6 +126,11 @@ final class AppModel: ObservableObject {
             }
             console.line("Imported project \(name)")
             notice = "Added \(name)"
+            let proj = Project(url: dest)
+            DispatchQueue.global(qos: .userInitiated).async {
+                Generator.refresh(proj, log: nil)
+                DispatchQueue.main.async { self.refresh() }
+            }
         } catch { console.line("Import failed: \(error)"); notice = "Import failed: \(error)" }
         refresh()
     }

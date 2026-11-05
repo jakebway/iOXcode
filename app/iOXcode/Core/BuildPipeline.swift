@@ -54,6 +54,7 @@ final class BuildPipeline {
     /// Returns the finished .ipa.
     func run() throws -> URL {
         let fm = FileManager.default
+        Generator.refresh(project, log: log)
         let m = project.manifest
         let t0 = Date()
         log.log("== Building \(m.name) (\(m.bundleId))")
@@ -152,8 +153,9 @@ final class BuildPipeline {
         // 3. bundle
         log.log("-- packaging")
         var iconFromCatalog: URL?
-        for r in m.resources {
-            let src = project.root.appendingPathComponent(r)
+        let resourceURLs = m.resources.map { project.root.appendingPathComponent($0) } + project.sourceResourceFiles(for: m)
+        for src in resourceURLs {
+            let r = src.lastPathComponent
             let ext = src.pathExtension.lowercased()
             if ext == "xcassets" { iconFromCatalog = iconFromCatalog ?? Assets.extract(catalog: src, into: app, log: log); continue }
             if ["storyboard", "xib"].contains(ext) { log.log("note: \(src.lastPathComponent) is not compiled yet (no interface compiler on device)"); continue }
@@ -210,7 +212,11 @@ final class BuildPipeline {
         ]
         for s in scripts {
             log.log("-- script: \(s.name)")
-            let r = PythonHost.shared.run(.shell(s.script), cwd: root, env: env, log: log)
+            var e = env
+            let cwd = s.dir.map { project.url.appendingPathComponent($0).standardizedFileURL } ?? root
+            e["GITHUB_WORKSPACE"] = project.url.path
+            e["RUNNER_TEMP"] = work.appendingPathComponent("runner").path
+            let r = PythonHost.shared.run(.shell(s.script), cwd: cwd, env: e, log: log)
             if r.exitCode != 0 {
                 if r.message.isEmpty || r.message.hasPrefix("This copy of iOXcode") || r.message.hasPrefix("Python could not start") { log.log(r.message) }
                 log.log("warning: script '\(s.name)' ended with code \(r.exitCode); continuing")
@@ -311,5 +317,22 @@ enum IconWriter {
             }
             if let d = out.pngData() { try? d.write(to: app.appendingPathComponent(name + ".png")) }
         }
+    }
+}
+
+/// Re-reads project.yml and the GitHub workflows of a project with ioxgen (in the app's Python).
+enum Generator {
+    static func needed(_ project: Project) -> Bool {
+        let fm = FileManager.default
+        if fm.fileExists(atPath: project.url.appendingPathComponent(".github/workflows").path) { return true }
+        let kids = (try? fm.contentsOfDirectory(atPath: project.url.path)) ?? []
+        if kids.contains("project.yml") { return true }
+        return kids.contains { fm.fileExists(atPath: project.url.appendingPathComponent($0).appendingPathComponent("project.yml").path) }
+    }
+
+    static func refresh(_ project: Project, log: LogSink?) {
+        guard needed(project), PythonHost.shared.isAvailable else { return }
+        let r = PythonHost.shared.run(.shell("python3 -c 'import ioxgen; ioxgen.generate(\".\")'"), cwd: project.url, log: nil)
+        if r.exitCode != 0 { log?.log("note: could not read project.yml / workflows: \(r.message.suffix(400))") }
     }
 }

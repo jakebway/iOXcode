@@ -669,13 +669,14 @@ class Shell:
         if kind == "group":
             return self.run_list(node[1])
         if kind == "subshell":
-            cwd, env = os.getcwd(), dict(os.environ)
+            cwd, env, errexit, pos = os.getcwd(), dict(os.environ), self.errexit, list(self.positional)
             try:
                 return self.run_list(node[1])
             except ShellExit as e:
                 return e.code
             finally:
                 os.chdir(cwd); os.environ.clear(); os.environ.update(env)
+                self.errexit, self.positional = errexit, pos
         return 0
 
     def with_redirects(self, reds, stdin, body):
@@ -841,7 +842,6 @@ MAC_ONLY = {
     "rustup": "(Rust) is not available on iPhone",
     "npm": "is not available on iPhone",
     "node": "is not available on iPhone",
-    "git": "is not available inside a build on iPhone",
     "gh": "is not available on iPhone",
 }
 
@@ -1096,6 +1096,9 @@ def _set(sh, a, i):
         if x.startswith("-") or x.startswith("+"):
             if "e" in x: sh.errexit = x[0] == "-"
             if "x" in x: sh.xtrace = x[0] == "-"
+            if "o" in x[1:] and k + 1 < len(a):
+                if a[k + 1] == "errexit": sh.errexit = x[0] == "-"
+                k += 2; continue
             k += 1; continue
         sh.positional = a[k:]; return 0
     return 0
@@ -1578,6 +1581,317 @@ def _nproc(sh, a, i): sh.out.write("%d\n" % (os.cpu_count() or 1))
 
 @builtin("sysctl")
 def _sysctl(sh, a, i): sh.out.write("%d\n" % (os.cpu_count() or 1))
+
+
+# ---------------------------------------------------------------- GitHub runner pieces
+
+def _env_files():
+    tmp = os.environ.get("RUNNER_TEMP") or os.path.join(os.environ.get("TMPDIR", "/tmp"), "ioxcode-runner")
+    os.makedirs(tmp, exist_ok=True)
+    os.environ.setdefault("RUNNER_TEMP", tmp)
+    os.environ.setdefault("RUNNER_OS", "macOS")
+    os.environ.setdefault("RUNNER_ARCH", "ARM64")
+    os.environ.setdefault("CI", "true")
+    os.environ.setdefault("GITHUB_ACTIONS", "true")
+    os.environ.setdefault("GITHUB_WORKSPACE", os.getcwd())
+    for var, name in (("GITHUB_ENV", "env"), ("GITHUB_PATH", "path"), ("GITHUB_OUTPUT", "output"), ("GITHUB_STEP_SUMMARY", "summary.md")):
+        if not os.environ.get(var):
+            path = os.path.join(tmp, name)
+            open(path, "w").close()
+            os.environ[var] = path
+
+
+def _load_env_file(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            lines = f.read().split("\n")
+    except OSError:
+        return
+    k = 0
+    while k < len(lines):
+        line = lines[k]
+        m = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)<<(.+)$", line)
+        if m:
+            name, delim, body = m.group(1), m.group(2), []
+            k += 1
+            while k < len(lines) and lines[k] != delim:
+                body.append(lines[k]); k += 1
+            os.environ[name] = "\n".join(body)
+        elif "=" in line:
+            name, _, value = line.partition("=")
+            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+                os.environ[name] = value
+        k += 1
+    open(path, "w").close()
+
+
+@builtin("ioxcode-step")
+def _ioxcode_step(sh, a, i):
+    """ioxcode-step NAME WORKDIR 'K=V ...' BASE64SCRIPT: one GitHub workflow `run:` step."""
+    import base64
+    name, wd, senv, b64 = a[0], a[1], a[2], a[3]
+    _env_files()
+    text = base64.b64decode(b64).decode("utf-8")
+    sh.out.write("-- step: %s\n" % name)
+    ws = os.environ.get("GITHUB_WORKSPACE") or os.getcwd()
+    cwd, saved = os.getcwd(), dict(os.environ)
+    for pair in shlex.split(senv):
+        k, _, v = pair.partition("=")
+        os.environ[k] = v
+    code = 0
+    try:
+        os.chdir(os.path.normpath(os.path.join(ws, wd)))
+        sub = Shell(sh.out, sh.err)
+        sub.errexit = True
+        sub.script_name = name
+        code = sub.run_source(text)
+    except ShellExit as e:
+        code = e.code
+    except ShellSyntaxError as e:
+        sh.err.write("ioxsh: syntax error in step '%s': %s\n" % (name, e)); code = 2
+    except FileNotFoundError as e:
+        sh.err.write("step '%s': folder not found: %s\n" % (name, e.filename)); code = 1
+    finally:
+        os.chdir(cwd)
+        keep = {k: os.environ[k] for k in ("GITHUB_ENV", "GITHUB_PATH", "GITHUB_OUTPUT", "GITHUB_STEP_SUMMARY", "RUNNER_TEMP")}
+        os.environ.clear(); os.environ.update(saved); os.environ.update(keep)
+        _load_env_file(os.environ["GITHUB_ENV"])
+    if code:
+        sh.err.write("warning: step '%s' failed (exit %d). On GitHub the job would stop here; iOXcode keeps going.\n" % (name, code))
+    return 0
+
+
+# ---- git, the parts build scripts use (downloads from GitHub instead of talking git)
+
+def _github_parts(url):
+    m = re.match(r"(?:https?://)?(?:[^@/]+@)?github\.com[/:]([^/]+)/([^/#?]+?)(?:\.git)?/?$", url)
+    return (m.group(1), m.group(2)) if m else None
+
+
+def _download_repo(owner, repo, ref, dest):
+    import urllib.request, zipfile, tempfile
+    url = "https://api.github.com/repos/%s/%s/zipball/%s" % (owner, repo, ref or "HEAD")
+    req = urllib.request.Request(url, headers={"User-Agent": "iOXcode"})
+    fd, tmp = tempfile.mkstemp(suffix=".zip"); os.close(fd)
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r, open(tmp, "wb") as f:
+            shutil.copyfileobj(r, f)
+        stage = dest + ".ioxcode-tmp"
+        shutil.rmtree(stage, ignore_errors=True)
+        with zipfile.ZipFile(tmp) as z:
+            z.extractall(stage)
+        kids = os.listdir(stage)
+        top = os.path.join(stage, kids[0]) if len(kids) == 1 else stage
+        os.makedirs(dest, exist_ok=True)
+        for n in os.listdir(dest):
+            if n != ".git":
+                p = os.path.join(dest, n)
+                shutil.rmtree(p) if os.path.isdir(p) and not os.path.islink(p) else os.remove(p)
+        for n in os.listdir(top):
+            shutil.move(os.path.join(top, n), os.path.join(dest, n))
+        shutil.rmtree(stage, ignore_errors=True)
+    finally:
+        os.remove(tmp)
+    os.makedirs(os.path.join(dest, ".git"), exist_ok=True)
+    with open(os.path.join(dest, ".git", "ioxcode-origin"), "w") as f:
+        f.write("%s/%s\n%s\n" % (owner, repo, ref or "HEAD"))
+
+
+def _origin(path):
+    d = os.path.abspath(path)
+    while True:
+        p = os.path.join(d, ".git", "ioxcode-origin")
+        if os.path.isfile(p):
+            with open(p) as f:
+                lines = f.read().split("\n")
+            o, r = lines[0].split("/", 1)
+            return d, o, r, lines[1] if len(lines) > 1 else "HEAD"
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def apply_patch(text, root, reverse=False, check=False, strip=1):
+    """Applies a unified diff. Returns (ok, message)."""
+    files, cur = [], None
+    lines = text.split("\n")
+    k = 0
+    while k < len(lines):
+        ln = lines[k]
+        if ln.startswith("--- ") and k + 1 < len(lines) and lines[k + 1].startswith("+++ "):
+            old = ln[4:].split("\t")[0].strip(); new = lines[k + 1][4:].split("\t")[0].strip()
+            cur = {"old": old, "new": new, "hunks": []}
+            files.append(cur); k += 2; continue
+        m = re.match(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", ln)
+        if m and cur is not None:
+            ocount = int(m.group(2)) if m.group(2) is not None else 1
+            ncount = int(m.group(4)) if m.group(4) is not None else 1
+            h = {"ostart": int(m.group(1)), "old": [], "new": []}
+            k += 1
+            while k < len(lines) and (ocount > 0 or ncount > 0):
+                l = lines[k]
+                if l.startswith("\\"):
+                    k += 1; continue
+                tag, body = (l[:1], l[1:]) if l else (" ", "")
+                if tag == " ":
+                    h["old"].append(body); h["new"].append(body); ocount -= 1; ncount -= 1
+                elif tag == "-":
+                    h["old"].append(body); ocount -= 1
+                elif tag == "+":
+                    h["new"].append(body); ncount -= 1
+                else:
+                    break
+                k += 1
+            cur["hunks"].append(h)
+            continue
+        k += 1
+    if not files:
+        return False, "no file changes found in the patch"
+    def strip_path(p):
+        if p == "/dev/null":
+            return None
+        parts = p.split("/")
+        return "/".join(parts[strip:]) if len(parts) > strip else parts[-1]
+    results = []
+    for f in files:
+        src, dst = strip_path(f["old"]), strip_path(f["new"])
+        if reverse:
+            src, dst = dst, src
+        target = dst or src
+        path = os.path.join(root, src or target)
+        if src is None:
+            content = []
+        else:
+            if not os.path.exists(path):
+                return False, "%s: No such file" % (src)
+            with open(path, encoding="utf-8", errors="surrogateescape", newline="") as fh:
+                data = fh.read()
+            content = data.split("\n")
+        offset = 0
+        for h in f["hunks"]:
+            old, new = (h["new"], h["old"]) if reverse else (h["old"], h["new"])
+            want = max(h["ostart"] - 1 + offset, 0)
+            pos = None
+            for delta in range(0, len(content) + 1):
+                for cand in (want - delta, want + delta):
+                    if 0 <= cand <= len(content) - len(old) and content[cand:cand + len(old)] == old:
+                        pos = cand; break
+                if pos is not None:
+                    break
+            if pos is None:
+                return False, "patch does not apply to %s (near line %d)" % (target, h["ostart"])
+            content[pos:pos + len(old)] = new
+            offset += len(new) - len(old)
+        results.append((src, dst, content))
+    if check:
+        return True, ""
+    for src, dst, content in results:
+        if dst is None:
+            os.remove(os.path.join(root, src)); continue
+        out = os.path.join(root, dst)
+        os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+        with open(out, "w", encoding="utf-8", errors="surrogateescape", newline="") as fh:
+            fh.write("\n".join(content))
+        if src and src != dst:
+            os.remove(os.path.join(root, src))
+    return True, ""
+
+
+@builtin("patch")
+def _patch(sh, a, i):
+    strip, reverse, check, files, k = 0, False, False, [], 0
+    while k < len(a):
+        x = a[k]
+        if x.startswith("-p"): strip = _int(x[2:] or a[k + 1]); k += 1 if x[2:] else 2; continue
+        if x in ("-R", "--reverse"): reverse = True
+        elif x == "--dry-run": check = True
+        elif x in ("-i", "--input"): files.append(a[k + 1]); k += 2; continue
+        elif not x.startswith("-"): files.append(x)
+        k += 1
+    text = i or ""
+    for p in files:
+        if p.endswith(".patch") or p.endswith(".diff"):
+            with open(p, encoding="utf-8", errors="replace") as f: text = f.read()
+    ok, msg = apply_patch(text, os.getcwd(), reverse, check, strip)
+    if not ok: sh.err.write("patch: %s\n" % msg)
+    return 0 if ok else 1
+
+
+@builtin("git")
+def _git(sh, a, i):
+    a = list(a)
+    where = os.getcwd()
+    while a and a[0] in ("-C", "-c"):
+        if a[0] == "-C": where = os.path.join(where, a[1])
+        a = a[2:]
+    if not a:
+        return 1
+    cmd, rest = a[0], a[1:]
+    if cmd == "clone":
+        ref, pos, k = None, [], 0
+        while k < len(rest):
+            x = rest[k]
+            if x in ("-b", "--branch"): ref = rest[k + 1]; k += 2; continue
+            if x in ("--depth", "--filter", "-o", "--origin", "--reference", "-c", "--config"): k += 2; continue
+            if x.startswith("-"): k += 1; continue
+            pos.append(x); k += 1
+        url = pos[0]
+        parts = _github_parts(url)
+        if not parts:
+            sh.err.write("git clone: only github.com repositories can be fetched on iPhone (%s)\n" % url); return 128
+        if "@" in url.split("github.com")[0]:
+            sh.err.write("git clone: private repositories (with a token) can't be fetched; skipping %s/%s\n" % parts); return 128
+        dest = os.path.join(where, pos[1] if len(pos) > 1 else parts[1])
+        sh.err.write("Cloning %s/%s%s (download from GitHub)\n" % (parts[0], parts[1], " @ " + ref if ref else ""))
+        _download_repo(parts[0], parts[1], ref, dest)
+        return 0
+    if cmd in ("checkout", "switch", "reset"):
+        args = [x for x in rest if not x.startswith("-")]
+        if cmd == "reset" or not args or "--" in rest or os.path.exists(os.path.join(where, args[0])):
+            return 0
+        o = _origin(where)
+        if not o:
+            sh.err.write("git %s: not a downloaded repository; nothing to do\n" % cmd); return 0
+        if args[0] == o[3]:
+            return 0
+        sh.err.write("Checking out %s (download from GitHub)\n" % args[0])
+        _download_repo(o[1], o[2], args[0], o[0])
+        return 0
+    if cmd == "apply":
+        reverse = "-R" in rest or "--reverse" in rest
+        check = "--check" in rest
+        strip = 1
+        for x in rest:
+            if x.startswith("-p") and x[2:].isdigit(): strip = int(x[2:])
+        files = [x for x in rest if not x.startswith("-")]
+        o = _origin(where)
+        root = where
+        code = 0
+        for p in files or ["-"]:
+            if p == "-":
+                text = i or ""
+            else:
+                with open(os.path.join(where, p), encoding="utf-8", errors="replace") as f: text = f.read()
+            ok, msg = apply_patch(text, root, reverse, check, strip)
+            if not ok:
+                if not check: sh.err.write("error: %s\n" % msg)
+                code = 1
+        return code
+    if cmd == "rev-parse":
+        o = _origin(where)
+        if "--show-toplevel" in rest: sh.out.write((o[0] if o else where) + "\n")
+        elif "--abbrev-ref" in rest: sh.out.write("main\n")
+        else: sh.out.write(((o[3] if o else "HEAD") if o else "0000000") + "\n")
+        return 0
+    if cmd in ("describe",):
+        sh.out.write("v0\n"); return 0
+    if cmd in ("config", "submodule", "lfs", "fetch", "pull", "status", "log", "add", "commit", "diff", "remote", "tag", "stash", "init", "branch", "clean", "show"):
+        if cmd in ("submodule", "lfs"):
+            sh.err.write("note: git %s is not available on iPhone; skipping\n" % cmd)
+        return 0
+    sh.err.write("git %s is not available on iPhone\n" % cmd)
+    return 1
 
 
 # ---------------------------------------------------------------- entry
