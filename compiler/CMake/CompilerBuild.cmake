@@ -32,7 +32,8 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   "${TOOLCHAIN_LOCK_FILE}" "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/DisableImmediateExecution.patch"
   "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch"
   "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedSwiftNativeProfile.patch"
-  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedLLVMNativeProfile.patch")
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedLLVMNativeProfile.patch"
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/LldAllowPlatforms.patch")
 
 execute_process(COMMAND "${TOOLCHAIN_BOOTSTRAP_ROOT}/bin/swiftc" --version
   OUTPUT_VARIABLE bootstrap_version COMMAND_ERROR_IS_FATAL ANY)
