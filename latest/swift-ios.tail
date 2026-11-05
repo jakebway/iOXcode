@@ -1,0 +1,150 @@
+      |                ^~~~~~~~~~~~~~~
+2 warnings generated.
+[962/1069] Building CXX object lib/IRGen/CMakeFiles/swiftIRGen.dir/MetadataLayout.cpp.o
+[963/1069] Building CXX object lib/IRGen/CMakeFiles/swiftIRGen.dir/PackMetadataMarkerInserter.cpp.o
+[964/1069] Building CXX object lib/IRGen/CMakeFiles/swiftIRGen.dir/SwiftTargetInfo.cpp.o
+[965/1069] Building CXX object lib/IRGen/CMakeFiles/swiftIRGen.dir/StructLayout.cpp.o
+[966/1069] Building CXX object lib/IRGen/CMakeFiles/swiftIRGen.dir/TBDGen.cpp.o
+[967/1069] Building CXX object lib/IRGen/CMakeFiles/swiftIRGen.dir/TBDGenRequests.cpp.o
+[968/1069] Building CXX object lib/IRGen/CMakeFiles/swiftIRGen.dir/TypeLayout.cpp.o
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098/lib/IRGen/TypeLayout.cpp:2548:10: warning: unused variable 'size' [-Wunused-variable]
+ 2548 |     auto size = fixedSize(IGM);
+      |          ^~~~
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098/lib/IRGen/TypeLayout.cpp:445:20: warning: unused function 'scalarToString' [-Wunused-function]
+  445 | static std::string scalarToString(ScalarKind kind) {
+      |                    ^~~~~~~~~~~~~~
+2 warnings generated.
+[969/1069] Linking CXX static library lib/libswiftLLVMPasses.a
+[970/1069] Linking CXX static library lib/libswiftParse.a
+[971/1069] Building CXX object lib/IRGen/CMakeFiles/swiftIRGen.dir/TypeLayoutDumper.cpp.o
+[972/1069] Building CXX object lib/IRGen/CMakeFiles/swiftIRGen.dir/TypeLayoutVerifier.cpp.o
+[973/1069] Building CXX object lib/SymbolGraphGen/CMakeFiles/swiftSymbolGraphGen.dir/AvailabilityMixin.cpp.o
+[974/1069] Building CXX object lib/SymbolGraphGen/CMakeFiles/swiftSymbolGraphGen.dir/Edge.cpp.o
+[975/1069] Building CXX object lib/SymbolGraphGen/CMakeFiles/swiftSymbolGraphGen.dir/DeclarationFragmentPrinter.cpp.o
+[976/1069] Building CXX object lib/SymbolGraphGen/CMakeFiles/swiftSymbolGraphGen.dir/JSON.cpp.o
+[977/1069] Building CXX object lib/SymbolGraphGen/CMakeFiles/swiftSymbolGraphGen.dir/Symbol.cpp.o
+[978/1069] Building CXX object lib/SymbolGraphGen/CMakeFiles/swiftSymbolGraphGen.dir/SymbolGraph.cpp.o
+[979/1069] Building CXX object lib/SymbolGraphGen/CMakeFiles/swiftSymbolGraphGen.dir/SymbolGraphGen.cpp.o
+[980/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/ArgsToFrontendInputsConverter.cpp.o
+[981/1069] Building CXX object lib/SymbolGraphGen/CMakeFiles/swiftSymbolGraphGen.dir/SymbolGraphASTWalker.cpp.o
+[982/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/ArgsToFrontendOptionsConverter.cpp.o
+[983/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/ArgsToFrontendOutputsConverter.cpp.o
+[984/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/CachingUtils.cpp.o
+[985/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/CASOutputBackends.cpp.o
+[986/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/CompileJobCacheKey.cpp.o
+[987/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/CompileJobCacheResult.cpp.o
+[988/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/CachedDiagnostics.cpp.o
+[989/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/DependencyVerifier.cpp.o
+[990/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/CompilerInvocation.cpp.o
+[991/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/DiagnosticVerifier.cpp.o
+[992/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/DiagnosticHelper.cpp.o
+[993/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/Frontend.cpp.o
+[994/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/FrontendOptions.cpp.o
+[995/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/FrontendInputsAndOutputs.cpp.o
+[996/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/MakeStyleDependencies.cpp.o
+[997/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/ModuleInterfaceBuilder.cpp.o
+[998/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/ModuleInterfaceSupport.cpp.o
+[999/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/ModuleInterfaceLoader.cpp.o
+[1000/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/PrintingDiagnosticConsumer.cpp.o
+[1001/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/Serialization.cpp.o
+[1002/1069] Building CXX object lib/Frontend/CMakeFiles/swiftFrontend.dir/SerializedDiagnosticConsumer.cpp.o
+[1003/1069] Building CXX object lib/Index/CMakeFiles/swiftIndex.dir/IndexDataConsumer.cpp.o
+[1004/1069] Building CXX object lib/Index/CMakeFiles/swiftIndex.dir/Index.cpp.o
+[1005/1069] Building CXX object lib/Index/CMakeFiles/swiftIndex.dir/IndexRecord.cpp.o
+[1006/1069] Building CXX object lib/Index/CMakeFiles/swiftIndex.dir/IndexSymbol.cpp.o
+[1007/1069] Building CXX object lib/Migrator/CMakeFiles/swiftMigrator.dir/EditorAdapter.cpp.o
+[1008/1069] Building CXX object lib/Migrator/CMakeFiles/swiftMigrator.dir/APIDiffMigratorPass.cpp.o
+[1009/1069] Building CXX object lib/Migrator/CMakeFiles/swiftMigrator.dir/FixitApplyDiagnosticConsumer.cpp.o
+[1010/1069] Building CXX object lib/Migrator/CMakeFiles/swiftMigrator.dir/MigrationState.cpp.o
+[1011/1069] Building CXX object lib/Migrator/CMakeFiles/swiftMigrator.dir/Migrator.cpp.o
+[1012/1069] Building CXX object lib/Migrator/CMakeFiles/swiftMigrator.dir/RewriteBufferEditsReceiver.cpp.o
+[1013/1069] Building CXX object lib/Migrator/CMakeFiles/swiftMigrator.dir/OptionalTryMigratorPass.cpp.o
+[1014/1069] Building CXX object lib/PrintAsClang/CMakeFiles/swiftPrintAsClang.dir/ClangSyntaxPrinter.cpp.o
+[1015/1069] Building CXX object lib/PrintAsClang/CMakeFiles/swiftPrintAsClang.dir/DeclAndTypePrinter.cpp.o
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098/lib/PrintAsClang/DeclAndTypePrinter.cpp:1699:16: warning: unused variable 'thunkRepresentation' [-Wunused-variable]
+ 1699 |           auto thunkRepresentation = printCFunctionWithLoweredSignature(
+      |                ^~~~~~~~~~~~~~~~~~~
+1 warning generated.
+[1016/1069] Building CXX object lib/PrintAsClang/CMakeFiles/swiftPrintAsClang.dir/PrimitiveTypeMapping.cpp.o
+[1017/1069] Building CXX object lib/PrintAsClang/CMakeFiles/swiftPrintAsClang.dir/ModuleContentsWriter.cpp.o
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098/lib/PrintAsClang/ModuleContentsWriter.cpp:620:12: warning: variable 'imported' set but not used [-Wunused-but-set-variable]
+  620 |       bool imported = false;
+      |            ^
+1 warning generated.
+[1018/1069] Building CXX object lib/PrintAsClang/CMakeFiles/swiftPrintAsClang.dir/PrintAsClang.cpp.o
+[1019/1069] Building CXX object lib/PrintAsClang/CMakeFiles/swiftPrintAsClang.dir/PrintClangClassType.cpp.o
+[1020/1069] Building CXX object lib/PrintAsClang/CMakeFiles/swiftPrintAsClang.dir/PrintClangFunction.cpp.o
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098/lib/PrintAsClang/PrintClangFunction.cpp:908:22: warning: unused variable 's' [-Wunused-variable]
+  908 |                 auto s = printClangFunctionReturnType(
+      |                      ^
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098/lib/PrintAsClang/PrintClangFunction.cpp:1133:8: warning: unused variable 'result' [-Wunused-variable]
+ 1133 |   auto result = typePrinter.visit(type, std::nullopt, /*isInOut=*/false);
+      |        ^~~~~~
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098/lib/PrintAsClang/PrintClangFunction.cpp:1384:10: warning: unused variable 'result' [-Wunused-variable]
+ 1384 |     auto result = typePrinter.visit(param.getInterfaceType(), OTK_None,
+      |          ^~~~~~
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098/lib/PrintAsClang/PrintClangFunction.cpp:1450:16: warning: unused variable 'result' [-Wunused-variable]
+ 1450 |           auto result = typePrinter.visit(param.getInterfaceType(), OTK_None,
+      |                ^~~~~~
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098/lib/PrintAsClang/PrintClangFunction.cpp:1508:16: warning: unused variable 'result' [-Wunused-variable]
+ 1508 |           auto result =
+      |                ^~~~~~
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098/lib/PrintAsClang/PrintClangFunction.cpp:1641:18: warning: unused variable 's' [-Wunused-variable]
+ 1641 |             auto s = printClangFunctionReturnType(
+      |                  ^
+6 warnings generated.
+[1021/1069] Building CXX object lib/PrintAsClang/CMakeFiles/swiftPrintAsClang.dir/PrintClangValueType.cpp.o
+[1022/1069] Building CXX object lib/PrintAsClang/CMakeFiles/swiftPrintAsClang.dir/SwiftToClangInteropContext.cpp.o
+[1023/1069] Building CXX object lib/PrintAsClang/CMakeFiles/swiftPrintAsClang.dir/PrintSwiftToClangCoreScaffold.cpp.o
+[1024/1069] Building CXX object lib/FrontendTool/CMakeFiles/swiftFrontendTool.dir/FrontendTool.cpp.o
+[1025/1069] Building CXX object lib/FrontendTool/CMakeFiles/swiftFrontendTool.dir/ImportedModules.cpp.o
+[1026/1069] Building CXX object lib/FrontendTool/CMakeFiles/swiftFrontendTool.dir/LoadedModuleTrace.cpp.o
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098/lib/FrontendTool/LoadedModuleTrace.cpp:1054:15: warning: unused variable 'ctxt' [-Wunused-variable]
+ 1054 |   ASTContext &ctxt = mainModule->getASTContext();
+      |               ^~~~
+1 warning generated.
+[1027/1069] Building CXX object lib/FrontendTool/CMakeFiles/swiftFrontendTool.dir/TBD.cpp.o
+[1028/1069] Building CXX object lib/DependencyScan/CMakeFiles/swiftDependencyScan.dir/DependencyScanningTool.cpp.o
+[1029/1069] Building CXX object lib/DependencyScan/CMakeFiles/swiftDependencyScan.dir/ModuleDependencyCacheSerialization.cpp.o
+[1030/1069] Building CXX object lib/DependencyScan/CMakeFiles/swiftDependencyScan.dir/ModuleDependencyScanner.cpp.o
+[1031/1069] Building CXX object lib/DependencyScan/CMakeFiles/swiftDependencyScan.dir/ScanDependencies.cpp.o
+[1032/1069] Building CXX object lib/IDETool/CMakeFiles/swiftIDETool.dir/CompileInstance.cpp.o
+[1033/1069] Building CXX object lib/IDETool/CMakeFiles/swiftIDETool.dir/CompilerInvocation.cpp.o
+[1034/1069] Linking Swift static library lib/libswiftMacroEvaluation.a; Update mtime of library outputs workaround
+[1035/1069] Linking CXX static library lib/libswiftClangImporter.a
+[1036/1069] Building CXX object lib/IDETool/CMakeFiles/swiftIDETool.dir/IDEInspectionInstance.cpp.o
+[1037/1069] Building CXX object lib/IDETool/CMakeFiles/swiftIDETool.dir/DependencyChecking.cpp.o
+[1038/1069] Building CXX object CMakeFiles/SwiftCompilerBridge.dir/Users/runner/work/iOXcode/iOXcode/compiler/Sources/CompilerBridge/SwiftCompilerBridge.cpp.o
+[1039/1069] Building CXX object lib/IDETool/CMakeFiles/swiftIDETool.dir/SyntacticMacroExpansion.cpp.o
+[1040/1069] Building CXX object CMakeFiles/SwiftCompilerBridge.dir/Users/runner/work/iOXcode/iOXcode/compiler/Sources/CompilerBridge/NativeBackend.cpp.o
+[1041/1069] Building CXX object CMakeFiles/SwiftCompilerBridge.dir/Users/runner/work/iOXcode/iOXcode/compiler/Sources/CompilerBridge/CompletionBackend.cpp.o
+[1042/1069] Building CXX object CMakeFiles/SwiftCompilerBridge.dir/Users/runner/work/iOXcode/iOXcode/compiler/Sources/CompilerBridge/AnnotationBackend.cpp.o
+[1043/1069] Building CXX object CMakeFiles/SwiftCompilerBridge.dir/Users/runner/work/iOXcode/iOXcode/compiler/Sources/CompilerBridge/SemanticSupport.cpp.o
+[1044/1069] Building CXX object CMakeFiles/SwiftCompilerBridge.dir/Users/runner/work/iOXcode/iOXcode/compiler/Sources/NativeProfile/BundledPluginPolicy.cpp.o
+[1045/1069] Building CXX object CMakeFiles/SwiftCompilerBridge.dir/lib/DriverTool/autolink_extract_main.cpp.o
+[1046/1069] Linking Swift static library lib/libswiftIDEUtilsBridging.a; Update mtime of library outputs workaround
+[1047/1069] Linking CXX static library lib/libswiftSILOptimizer.a
+[1048/1069] Linking CXX static library lib/libswiftDriver.a
+[1049/1069] Linking CXX static library lib/libswiftSIL.a
+[1050/1069] Linking CXX static library lib/libswiftConstExtract.a
+[1051/1069] Linking CXX static library lib/libswiftSerialization.a
+[1052/1069] Linking CXX static library lib/libswiftLocalization.a
+[1053/1069] Linking CXX static library lib/libswiftSema.a
+[1054/1069] Linking CXX static library lib/libswiftDependencyScanImpl.a
+[1055/1069] Linking CXX static library lib/libswiftIDE.a
+[1056/1069] Linking CXX static library lib/libswiftSILGen.a
+[1057/1069] Linking CXX static library lib/libswiftAPIDigester.a
+[1058/1069] Linking CXX static library lib/libswiftIRGen.a
+[1059/1069] Linking CXX static library lib/libswiftSymbolGraphGen.a
+[1060/1069] Linking CXX static library lib/libswiftIndex.a
+[1061/1069] Linking CXX static library lib/libswiftFrontend.a
+[1062/1069] Linking CXX static library lib/libswiftMigrator.a
+[1063/1069] Linking CXX static library lib/libswiftPrintAsClang.a
+[1064/1069] Linking CXX static library lib/libswiftThreading.a
+[1065/1069] Linking CXX static library lib/libswiftCompilerModules.a
+[1066/1069] Linking CXX static library lib/libswiftFrontendTool.a
+[1067/1069] Linking CXX static library lib/libswiftDependencyScan.a
+[1068/1069] Linking CXX static library lib/libswiftIDETool.a
+[1069/1069] Linking CXX shared library lib/libSwiftCompilerBridge.dylib
+[22/23] No install step for 'swift-ios'
+[23/23] Completed 'swift-ios'
