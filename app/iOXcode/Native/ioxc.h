@@ -19,4 +19,9 @@ void ioxc_release(char *message);
 /// Bytes the process may still allocate (os_proc_available_memory), or 0 if unknown.
 size_t ioxc_available_memory(void);
 
+/// Loads Python.framework, initializes it and runs setupCode once. Returns 0 on success.
+int ioxc_py_start(const char *frameworkBinary, const char *setupCode, char *error, size_t errorLength);
+/// Runs Python source with the GIL held. Returns 0 on success, -1 if an exception escaped.
+int ioxc_py_exec(const char *code);
+
 #endif

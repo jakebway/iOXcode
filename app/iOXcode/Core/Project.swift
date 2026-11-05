@@ -1,5 +1,12 @@
 import Foundation
 
+/// A build script: an Xcode "Run Script" phase, an XcodeGen script or a workflow step.
+struct BuildScript: Codable, Hashable {
+    var name: String
+    var script: String
+    var afterCompile: Bool = false
+}
+
 /// ioxcode.json in a project folder. Every field has a default, so a plain folder of .swift files builds.
 struct Manifest: Codable {
     var name: String = "App"
@@ -22,6 +29,7 @@ struct Manifest: Codable {
     var infoPlist: [String: String] = [:]      // extra string keys
     var infoPlistFile: String?                 // an Info.plist from an Xcode project
     var swiftFiles: [String]?                  // explicit file list (from an Xcode project)
+    var scripts: [BuildScript] = []            // run by ioxsh before/after compiling
 
     init() {}
     init(from decoder: Decoder) throws {
@@ -35,10 +43,11 @@ struct Manifest: Codable {
         resources = get(.resources, []); icon = get(.icon, nil as String?)
         swiftFlags = get(.swiftFlags, []); linkerFlags = get(.linkerFlags, []); infoPlist = get(.infoPlist, [:])
         infoPlistFile = get(.infoPlistFile, nil as String?); swiftFiles = get(.swiftFiles, nil as [String]?)
+        scripts = get(.scripts, [])
     }
     enum Keys: String, CodingKey {
         case name, displayName, bundleId, version, build, minOS, sources, bridgingHeader, optimization, swiftVersion
-        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles
+        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles, scripts
     }
 
     static func load(from dir: URL) -> Manifest {

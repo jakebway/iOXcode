@@ -14,6 +14,7 @@ on:
     branches: [main]
     paths:
       - "app/**"
+      - "scripts/ci/install-python.py"
       - ".github/workflows/app.yml"
 
 permissions:
@@ -80,6 +81,30 @@ jobs:
           mkdir -p /tmp/clang && unzip -oq /tmp/clang.zip -d /tmp/clang
           ls /tmp/clang | head; echo "CLANG_RESOURCE=/tmp/clang" >> "$GITHUB_ENV"
 
+      - name: Get Python for iOS (runs project build scripts on the phone)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          retry() { for i in 1 2 3 4 5 6; do "$@" && return 0; echo "attempt $i failed, waiting"; sleep $((i * 10)); done; return 1; }
+          TAG=$(retry gh api "repos/beeware/Python-Apple-support/releases?per_page=30" --jq '[.[] | select(.tag_name | startswith("3.14-"))][0].tag_name')
+          echo "Python support release: $TAG"
+          mkdir -p /tmp/py && cd /tmp/py
+          retry gh release download "$TAG" -R beeware/Python-Apple-support -p '*iOS-support*' --clobber
+          tar -xzf *iOS-support*.tar.gz
+          ls; cat VERSIONS || true
+          ls Python.xcframework Python.xcframework/ios-arm64 | head -30
+          # packages build scripts commonly need: Pillow (images) and PyYAML (pure Python)
+          mkdir -p /tmp/wheels /tmp/app_packages
+          python3 -m pip download --only-binary=:all: --platform ios_13_0_arm64_iphoneos --python-version 3.14 --implementation cp --no-deps pillow -d /tmp/wheels
+          python3 -m pip download --no-binary=:all: --no-deps --no-build-isolation pyyaml -d /tmp/wheels || python3 -m pip download --no-deps pyyaml -d /tmp/wheels
+          for w in /tmp/wheels/*.whl; do unzip -oq "$w" -d /tmp/app_packages; done
+          for t in /tmp/wheels/*.tar.gz; do [ -f "$t" ] || continue; mkdir -p /tmp/sd && tar -xzf "$t" -C /tmp/sd; cp -R /tmp/sd/*/lib/yaml /tmp/app_packages/ 2>/dev/null || true; done
+          find /tmp/app_packages -maxdepth 2 | head -40
+          find /tmp/app_packages -name "*.dylib" -o -name "*.so" | head -20
+          echo "PY_XCF=/tmp/py/Python.xcframework" >> "$GITHUB_ENV"
+          echo "PY_PACKAGES=/tmp/app_packages" >> "$GITHUB_ENV"
+
       - name: Build the app (unsigned)
         run: |
           set -o pipefail
@@ -112,6 +137,11 @@ jobs:
             echo "no compiler embedded"
           fi
           if [ -n "${CLANG_RESOURCE:-}" ]; then cp -R "$CLANG_RESOURCE" "$APP/ClangResource"; echo "clang headers embedded: $(du -sh "$APP/ClangResource" | cut -f1)"; fi
+          if [ -n "${PY_XCF:-}" ]; then
+            cp app/Python/*.py "$PY_PACKAGES"/
+            python3 scripts/ci/install-python.py "$PY_XCF" "$APP" "$PY_PACKAGES"
+            echo "python embedded: $(du -sh "$APP/python" | cut -f1) stdlib, $(du -sh "$APP/app_packages" | cut -f1) packages"
+          fi
           rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
           zip -qry iOXcode.ipa Payload
           ls -lh iOXcode.ipa
@@ -123,6 +153,7 @@ jobs:
             unzip -tq iOXcode.ipa | tail -1
             ls -l iOXcode.ipa | awk '{print "size: " $5/1048576 " MB"}'
             unzip -l iOXcode.ipa | awk 'NR>3{print $4}' | cut -d/ -f1-3 | sort -u | head -40
+            ls Payload/iOXcode.app/Frameworks | head -80
             for f in Payload/iOXcode.app/Frameworks/*.dylib; do
               echo "$(basename "$f"): $(vtool -show-build "$f" 2>/dev/null | grep -E 'platform|minos' | tr -s ' ' | tr '\n' ' ')"
             done

@@ -141,8 +141,18 @@ enum XcodeProjectReader {
         var libs: [String] = []
         var libDirs: [String] = []
         var skippedSources: [String] = []
+        var scripts: [BuildScript] = []
+        var sawSources = false
         for phaseId in (target.value["buildPhases"] as? [String]) ?? [] {
             guard let phase = objects[phaseId], let isa = phase["isa"] as? String else { continue }
+            if isa == "PBXSourcesBuildPhase" { sawSources = true }
+            if isa == "PBXShellScriptBuildPhase", let text = phase["shellScript"] as? String {
+                let name = (phase["name"] as? String) ?? "Run Script"
+                let shell = (phase["shellPath"] as? String) ?? "/bin/sh"
+                let body = shell.contains("python") ? "python3 - <<'IOXCODE_PY'\n\(text)\nIOXCODE_PY\n" : text
+                scripts.append(BuildScript(name: name, script: body, afterCompile: sawSources))
+                continue
+            }
             for bf in (phase["files"] as? [String]) ?? [] {
                 guard let buildFile = objects[bf] else { continue }
                 if buildFile["productRef"] != nil { warnings.append("Swift package dependencies are not supported yet."); continue }
@@ -170,6 +180,7 @@ enum XcodeProjectReader {
         }
         if !skippedSources.isEmpty { warnings.append("C/Objective-C files are not compiled yet (\(skippedSources.count)): \(skippedSources.prefix(3).joined(separator: ", "))") }
         m.swiftFiles = swiftFiles
+        m.scripts = scripts
         m.resources = resources
         m.frameworks = frameworks + extraFrameworks
         m.libraries = libs + extraLibs

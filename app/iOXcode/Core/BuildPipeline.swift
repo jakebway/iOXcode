@@ -63,6 +63,12 @@ final class BuildPipeline {
         guard let layout = SDKLayout.locate() else {
             throw BuildError.message("No iPhone SDK found. Open Setup and import the SDK pack first.")
         }
+        let work = Paths.work.appendingPathComponent(m.name, isDirectory: true)
+        try? fm.removeItem(at: work)
+        try fm.createDirectory(at: work, withIntermediateDirectories: true)
+        let app = work.appendingPathComponent("Payload/\(m.name).app", isDirectory: true)
+        try runScripts(m.scripts.filter { !$0.afterCompile }, m: m, app: app, work: work, layout: layout)
+
         let files = project.swiftFiles(for: m)
         guard !files.isEmpty else {
             if let listed = m.swiftFiles, !listed.isEmpty {
@@ -75,8 +81,6 @@ final class BuildPipeline {
         log.log("\(files.count) Swift files, SDK \(layout.sdk.lastPathComponent)")
         for w in project.warnings { log.log("note: \(w)") }
 
-        let work = Paths.work.appendingPathComponent(m.name, isDirectory: true)
-        try? fm.removeItem(at: work)
         let moduleCache = Paths.caches.appendingPathComponent("ModuleCache", isDirectory: true)
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
         try fm.createDirectory(at: moduleCache, withIntermediateDirectories: true)
@@ -121,7 +125,6 @@ final class BuildPipeline {
         log.log("compiled in \(Int(Date().timeIntervalSince(t0)))s")
 
         // 2. link
-        let app = work.appendingPathComponent("Payload/\(m.name).app", isDirectory: true)
         try fm.createDirectory(at: app, withIntermediateDirectories: true)
         let exe = app.appendingPathComponent(m.name)
         var ld: [String] = ["ld64.lld", "-arch", "arm64",
@@ -166,6 +169,7 @@ final class BuildPipeline {
             let src = project.root.appendingPathComponent(icon)
             if fm.fileExists(atPath: src.path) { IconWriter.write(src, into: app, log: log) }
         }
+        try runScripts(m.scripts.filter { $0.afterCompile }, m: m, app: app, work: work, layout: layout)
         try fm.createDirectory(at: Paths.output, withIntermediateDirectories: true)
         let ipa = Paths.output.appendingPathComponent("\(m.name).ipa")
         try Zip.create(from: work.appendingPathComponent("Payload").deletingLastPathComponent().appendingPathComponent("Payload"), to: ipa, prefix: "Payload")
@@ -179,6 +183,39 @@ final class BuildPipeline {
         let name = sdk.deletingPathExtension().lastPathComponent // iPhoneOS26.2
         let v = name.replacingOccurrences(of: "iPhoneOS", with: "")
         return v.isEmpty ? "18.0" : v
+    }
+
+    /// Runs build scripts with the variables Xcode gives a Run Script phase.
+    func runScripts(_ scripts: [BuildScript], m: Manifest, app: URL, work: URL, layout: SDKLayout) throws {
+        guard !scripts.isEmpty else { return }
+        let root = project.root
+        let products = app.deletingLastPathComponent()
+        let derived = work.appendingPathComponent("DerivedSources", isDirectory: true)
+        try? FileManager.default.createDirectory(at: derived, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: app, withIntermediateDirectories: true)
+        let env: [String: String] = [
+            "SRCROOT": root.path, "PROJECT_DIR": root.path, "SOURCE_ROOT": root.path,
+            "PROJECT_NAME": m.name, "TARGET_NAME": m.name, "PRODUCT_NAME": m.name, "EXECUTABLE_NAME": m.name,
+            "PRODUCT_BUNDLE_IDENTIFIER": m.bundleId, "MARKETING_VERSION": m.version, "CURRENT_PROJECT_VERSION": m.build,
+            "CONFIGURATION": "Release", "ACTION": "build", "PLATFORM_NAME": "iphoneos", "SDK_NAME": "iphoneos",
+            "EFFECTIVE_PLATFORM_NAME": "-iphoneos", "SDKROOT": layout.sdk.path, "ARCHS": "arm64", "CURRENT_ARCH": "arm64",
+            "NATIVE_ARCH": "arm64", "IPHONEOS_DEPLOYMENT_TARGET": m.minOS,
+            "BUILT_PRODUCTS_DIR": products.path, "TARGET_BUILD_DIR": products.path, "CONFIGURATION_BUILD_DIR": products.path,
+            "CODESIGNING_FOLDER_PATH": app.path, "WRAPPER_NAME": "\(m.name).app", "FULL_PRODUCT_NAME": "\(m.name).app",
+            "CONTENTS_FOLDER_PATH": "\(m.name).app", "UNLOCALIZED_RESOURCES_FOLDER_PATH": "\(m.name).app",
+            "EXECUTABLE_PATH": "\(m.name).app/\(m.name)", "INFOPLIST_PATH": "\(m.name).app/Info.plist",
+            "DERIVED_FILE_DIR": derived.path, "DERIVED_SOURCES_DIR": derived.path, "TEMP_DIR": work.path,
+            "OBJECT_FILE_DIR": work.path, "SCRIPT_INPUT_FILE_COUNT": "0", "SCRIPT_OUTPUT_FILE_COUNT": "0",
+            "IOXCODE": "1",
+        ]
+        for s in scripts {
+            log.log("-- script: \(s.name)")
+            let r = PythonHost.shared.run(.shell(s.script), cwd: root, env: env, log: log)
+            if r.exitCode != 0 {
+                if r.message.isEmpty || r.message.hasPrefix("This copy of iOXcode") || r.message.hasPrefix("Python could not start") { log.log(r.message) }
+                log.log("warning: script '\(s.name)' ended with code \(r.exitCode); continuing")
+            }
+        }
     }
 
     private func writeInfoPlist(_ m: Manifest, to url: URL, base: URL) throws {
