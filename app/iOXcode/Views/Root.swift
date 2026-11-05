@@ -20,11 +20,14 @@ struct RootView: View {
 
 struct ProjectsView: View {
     @EnvironmentObject var model: AppModel
+    @State private var askLink = false
+    @State private var link = ""
     var body: some View {
         NavigationView {
             List {
+                if model.importing { HStack { ProgressView(); Text(model.importMessage).padding(.leading, 8) } }
                 if model.projects.isEmpty {
-                    Text("No projects yet. Tap + and pick a .zip of your project. Or copy a project folder into Files > On My iPhone > iOXcode > iOXcode > Projects, then pull down to refresh.").foregroundColor(.secondary)
+                    Text("No projects yet. Tap + and paste a GitHub link, or pick a .zip of your project. Or copy a project folder into Files > On My iPhone > iOXcode > iOXcode > Projects, then pull down to refresh.").foregroundColor(.secondary)
                 }
                 ForEach(model.projects) { p in
                     VStack(alignment: .leading, spacing: 6) {
@@ -39,7 +42,17 @@ struct ProjectsView: View {
                 }
             }
             .navigationTitle("iOXcode")
-            .toolbar { Button { FilePicker.present(types: [.zip], copy: true) { model.importProject($0) } } label: { Image(systemName: "plus") } }
+            .toolbar {
+                Menu {
+                    Button { askLink = true } label: { Label("From GitHub link", systemImage: "link") }
+                    Button { FilePicker.present(types: [.zip], copy: true) { model.importProject($0) } } label: { Label("From a .zip file", systemImage: "doc.zipper") }
+                } label: { Image(systemName: "plus") }
+            }
+            .alert("Import from GitHub", isPresented: $askLink) {
+                TextField("github.com/owner/repo", text: $link).autocapitalization(.none).disableAutocorrection(true)
+                Button("Import") { model.importGitHub(link); link = "" }
+                Button("Cancel", role: .cancel) { link = "" }
+            } message: { Text("Paste a public repository link.") }
             .onAppear { model.refresh() }
             .refreshable { model.refresh() }
         }

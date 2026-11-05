@@ -130,6 +130,43 @@ final class AppModel: ObservableObject {
         refresh()
     }
 
+    /// Downloads a public GitHub repo (github.com/owner/repo, optionally /tree/<branch>) and imports it like a zip.
+    func importGitHub(_ text: String) {
+        let parts = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "http://", with: "")
+            .replacingOccurrences(of: "www.", with: "").split(separator: "/").map(String.init)
+        guard parts.count >= 3, parts[0].lowercased() == "github.com" else { notice = "Paste a link like github.com/owner/repo"; return }
+        let owner = parts[1]
+        let repo = parts[2].replacingOccurrences(of: ".git", with: "")
+        let branch: String? = (parts.count >= 5 && parts[3] == "tree") ? parts[4...].joined(separator: "/") : nil
+        importing = true
+        importMessage = "Downloading \(repo)…"
+        Task {
+            do {
+                let ref = branch ?? "HEAD"
+                let api = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/zipball/\(ref)")!
+                var req = URLRequest(url: api)
+                req.setValue("iOXcode", forHTTPHeaderField: "User-Agent")
+                let (tmp, resp) = try await URLSession.shared.download(for: req)
+                let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+                guard code == 200 else { throw NSError(domain: "GitHub", code: code, userInfo: [NSLocalizedDescriptionKey: code == 404 ? "Repo not found (is it public?)" : "GitHub answered \(code)"]) }
+                let zip = FileManager.default.temporaryDirectory.appendingPathComponent("\(repo).zip")
+                try? FileManager.default.removeItem(at: zip)
+                try FileManager.default.moveItem(at: tmp, to: zip)
+                await MainActor.run {
+                    self.importing = false
+                    self.importProject(zip)
+                }
+            } catch {
+                await MainActor.run {
+                    self.importing = false
+                    self.console.line("GitHub import failed: \(error.localizedDescription)")
+                    self.notice = "GitHub import failed: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
     func importSDK(_ url: URL, scoped useScope: Bool = true) {
         importing = true
         importMessage = "Unpacking…"
