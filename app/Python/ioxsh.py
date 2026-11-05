@@ -1497,7 +1497,7 @@ def _curl(sh, a, i):
     if not url: raise Exception("no URL given")
     req = urllib.request.Request(url, headers={"User-Agent": "iOXcode"})
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=60, context=_ssl_ctx()) as r:
             data = r.read()
     except Exception as e:
         sh.err.write("download failed: %s (%s)\n" % (url, e)); return 22
@@ -1674,7 +1674,7 @@ def _download_repo(owner, repo, ref, dest):
     req = urllib.request.Request(url, headers={"User-Agent": "iOXcode"})
     fd, tmp = tempfile.mkstemp(suffix=".zip"); os.close(fd)
     try:
-        with urllib.request.urlopen(req, timeout=120) as r, open(tmp, "wb") as f:
+        with urllib.request.urlopen(req, timeout=120, context=_ssl_ctx()) as r, open(tmp, "wb") as f:
             shutil.copyfileobj(r, f)
         stage = dest + ".ioxcode-tmp"
         shutil.rmtree(stage, ignore_errors=True)
@@ -1907,3 +1907,12 @@ def run_script(text, args, out, err=None):
     except ShellSyntaxError as e:
         out.write("ioxsh: syntax error: %s\n" % e)
         return 2
+
+
+def _ssl_ctx():
+    import ssl
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()

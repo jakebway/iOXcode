@@ -363,7 +363,15 @@ def parse_dependency(dep):
 
 # ---------------------------------------------------------------- GitHub access
 
-_ctx = ssl.create_default_context()
+def _make_ctx():
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
+_ctx = _make_ctx()
 
 
 def _get(url, timeout=120, accept=None):

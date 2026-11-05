@@ -98,6 +98,7 @@ jobs:
           mkdir -p /tmp/wheels /tmp/app_packages
           python3 -m pip download --only-binary=:all: --platform ios_13_0_arm64_iphoneos --python-version 3.14 --implementation cp --no-deps pillow -d /tmp/wheels
           python3 -m pip download --no-binary=:all: --no-deps --no-build-isolation pyyaml -d /tmp/wheels || python3 -m pip download --no-deps pyyaml -d /tmp/wheels
+          python3 -m pip download --only-binary=:all: --no-deps certifi -d /tmp/wheels   # CA bundle: the embedded Python has no system certificates
           for w in /tmp/wheels/*.whl; do unzip -oq "$w" -d /tmp/app_packages; done
           for t in /tmp/wheels/*.tar.gz; do [ -f "$t" ] || continue; mkdir -p /tmp/sd && tar -xzf "$t" -C /tmp/sd; cp -R /tmp/sd/*/lib/yaml /tmp/app_packages/ 2>/dev/null || true; done
           find /tmp/app_packages -maxdepth 2 | head -40
