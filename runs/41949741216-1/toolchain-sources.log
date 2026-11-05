@@ -1,0 +1,175 @@
+[1/5] cd /Users/runner/work/iOXcode/iOXcode/.build-compiler && /opt/homebrew/bin/cmake -S /Users/runner/work/iOXcode/iOXcode/compiler/CMake/SourcePreparation -B /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098 -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DTOOLCHAIN_REPOSITORY_ROOT=/Users/runner/work/iOXcode/iOXcode/compiler -DTOOLCHAIN_PATCH=/usr/bin/patch -DTOOLCHAIN_SOURCE_NAME=swift -DTOOLCHAIN_SOURCE_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098 -DTOOLCHAIN_SOURCE_URL=https://codeload.github.com/swiftlang/swift/tar.gz/b8189d766d86ad7fc8106787d6ce9e402f38dd72 -DTOOLCHAIN_SOURCE_SHA256=e8c3a9053c10906b492ceeb175e1e6c2d0693a0863a6fafee638b182ae97d3ee -DTOOLCHAIN_SOURCE_REVISION=b8189d766d86ad7fc8106787d6ce9e402f38dd72 -DTOOLCHAIN_DOWNLOAD_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads && /opt/homebrew/bin/cmake --build /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098 --target prepare-source
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098
+[1/8] Creating directories for 'prepare-source'
+[2/8] Performing download step (download, verify and extract) for 'prepare-source'
+-- Downloading...
+   dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72.tar.gz'
+   timeout='300 seconds'
+   inactivity timeout='30 seconds'
+-- Using src='https://codeload.github.com/swiftlang/swift/tar.gz/b8189d766d86ad7fc8106787d6ce9e402f38dd72'
+-- verifying file...
+       file='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72.tar.gz'
+-- Downloading... done
+-- extracting...
+     src='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72.tar.gz'
+     dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-b8189d766d86ad7fc8106787d6ce9e402f38dd72-72d43d46f6d02bcf3497bda66d0ff2eb37cf0cf1f00a854de24d6e9f75f40add-89f42e974d8793bea0f60c61e27b4f7548944098a3add3c8b70a2635d6043098'
+-- extracting... [tar xf]
+-- extracting... [analysis]
+-- extracting... [rename]
+-- extracting... [clean up]
+-- extracting... done
+[3/8] No update step for 'prepare-source'
+[4/8] Performing patch step for 'prepare-source'
+patching file 'lib/FrontendTool/CMakeLists.txt'
+patching file 'lib/FrontendTool/FrontendTool.cpp'
+patching file 'include/swift/AST/DiagnosticsFrontend.def'
+patching file 'lib/Basic/Program.cpp'
+patching file 'lib/Basic/LoadDynamicLibrary.cpp'
+patching file 'lib/AST/PluginRegistry.cpp'
+patching file 'lib/Frontend/CompilerInvocation.cpp'
+patching file 'include/swift/AST/DiagnosticsFrontend.def'
+patching file 'lib/Basic/Unix/TaskQueue.inc'
+[5/8] No configure step for 'prepare-source'
+[6/8] No build step for 'prepare-source'
+[7/8] No install step for 'prepare-source'
+[8/8] Completed 'prepare-source'
+[2/5] cd /Users/runner/work/iOXcode/iOXcode/.build-compiler && /opt/homebrew/bin/cmake -S /Users/runner/work/iOXcode/iOXcode/compiler/CMake/SourcePreparation -B /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a-0ae33a9587180d0c2b6ae5cfb657c46fc97a0d79fe4b007fda73a54774a3c607-4fea55fce5269425c73d10bff3be601a319bcd658293e439f45a5105cb34adca -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DTOOLCHAIN_REPOSITORY_ROOT=/Users/runner/work/iOXcode/iOXcode/compiler -DTOOLCHAIN_PATCH=/usr/bin/patch -DTOOLCHAIN_SOURCE_NAME=llvm-project -DTOOLCHAIN_SOURCE_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a-0ae33a9587180d0c2b6ae5cfb657c46fc97a0d79fe4b007fda73a54774a3c607-4fea55fce5269425c73d10bff3be601a319bcd658293e439f45a5105cb34adca -DTOOLCHAIN_SOURCE_URL=https://codeload.github.com/swiftlang/llvm-project/tar.gz/903b9faaae5c43ecc9b7e33f8db9c94c7429374a -DTOOLCHAIN_SOURCE_SHA256=b18a9af1b0a41d38b309d76b5e2fab5bc1b60a06aed95063c9256c5d6815ddf8 -DTOOLCHAIN_SOURCE_REVISION=903b9faaae5c43ecc9b7e33f8db9c94c7429374a -DTOOLCHAIN_DOWNLOAD_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads && /opt/homebrew/bin/cmake --build /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a-0ae33a9587180d0c2b6ae5cfb657c46fc97a0d79fe4b007fda73a54774a3c607-4fea55fce5269425c73d10bff3be601a319bcd658293e439f45a5105cb34adca --target prepare-source
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a-0ae33a9587180d0c2b6ae5cfb657c46fc97a0d79fe4b007fda73a54774a3c607-4fea55fce5269425c73d10bff3be601a319bcd658293e439f45a5105cb34adca
+[1/8] Creating directories for 'prepare-source'
+[2/8] Performing download step (download, verify and extract) for 'prepare-source'
+-- Downloading...
+   dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a.tar.gz'
+   timeout='300 seconds'
+   inactivity timeout='30 seconds'
+-- Using src='https://codeload.github.com/swiftlang/llvm-project/tar.gz/903b9faaae5c43ecc9b7e33f8db9c94c7429374a'
+-- verifying file...
+       file='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a.tar.gz'
+-- Downloading... done
+-- extracting...
+     src='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a.tar.gz'
+     dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a-0ae33a9587180d0c2b6ae5cfb657c46fc97a0d79fe4b007fda73a54774a3c607-4fea55fce5269425c73d10bff3be601a319bcd658293e439f45a5105cb34adca'
+-- extracting... [tar xf]
+-- extracting... [analysis]
+-- extracting... [rename]
+-- extracting... [clean up]
+-- extracting... done
+[3/8] No update step for 'prepare-source'
+[4/8] Performing patch step for 'prepare-source'
+patching file 'llvm/lib/Support/Unix/Path.inc'
+patching file 'llvm/lib/Support/Unix/Program.inc'
+patching file 'llvm/lib/Support/Unix/Memory.inc'
+patching file 'llvm/lib/Support/Unix/DynamicLibrary.inc'
+patching file 'lld/MachO/InputFiles.cpp'
+[5/8] No configure step for 'prepare-source'
+[6/8] No build step for 'prepare-source'
+[7/8] No install step for 'prepare-source'
+[8/8] Completed 'prepare-source'
+[3/5] cd /Users/runner/work/iOXcode/iOXcode/.build-compiler && /opt/homebrew/bin/cmake -S /Users/runner/work/iOXcode/iOXcode/compiler/CMake/SourcePreparation -B /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-syntax-050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DTOOLCHAIN_REPOSITORY_ROOT=/Users/runner/work/iOXcode/iOXcode/compiler -DTOOLCHAIN_PATCH=/usr/bin/patch -DTOOLCHAIN_SOURCE_NAME=swift-syntax -DTOOLCHAIN_SOURCE_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-syntax-050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf -DTOOLCHAIN_SOURCE_URL=https://codeload.github.com/swiftlang/swift-syntax/tar.gz/050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf -DTOOLCHAIN_SOURCE_SHA256=2112986ef9432364bc75f400e501138eadb3719cb43d15fb861c67d8286f0ad6 -DTOOLCHAIN_SOURCE_REVISION=050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf -DTOOLCHAIN_DOWNLOAD_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads && /opt/homebrew/bin/cmake --build /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-syntax-050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf --target prepare-source
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+CMake Warning (unused-cli):
+  Manually-specified variables were not used by the project:
+
+    TOOLCHAIN_PATCH
+    TOOLCHAIN_REPOSITORY_ROOT
+
+
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-syntax-050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf
+[1/8] Creating directories for 'prepare-source'
+[2/8] Performing download step (download, verify and extract) for 'prepare-source'
+-- Downloading...
+   dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/swift-syntax-050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf.tar.gz'
+   timeout='300 seconds'
+   inactivity timeout='30 seconds'
+-- Using src='https://codeload.github.com/swiftlang/swift-syntax/tar.gz/050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf'
+-- verifying file...
+       file='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/swift-syntax-050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf.tar.gz'
+-- Downloading... done
+-- extracting...
+     src='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/swift-syntax-050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf.tar.gz'
+     dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-syntax-050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf'
+-- extracting... [tar xf]
+-- extracting... [analysis]
+-- extracting... [rename]
+-- extracting... [clean up]
+-- extracting... done
+[3/8] No update step for 'prepare-source'
+[4/8] No patch step for 'prepare-source'
+[5/8] No configure step for 'prepare-source'
+[6/8] No build step for 'prepare-source'
+[7/8] No install step for 'prepare-source'
+[8/8] Completed 'prepare-source'
+[4/5] cd /Users/runner/work/iOXcode/iOXcode/.build-compiler && /opt/homebrew/bin/cmake -S /Users/runner/work/iOXcode/iOXcode/compiler/CMake/SourcePreparation -B /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6 -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DTOOLCHAIN_REPOSITORY_ROOT=/Users/runner/work/iOXcode/iOXcode/compiler -DTOOLCHAIN_PATCH=/usr/bin/patch -DTOOLCHAIN_SOURCE_NAME=swift-cmark -DTOOLCHAIN_SOURCE_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6 -DTOOLCHAIN_SOURCE_URL=https://codeload.github.com/swiftlang/swift-cmark/tar.gz/924936d0427cb25a61169739a7660230bffa6ea6 -DTOOLCHAIN_SOURCE_SHA256=1c51659bd47c34df1c8976f893adc43ba039a98f6eac4fa95d53d1e08ba6072a -DTOOLCHAIN_SOURCE_REVISION=924936d0427cb25a61169739a7660230bffa6ea6 -DTOOLCHAIN_DOWNLOAD_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads && /opt/homebrew/bin/cmake --build /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6 --target prepare-source
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+CMake Warning (unused-cli):
+  Manually-specified variables were not used by the project:
+
+    TOOLCHAIN_PATCH
+    TOOLCHAIN_REPOSITORY_ROOT
+
+
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6
+[1/8] Creating directories for 'prepare-source'
+[2/8] Performing download step (download, verify and extract) for 'prepare-source'
+-- Downloading...
+   dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6.tar.gz'
+   timeout='300 seconds'
+   inactivity timeout='30 seconds'
+-- Using src='https://codeload.github.com/swiftlang/swift-cmark/tar.gz/924936d0427cb25a61169739a7660230bffa6ea6'
+-- verifying file...
+       file='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6.tar.gz'
+-- Downloading... done
+-- extracting...
+     src='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6.tar.gz'
+     dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6'
+-- extracting... [tar xf]
+-- extracting... [analysis]
+-- extracting... [rename]
+-- extracting... [clean up]
+-- extracting... done
+[3/8] No update step for 'prepare-source'
+[4/8] No patch step for 'prepare-source'
+[5/8] No configure step for 'prepare-source'
+[6/8] No build step for 'prepare-source'
+[7/8] No install step for 'prepare-source'
+[8/8] Completed 'prepare-source'
+[5/5] cd /Users/runner/work/iOXcode/iOXcode/.build-compiler && /opt/homebrew/bin/cmake -S /Users/runner/work/iOXcode/iOXcode/compiler/CMake/SourcePreparation -B /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250 -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DTOOLCHAIN_REPOSITORY_ROOT=/Users/runner/work/iOXcode/iOXcode/compiler -DTOOLCHAIN_PATCH=/usr/bin/patch -DTOOLCHAIN_SOURCE_NAME=string-processing -DTOOLCHAIN_SOURCE_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250 -DTOOLCHAIN_SOURCE_URL=https://codeload.github.com/swiftlang/swift-experimental-string-processing/tar.gz/bf9cd9a0cfb0481f0825509aeb81ff3135bac250 -DTOOLCHAIN_SOURCE_SHA256=5579ce5ca464037f2d3247ea52228693ea853892b18f3157402afe904270a7fe -DTOOLCHAIN_SOURCE_REVISION=bf9cd9a0cfb0481f0825509aeb81ff3135bac250 -DTOOLCHAIN_DOWNLOAD_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads && /opt/homebrew/bin/cmake --build /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250 --target prepare-source
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+CMake Warning (unused-cli):
+  Manually-specified variables were not used by the project:
+
+    TOOLCHAIN_PATCH
+    TOOLCHAIN_REPOSITORY_ROOT
+
+
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250
+[1/8] Creating directories for 'prepare-source'
+[2/8] Performing download step (download, verify and extract) for 'prepare-source'
+-- Downloading...
+   dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250.tar.gz'
+   timeout='300 seconds'
+   inactivity timeout='30 seconds'
+-- Using src='https://codeload.github.com/swiftlang/swift-experimental-string-processing/tar.gz/bf9cd9a0cfb0481f0825509aeb81ff3135bac250'
+-- verifying file...
+       file='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250.tar.gz'
+-- Downloading... done
+-- extracting...
+     src='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250.tar.gz'
+     dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250'
+-- extracting... [tar xf]
+-- extracting... [analysis]
+-- extracting... [rename]
+-- extracting... [clean up]
+-- extracting... done
+[3/8] No update step for 'prepare-source'
+[4/8] No patch step for 'prepare-source'
+[5/8] No configure step for 'prepare-source'
+[6/8] No build step for 'prepare-source'
+[7/8] No install step for 'prepare-source'
+[8/8] Completed 'prepare-source'
