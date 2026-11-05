@@ -48,19 +48,32 @@ final class CompilerHost {
     }
 
     private static func invoke(_ args: [String], link: Bool) -> ToolResult {
+        // The compiler prints its detailed diagnostics to stderr: capture them in a file for the duration of the call.
+        let path = NSTemporaryDirectory() + "ioxc-stderr.txt"
+        fflush(stderr)
+        let saved = dup(STDERR_FILENO)
+        let fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0o644)
+        if fd >= 0 { dup2(fd, STDERR_FILENO); close(fd) }
+
         // Keep the C strings alive for the duration of the call.
         var pointers: [UnsafeMutablePointer<CChar>?] = args.map { strdup($0) }
-        defer { pointers.forEach { free($0) } }
         let r: SwiftCompilerResult = pointers.withUnsafeMutableBufferPointer { buf in
             let base = UnsafeRawPointer(buf.baseAddress!).assumingMemoryBound(to: UnsafePointer<CChar>?.self)
             return link ? ioxc_link(Int32(args.count), base) : ioxc_frontend(Int32(args.count), base)
         }
+        pointers.forEach { free($0) }
+
+        fflush(stderr)
+        if saved >= 0 { dup2(saved, STDERR_FILENO); close(saved) }
+        let captured = (try? String(contentsOfFile: path, encoding: .utf8)) ?? ""
+
         var text = ""
         if let m = r.message, r.messageLength > 0 {
             let data = Data(bytes: m, count: Int(r.messageLength))
             text = String(decoding: data, as: UTF8.self)
         }
         if let m = r.message { ioxc_release(m) }
+        if !captured.isEmpty { text = text.isEmpty ? captured : text + "\n" + captured }
         return ToolResult(exitCode: r.exitCode, message: text)
     }
 }

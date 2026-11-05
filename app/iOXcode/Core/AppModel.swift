@@ -12,6 +12,8 @@ final class AppModel: ObservableObject {
     @Published var sdkStatus = "Not installed"
     @Published var importing = false
     @Published var importMessage = ""
+    @Published var notice: String?
+    @Published var tab = 0
 
     init() {
         Paths.prepare()
@@ -55,6 +57,7 @@ final class AppModel: ObservableObject {
     func build(_ p: Project) {
         guard !building else { return }
         building = true
+        tab = 1
         console.clear()
         let sink = LogSink { [weak self] s in Task { @MainActor in self?.console.line(s) } }
         DispatchQueue.global(qos: .userInitiated).async {
@@ -115,7 +118,8 @@ final class AppModel: ObservableObject {
                 }
             }
             console.line("Imported project \(name)")
-        } catch { console.line("Import failed: \(error)") }
+            notice = "Added \(name)"
+        } catch { console.line("Import failed: \(error)"); notice = "Import failed: \(error)" }
         refresh()
     }
 
@@ -131,7 +135,7 @@ final class AppModel: ObservableObject {
                 try Zip.extract(url, to: Paths.sdkRoot) { i, n in
                     if i % 500 == 0 { DispatchQueue.main.async { self.importMessage = "Unpacking \(i) of \(n)" } }
                 }
-                DispatchQueue.main.async { self.importMessage = "Done"; self.importing = false; self.refresh() }
+                DispatchQueue.main.async { self.importMessage = "Done"; self.importing = false; self.refresh(); self.notice = "SDK pack stored" }
             } catch {
                 DispatchQueue.main.async { self.importMessage = "Failed: \(error)"; self.importing = false }
             }

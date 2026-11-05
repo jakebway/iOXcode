@@ -4,10 +4,13 @@ import UniformTypeIdentifiers
 struct RootView: View {
     @EnvironmentObject var model: AppModel
     var body: some View {
-        TabView {
-            ProjectsView().tabItem { Label("Projects", systemImage: "folder") }
-            ConsoleView().tabItem { Label("Console", systemImage: "terminal") }
-            SetupView().tabItem { Label("Setup", systemImage: "gearshape") }
+        TabView(selection: $model.tab) {
+            ProjectsView().tabItem { Label("Projects", systemImage: "folder") }.tag(0)
+            ConsoleView().tabItem { Label("Console", systemImage: "terminal") }.tag(1)
+            SetupView().tabItem { Label("Setup", systemImage: "gearshape") }.tag(2)
+        }
+        .alert(model.notice ?? "", isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
+            Button("OK", role: .cancel) {}
         }
     }
 }
