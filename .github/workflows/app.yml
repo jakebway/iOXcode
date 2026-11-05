@@ -68,6 +68,18 @@ jobs:
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: Get the clang headers that match the compiler
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          retry() { for i in 1 2 3 4 5 6; do "$@" && return 0; echo "attempt $i failed, waiting"; sleep $((i * 10)); done; return 1; }
+          ID=$(retry gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=clang-resource&per_page=1" --jq '.artifacts[0].id // empty')
+          if [ -z "$ID" ]; then echo "::warning::No clang-resource artifact yet (run the Clang headers workflow)."; exit 0; fi
+          retry gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ID/zip" > /tmp/clang.zip
+          mkdir -p /tmp/clang && unzip -oq /tmp/clang.zip -d /tmp/clang
+          ls /tmp/clang | head; echo "CLANG_RESOURCE=/tmp/clang" >> "$GITHUB_ENV"
+
       - name: Build the app (unsigned)
         run: |
           set -o pipefail
@@ -99,6 +111,7 @@ jobs:
           else
             echo "no compiler embedded"
           fi
+          if [ -n "${CLANG_RESOURCE:-}" ]; then cp -R "$CLANG_RESOURCE" "$APP/ClangResource"; echo "clang headers embedded: $(du -sh "$APP/ClangResource" | cut -f1)"; fi
           rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
           zip -qry iOXcode.ipa Payload
           ls -lh iOXcode.ipa

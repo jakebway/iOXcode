@@ -1,0 +1,58 @@
+name: Clang headers - build the compiler-matching resource headers
+
+# The Swift compiler we built contains clang 21. Apple's SDK pack carries clang 17 headers (arm_neon.h and friends),
+# and the two do not agree. This builds the matching headers from the same LLVM source the compiler was built from.
+# They are open source (Apache-2.0), so they ship inside the app.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/clang-headers.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  headers:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          for t in cmake ninja; do command -v $t >/dev/null || brew install $t; done
+
+      - name: Get the LLVM source the compiler was built from
+        run: |
+          set -eu
+          REV=$(python3 -c "import json;print([s for s in json.load(open('compiler/Toolchain.lock.json'))['sources'] if s['name']=='llvm-project'][0]['revision'])")
+          mkdir llvm && cd llvm && git init -q
+          git remote add origin https://github.com/swiftlang/llvm-project.git
+          git fetch -q --depth 1 origin "$REV"
+          git checkout -q FETCH_HEAD
+          git log -1 --oneline
+
+      - name: Build the resource headers
+        run: |
+          set -eu
+          cmake -S llvm/llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD=AArch64 \
+            -DLLVM_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF
+          cmake --build build --target clang-resource-headers --parallel 3
+          H=$(find build -type d -path '*lib/clang/*/include' | head -1)
+          echo "headers: $H"; ls "$H" | head -20; ls "$H" | wc -l
+          test -f "$H/arm_neon.h"
+          mkdir -p out/ClangResource && cp -R "$H" out/ClangResource/include
+          du -sh out/ClangResource
+          { echo "### clang headers"; echo "dir: $H"; echo "files: $(ls "$H" | wc -l)"; grep -m1 -n "clang" "$H/arm_neon.h" | head -1; } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clang-resource
+          path: out/ClangResource
+          retention-days: 90

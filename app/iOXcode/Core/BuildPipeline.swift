@@ -83,17 +83,29 @@ final class BuildPipeline {
         // 1. compile all Swift to one object (whole module)
         let obj = work.appendingPathComponent("\(m.name).o")
         let target = "arm64-apple-ios\(m.minOS)"
+        // A resource directory made of the pack's Swift files plus clang headers that match THIS compiler (clang 21).
+        let resourceDir = work.appendingPathComponent("resource-dir", isDirectory: true)
+        try fm.createDirectory(at: resourceDir, withIntermediateDirectories: true)
+        for entry in (try? fm.contentsOfDirectory(atPath: layout.swiftResource.path)) ?? [] where entry != "clang" {
+            try? fm.createSymbolicLink(atPath: resourceDir.appendingPathComponent(entry).path,
+                                       withDestinationPath: layout.swiftResource.appendingPathComponent(entry).path)
+        }
+        let bundled = Bundle.main.bundleURL.appendingPathComponent("ClangResource")
+        let clangDir: URL? = fm.fileExists(atPath: bundled.appendingPathComponent("include/arm_neon.h").path) ? bundled : layout.clangResource
+        if let c = clangDir {
+            try? fm.createSymbolicLink(atPath: resourceDir.appendingPathComponent("clang").path, withDestinationPath: c.path)
+            log.log("clang headers: \(c == bundled ? "built-in (matching)" : "from the SDK pack (may not match)")")
+        }
         var fe: [String] = ["-c"] + files.map { $0.path }
         fe += ["-target", target, "-sdk", layout.sdk.path,
                "-module-name", m.name, "-parse-as-library", "-swift-version", m.swiftVersion,
-               "-resource-dir", layout.swiftResource.path,
+               "-resource-dir", resourceDir.path,
                "-module-cache-path", moduleCache.path,
                "-enable-objc-interop", "-no-color-diagnostics",
                "-Xllvm", "-aarch64-use-tbi", "-empty-abi-descriptor", "-disable-clang-spi",
                "-no-auto-bridging-header-chaining",
                "-target-sdk-version", sdkVersion(layout.sdk), "-target-sdk-name", "iphoneos" + sdkVersion(layout.sdk),
                "-o", obj.path]
-        if let clang = layout.clangResource { fe += ["-Xcc", "-resource-dir", "-Xcc", clang.path] }
         switch m.optimization {
         case "speed": fe += ["-O"]
         case "size": fe += ["-Osize"]
