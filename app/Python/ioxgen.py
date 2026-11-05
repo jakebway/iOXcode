@@ -173,7 +173,7 @@ def manifest_from_spec(spec_path):
     m["sourceResources"] = True
 
     # libraries and frameworks
-    libs, fws, libdirs = [], [], []
+    libs, fws, libdirs, pkgs = [], [], [], []
     for d in target.get("dependencies") or []:
         if not isinstance(d, dict):
             continue
@@ -195,7 +195,26 @@ def manifest_from_spec(spec_path):
             else:
                 notes.append("framework dependency is not supported yet: " + n)
         elif "package" in d:
-            notes.append("Swift package dependencies are not supported yet: " + str(d["package"]))
+            pk = (spec.get("packages") or {}).get(d["package"])
+            if not isinstance(pk, dict):
+                notes.append("package %s is not declared under packages:" % d["package"])
+            else:
+                if pk.get("path"):
+                    notes.append("local Swift package %s is not supported yet" % pk["path"])
+                else:
+                    kind, value = "branch", "HEAD"
+                    if "from" in pk: kind, value = "from", _str(pk["from"])
+                    elif "majorVersion" in pk: kind, value = "from", _str(pk["majorVersion"])
+                    elif "minorVersion" in pk: kind, value = "minor", _str(pk["minorVersion"])
+                    elif "exactVersion" in pk: kind, value = "exact", _str(pk["exactVersion"])
+                    elif "version" in pk: kind, value = "exact", _str(pk["version"])
+                    elif "branch" in pk: kind, value = "branch", _str(pk["branch"])
+                    elif "revision" in pk: kind, value = "revision", _str(pk["revision"])
+                    pk_entry = next((x for x in pkgs if x["name"] == d["package"]), None)
+                    if pk_entry is None:
+                        pk_entry = {"name": d["package"], "url": pk.get("url", ""), "kind": kind, "value": value, "products": []}
+                        pkgs.append(pk_entry)
+                    pk_entry["products"].append(d.get("product") or d["package"])
         elif "target" in d:
             notes.append("extra targets (extensions, frameworks) are not built yet: " + str(d["target"]))
         elif "carthage" in d:
@@ -217,6 +236,7 @@ def manifest_from_spec(spec_path):
             ld.append(t)
         i += 1
     m["libraries"], m["frameworks"], m["libraryDirs"], m["linkerFlags"] = libs, fws, sorted(set(libdirs)), ld
+    m["packages"] = pkgs
     sf = [t for t in _str(s.get("OTHER_SWIFT_FLAGS")).split() if not t.startswith("$(")]
     if sf:
         m["swiftFlags"] = sf

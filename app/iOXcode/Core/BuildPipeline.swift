@@ -102,6 +102,21 @@ final class BuildPipeline {
             try? fm.createSymbolicLink(atPath: resourceDir.appendingPathComponent("clang").path, withDestinationPath: c.path)
             log.log("clang headers: \(c == bundled ? "built-in (matching)" : "from the SDK pack (may not match)")")
         }
+        // Swift packages: compile each module (dependencies first) into .o + .swiftmodule
+        var packageObjects: [URL] = []
+        let moduleDir = work.appendingPathComponent("modules", isDirectory: true)
+        let commonArgs: [String] = ["-target", target, "-sdk", layout.sdk.path,
+               "-parse-as-library",
+               "-resource-dir", resourceDir.path,
+               "-module-cache-path", moduleCache.path,
+               "-enable-objc-interop", "-no-color-diagnostics",
+               "-Xllvm", "-aarch64-use-tbi", "-empty-abi-descriptor", "-disable-clang-spi",
+               "-no-auto-bridging-header-chaining", "-enable-cross-import-overlays",
+               "-target-sdk-version", sdkVersion(layout.sdk), "-target-sdk-name", "iphoneos" + sdkVersion(layout.sdk)]
+        if !m.packages.isEmpty {
+            try fm.createDirectory(at: moduleDir, withIntermediateDirectories: true)
+            packageObjects = try buildPackages(m, work: work, moduleDir: moduleDir, common: commonArgs)
+        }
         let sourcesForCompile = PreviewStripper.prepare(files, root: project.root, work: work, log: log)
         var fe: [String] = ["-c"] + sourcesForCompile.map { $0.path }
         fe += ["-target", target, "-sdk", layout.sdk.path,
@@ -119,6 +134,7 @@ final class BuildPipeline {
         default: fe += ["-Onone"]
         }
         fe += MacroPlugins.arguments(log: log)
+        if !packageObjects.isEmpty { fe += ["-I", moduleDir.path] }
         if let h = m.bridgingHeader { fe += ["-import-objc-header", project.root.appendingPathComponent(h).path] }
         fe += m.swiftFlags
         log.log("-- compiling Swift")
@@ -140,7 +156,7 @@ final class BuildPipeline {
         for f in m.frameworks { ld += ["-framework", f] }
         ld += ["-lSystem", "-lc++", "-lobjc",
                "-rpath", "/usr/lib/swift", "-rpath", "@executable_path/Frameworks",
-               "-dead_strip", "-e", "_main", obj.path]
+               "-dead_strip", "-e", "_main", obj.path] + packageObjects.map { $0.path }
         // Apple's own link line also adds the back-deployment pack
         let compat = layout.swiftResource.appendingPathComponent("iphoneos/libswiftCompatibilityPacks.a")
         if fm.fileExists(atPath: compat.path) { ld.append(compat.path) }
@@ -187,6 +203,47 @@ final class BuildPipeline {
         let name = sdk.deletingPathExtension().lastPathComponent // iPhoneOS26.2
         let v = name.replacingOccurrences(of: "iPhoneOS", with: "")
         return v.isEmpty ? "18.0" : v
+    }
+
+    /// Resolves the project's Swift packages (ioxspm, in the app's Python) and compiles their modules.
+    func buildPackages(_ m: Manifest, work: URL, moduleDir: URL, common: [String]) throws -> [URL] {
+        let fm = FileManager.default
+        log.log("-- resolving Swift packages")
+        let req: [String: Any] = [
+            "work": work.path, "cache": Paths.caches.appendingPathComponent("Packages").path,
+            "packages": m.packages.map { ["url": $0.url, "req": ["kind": $0.kind, "value": $0.value]] },
+            "products": m.packages.flatMap { p in (p.products.isEmpty ? [p.name] : p.products).map { ["name": $0, "package": p.name] } },
+        ]
+        let reqURL = work.appendingPathComponent("packages-request.json")
+        try JSONSerialization.data(withJSONObject: req).write(to: reqURL)
+        let r = PythonHost.shared.run(.shell("python3 -c 'import ioxspm; ioxspm.resolve(\"\(reqURL.path)\")'"), cwd: work, log: nil)
+        guard r.exitCode == 0, let data = try? Data(contentsOf: work.appendingPathComponent("packages.json")),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw BuildError.message("Could not resolve the Swift packages: \(r.message.suffix(600))")
+        }
+        for n in (obj["notes"] as? [String]) ?? [] { log.log("  \(n)") }
+        var objects: [URL] = []
+        let modules = (obj["modules"] as? [[String: Any]]) ?? []
+        for mod in modules {
+            guard let name = mod["name"] as? String else { continue }
+            let files = ((mod["files"] as? [String]) ?? [])
+            let cfiles = (mod["cfiles"] as? [String]) ?? []
+            if !cfiles.isEmpty { log.log("warning: \(name) has \(cfiles.count) C/Objective-C files, which are not compiled yet") }
+            if files.isEmpty { continue }
+            log.log("-- module \(name) (\(files.count) files)")
+            let o = work.appendingPathComponent("pkg-\(name).o")
+            var fe = ["-c"] + files + common + ["-module-name", name, "-swift-version", "5",
+                      "-emit-module", "-emit-module-path", moduleDir.appendingPathComponent("\(name).swiftmodule").path,
+                      "-I", moduleDir.path, "-o", o.path, "-O"]
+            for d in (mod["defines"] as? [String]) ?? [] { fe += ["-D", d] }
+            fe += MacroPlugins.arguments(log: LogSink { _ in })
+            let res = CompilerHost.shared.frontend(fe)
+            if !res.message.isEmpty { log.log(res.message) }
+            guard res.exitCode == 0 else { throw BuildError.message("Swift package module \(name) failed to compile (exit \(res.exitCode))") }
+            objects.append(o)
+        }
+        _ = fm
+        return objects
     }
 
     /// Runs build scripts with the variables Xcode gives a Run Script phase.

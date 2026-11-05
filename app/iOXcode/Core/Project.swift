@@ -19,6 +19,27 @@ struct BuildScript: Codable, Hashable {
     }
 }
 
+/// A Swift package dependency of the app.
+struct PackageRef: Codable, Hashable {
+    var name: String
+    var url: String
+    var kind: String = "branch"       // from | minor | exact | branch | revision
+    var value: String = "HEAD"
+    var products: [String] = []
+
+    init(name: String, url: String, kind: String = "branch", value: String = "HEAD", products: [String] = []) {
+        self.name = name; self.url = url; self.kind = kind; self.value = value; self.products = products
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        url = (try? c.decode(String.self, forKey: .url)) ?? ""
+        name = (try? c.decode(String.self, forKey: .name)) ?? (url.split(separator: "/").last.map(String.init) ?? "")
+        kind = (try? c.decode(String.self, forKey: .kind)) ?? "branch"
+        value = (try? c.decode(String.self, forKey: .value)) ?? "HEAD"
+        products = (try? c.decode([String].self, forKey: .products)) ?? []
+    }
+}
+
 /// What ioxgen (inside the app's Python) made from project.yml and the GitHub workflows.
 struct Generated: Decodable {
     var manifest: Manifest?
@@ -55,6 +76,7 @@ struct Manifest: Codable {
     var infoPlistFile: String?                 // an Info.plist from an Xcode project
     var swiftFiles: [String]?                  // explicit file list (from an Xcode project)
     var scripts: [BuildScript] = []            // run by ioxsh before/after compiling
+    var packages: [PackageRef] = []            // Swift package dependencies
     var excludes: [String] = []                // folders/files under `sources` that are not compiled
     var sourceResources = false                // non-code files inside `sources` are copied too (XcodeGen does that)
 
@@ -70,11 +92,11 @@ struct Manifest: Codable {
         resources = get(.resources, []); icon = get(.icon, nil as String?)
         swiftFlags = get(.swiftFlags, []); linkerFlags = get(.linkerFlags, []); infoPlist = get(.infoPlist, [:])
         infoPlistFile = get(.infoPlistFile, nil as String?); swiftFiles = get(.swiftFiles, nil as [String]?)
-        scripts = get(.scripts, []); excludes = get(.excludes, []); sourceResources = get(.sourceResources, false)
+        scripts = get(.scripts, []); packages = get(.packages, []); excludes = get(.excludes, []); sourceResources = get(.sourceResources, false)
     }
     enum Keys: String, CodingKey {
         case name, displayName, bundleId, version, build, minOS, sources, bridgingHeader, optimization, swiftVersion
-        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles, scripts, excludes, sourceResources
+        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles, scripts, excludes, sourceResources, packages
     }
 
     static func load(from dir: URL) -> Manifest {

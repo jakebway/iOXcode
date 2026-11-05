@@ -155,7 +155,7 @@ enum XcodeProjectReader {
             }
             for bf in (phase["files"] as? [String]) ?? [] {
                 guard let buildFile = objects[bf] else { continue }
-                if buildFile["productRef"] != nil { warnings.append("Swift package dependencies are not supported yet."); continue }
+                if buildFile["productRef"] != nil { continue }
                 guard let ref = buildFile["fileRef"] as? String, let fo = objects[ref] else { continue }
                 let name = (fo["path"] as? String) ?? (fo["name"] as? String) ?? ""
                 let ext = (name as NSString).pathExtension.lowercased()
@@ -178,6 +178,34 @@ enum XcodeProjectReader {
                 }
             }
         }
+        // Swift packages: XCRemoteSwiftPackageReference + the products this target links
+        var wanted: [String: [String]] = [:]     // package reference id -> product names
+        for pid in (target.value["packageProductDependencies"] as? [String]) ?? [] {
+            guard let dep = objects[pid], let pname = dep["productName"] as? String, let pref = dep["package"] as? String else { continue }
+            wanted[pref, default: []].append(pname)
+        }
+        var packages: [PackageRef] = []
+        for (id, products) in wanted {
+            guard let o = objects[id] else { continue }
+            if let url = o["repositoryURL"] as? String {
+                var kind = "branch", value = "HEAD"
+                if let r = o["requirement"] as? [String: Any] {
+                    switch r["kind"] as? String ?? "" {
+                    case "upToNextMajorVersion": kind = "from"; value = r["minimumVersion"] as? String ?? ""
+                    case "upToNextMinorVersion": kind = "minor"; value = r["minimumVersion"] as? String ?? ""
+                    case "exactVersion": kind = "exact"; value = r["version"] as? String ?? ""
+                    case "versionRange": kind = "from"; value = r["minimumVersion"] as? String ?? ""
+                    case "branch": kind = "branch"; value = r["branch"] as? String ?? "HEAD"
+                    case "revision": kind = "revision"; value = r["revision"] as? String ?? ""
+                    default: break
+                    }
+                }
+                packages.append(PackageRef(name: (url as NSString).lastPathComponent.replacingOccurrences(of: ".git", with: ""), url: url, kind: kind, value: value, products: products))
+            } else if let rel = o["relativePath"] as? String {
+                warnings.append("local Swift package \(rel) is not supported yet")
+            }
+        }
+        m.packages = packages
         if !skippedSources.isEmpty { warnings.append("C/Objective-C files are not compiled yet (\(skippedSources.count)): \(skippedSources.prefix(3).joined(separator: ", "))") }
         m.swiftFiles = swiftFiles
         m.scripts = scripts
