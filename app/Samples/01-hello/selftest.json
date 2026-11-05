@@ -1,1 +1,0 @@
-{"title": "Plain SwiftUI app: compile, link, package, IPA", "expect": ["Info.plist", "Hello"]}
