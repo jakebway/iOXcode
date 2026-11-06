@@ -392,6 +392,48 @@ def expand_entry(src):
     return out
 
 
+# ---------------------------------------------------------------- SwiftData @Query
+_QUERY_HEAD = re.compile(r"\s*((?:(?:@\w+(?:\([^)]*\))?|private|fileprivate|internal|public|final|nonisolated)\s+)*)var\s+(\w+)\s*:\s*([^={\n;]+)")
+
+
+def expand_query(src):
+    if "@Query" not in src:
+        return None
+    clean = _blank_literals(src)
+    edits = []
+    for m in re.finditer(r"@Query\b", clean):
+        i = m.end()
+        n = len(clean)
+        args = ""
+        j = i
+        while j < n and clean[j] in " \t":
+            j += 1
+        end_attr = i
+        if j < n and clean[j] == "(":
+            k = _find_close(clean, j)
+            if k < 0:
+                continue
+            args = src[j + 1:k]
+            end_attr = k + 1
+        hm = _QUERY_HEAD.match(clean, end_attr)
+        if not hm:
+            continue
+        name = hm.group(2)
+        type_text = hm.group(3).strip()
+        type_end = hm.start(3) + len(hm.group(3).rstrip())
+        accessors = (" {\n    get { _%(n)s.wrappedValue }\n}\nprivate(set) var _%(n)s: SwiftData.Query<%(t)s.Element, %(t)s> = .init(%(a)s)" %
+                     {"n": name, "t": type_text, "a": args.strip()})
+        edits.append((type_end, type_end, accessors))
+        edits.append((m.start(), end_attr, ""))
+    if not edits:
+        return None
+    edits.sort(key=lambda e: (e[0], e[1]), reverse=True)
+    out = src
+    for a, b, r in edits:
+        out = out[:a] + r + out[b:]
+    return out
+
+
 def strip_previews(src):
     """Removes `#Preview ... { }` blocks (previews are Xcode-only and need Apple's preview macro plugin)."""
     if "#Preview" not in src:
@@ -443,6 +485,9 @@ def expand_source(src):
     ent = expand_entry(src)
     if ent is not None:
         src, changed = ent, True
+    qry = expand_query(src)
+    if qry is not None:
+        src, changed = qry, True
     if "#" not in src:
         return src if changed else None
     for name, fn in FREESTANDING.items():

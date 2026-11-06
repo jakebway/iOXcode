@@ -21,6 +21,9 @@ jobs:
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           xcrun swiftc -sdk "$SDK" -target arm64-apple-ios17.0 -parse-as-library -typecheck \
             -Xfrontend -dump-macro-expansions tools/macro-probe/Probe.swift 2>&1 | tee /tmp/expansions.txt || true
+          echo "=========== PREDICATES ==========="
+          xcrun swiftc -sdk "$SDK" -target arm64-apple-ios17.0 -parse-as-library -typecheck \
+            -Xfrontend -dump-macro-expansions tools/macro-probe/Predicates.swift 2>&1 | tee /tmp/predicates_$(echo $RUNNER_NAME | tr -c 'a-z0-9' _).txt | head -5000 || true
           echo "=========== PROBE2 ==========="
           xcrun swiftc -sdk "$SDK" -target arm64-apple-ios17.0 -parse-as-library -typecheck \
             -Xfrontend -dump-macro-expansions tools/macro-probe/Probe2.swift 2>&1 | tee -a /tmp/expansions.txt || true
@@ -51,6 +54,17 @@ jobs:
           assert "@Entry" not in out
           open("/tmp/expanded/Entry.swift", "w").write(out)
           PY
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "app/Python")
+          import ioxmacro
+          src = open("tools/macro-probe/QueryCheck.swift").read()
+          out = ioxmacro.expand_source(src)
+          assert "@Query" not in out and "@Model" not in out
+          open("/tmp/expanded/QueryCheck.swift", "w").write(out)
+          PY
+          xcrun swiftc -sdk "$SDK" -target arm64-apple-ios17.0 -parse-as-library -typecheck /tmp/expanded/QueryCheck.swift 2>&1 | tee /tmp/check_query.txt
+          echo "query typecheck exit: ${PIPESTATUS[0]}"
           for MODE in 5 6; do
             xcrun swiftc -sdk "$SDK" -target arm64-apple-ios17.0 -parse-as-library -typecheck -swift-version $MODE /tmp/expanded/Entry.swift 2>&1 | tee /tmp/check_entry.txt
             echo "entry typecheck (swift $MODE) exit: ${PIPESTATUS[0]}"
