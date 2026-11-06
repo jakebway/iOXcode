@@ -486,6 +486,38 @@ def load_pins(root):
     return pins
 
 
+def _fetch_submodules(top, owner, repo, ref, notes):
+    """GitHub's zip archives leave out git submodules; fetch each one at the commit the repository pins."""
+    gm = os.path.join(top, ".gitmodules")
+    if not os.path.isfile(gm):
+        return
+    text = open(gm, encoding="utf-8", errors="replace").read()
+    for path, url in re.findall(r"path\s*=\s*(\S+)\s*\n\s*url\s*=\s*(\S+)", text):
+        target = os.path.join(top, path)
+        if os.path.isdir(target) and os.listdir(target):
+            continue
+        gp = github_parts(url)
+        if not gp:
+            notes.append("submodule %s is not on github.com; skipped" % url)
+            continue
+        try:
+            info = json.loads(_get("https://api.github.com/repos/%s/%s/contents/%s?ref=%s" % (owner, repo, path, ref.replace("refs/heads/", "").replace("refs/tags/", "")), accept="application/vnd.github+json").decode("utf-8"))
+            sha = info.get("sha")
+            data = _get("https://codeload.github.com/%s/%s/zip/%s" % (gp[0], gp[1], sha))
+            stage = target + ".tmp"
+            shutil.rmtree(stage, ignore_errors=True)
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                z.extractall(stage)
+            kids = os.listdir(stage)
+            inner = os.path.join(stage, kids[0]) if len(kids) == 1 else stage
+            shutil.rmtree(target, ignore_errors=True)
+            shutil.move(inner, target)
+            shutil.rmtree(stage, ignore_errors=True)
+            notes.append("  submodule %s fetched" % path)
+        except Exception as e:
+            notes.append("could not fetch submodule %s: %s" % (path, e))
+
+
 def fetch_package(url, req, cache_dir, notes):
     gp = github_parts(url)
     if not gp:
@@ -517,6 +549,7 @@ def fetch_package(url, req, cache_dir, notes):
     key = "%s__%s__%s" % (owner, repo, re.sub(r"[^A-Za-z0-9._-]", "_", ref))
     dest = os.path.join(cache_dir, key)
     if os.path.isdir(dest) and os.path.isfile(os.path.join(dest, ".ioxcode-complete2")):
+        _fetch_submodules(dest, owner, repo, ref, notes)
         return dest, ref
     data = None
     for u in ("https://codeload.github.com/%s/%s/zip/%s" % (owner, repo, ref),):
@@ -546,6 +579,7 @@ def fetch_package(url, req, cache_dir, notes):
     shutil.rmtree(dest, ignore_errors=True)
     shutil.move(top, dest)
     shutil.rmtree(stage, ignore_errors=True)
+    _fetch_submodules(dest, owner, repo, ref, notes)
     open(os.path.join(dest, ".ioxcode-complete2"), "w").close()
     return dest, ref
 
