@@ -176,6 +176,18 @@ final class BuildPipeline {
         }
         let strippedSources = PreviewStripper.prepare(files, root: project.root, work: work, log: log)
         var sourcesForCompile = MacroEmulation.prepare(strippedSources, work: work, log: log)
+        // Core Data models: generate the entity classes and (later) the compiled model, as Xcode's momc would
+        var dataModels: [(bundle: URL, version: URL, entities: [DataModelCompiler.Entity])] = []
+        for bundle in DataModelCompiler.findModels(under: project.root) {
+            guard let version = DataModelCompiler.currentVersion(of: bundle) else { continue }
+            let entities = DataModelCompiler.parse(version)
+            guard !entities.isEmpty else { continue }
+            dataModels.append((bundle, version, entities))
+            let gen = work.appendingPathComponent("CoreDataGenerated-\(bundle.deletingPathExtension().lastPathComponent).swift")
+            try DataModelCompiler.source(for: entities).write(to: gen, atomically: true, encoding: .utf8)
+            sourcesForCompile.append(gen)
+            log.log("-- Core Data model \(bundle.lastPathComponent): \(entities.map { $0.name }.joined(separator: ", "))")
+        }
         // Apple's linker line adds libclang_rt, which provides the runtime check behind `#available`. We have no
         // libclang_rt on the device, so the app carries its own copy of that one function.
         let shim = work.appendingPathComponent("iox_runtime_shim.swift")
@@ -237,7 +249,7 @@ final class BuildPipeline {
         var iconFromCatalog: URL?
         var appCatalogs: [URL] = []
         var catalogPlist: [String: Any] = [:]
-        let resourceURLs = m.resources.map { project.root.appendingPathComponent($0) } + project.sourceResourceFiles(for: m)
+        let resourceURLs = (m.resources.map { project.root.appendingPathComponent($0) } + project.sourceResourceFiles(for: m)).filter { $0.pathExtension != "xcdatamodeld" }
         for src in resourceURLs {
             let r = src.lastPathComponent
             let ext = src.pathExtension.lowercased()
@@ -284,6 +296,10 @@ final class BuildPipeline {
                     log.log("note: \(rb.name): colors and images from its asset catalog will be missing at runtime")
                 }
             }
+        }
+        for dm in dataModels {
+            do { try DataModelCompiler.writeCompiled(bundle: dm.bundle, version: dm.version, entities: dm.entities, into: app) }
+            catch { log.log("warning: could not write the compiled model \(dm.bundle.lastPathComponent): \(error)") }
         }
         var m2 = m
         if m2.icon == nil, let ic = iconFromCatalog { IconWriter.write(ic, into: app, log: log); m2.icon = "-" }

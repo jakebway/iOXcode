@@ -213,7 +213,7 @@ struct Project: Identifiable, Hashable {
                 let ext = u.pathExtension.lowercased()
                 let isDir = (try? u.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
                 if isDir {
-                    if wholeExt.contains(ext) { en.skipDescendants(); if !["framework", "xcframework", "docc", "metal"].contains(ext) { out.append(u) } }
+                    if wholeExt.contains(ext) { en.skipDescendants(); if !["framework", "xcframework", "docc", "metal", "xcdatamodeld"].contains(ext) { out.append(u) } }
                     continue
                 }
                 if skipExt.contains(ext) || p == plist || name == "Info.plist" || name == "LICENSE" { continue }
