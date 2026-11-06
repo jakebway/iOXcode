@@ -109,6 +109,16 @@ final class BuildPipeline {
         for w in project.warnings { log.log("note: \(w)") }
 
         let moduleCache = Paths.caches.appendingPathComponent("ModuleCache", isDirectory: true)
+        // Compiled modules remember the timestamps of the SDK files they were built from. When the SDK pack was
+        // replaced, start from an empty cache.
+        let stampFile = Paths.caches.appendingPathComponent("ModuleCache.sdkstamp")
+        let probe = layout.sdk.appendingPathComponent("usr/include/AvailabilityInternal.h")
+        let mtime = ((try? fm.attributesOfItem(atPath: probe.path))?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+        let stamp = "\(layout.sdk.path) \(Int(mtime))"
+        if (try? String(contentsOf: stampFile, encoding: .utf8)) != stamp {
+            try? fm.removeItem(at: moduleCache)
+            try? stamp.write(to: stampFile, atomically: true, encoding: .utf8)
+        }
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
         try fm.createDirectory(at: moduleCache, withIntermediateDirectories: true)
 
