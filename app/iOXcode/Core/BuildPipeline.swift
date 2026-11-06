@@ -340,7 +340,7 @@ final class BuildPipeline {
                 o.includeDirs = [inc] + CCompiler.headerDirectories(under: [URL(fileURLWithPath: (mod["dir"] as? String) ?? "")], limit: 60)
                 o.defines = (mod["cdefines"] as? [String]) ?? []
                 o.optimize = true
-                o.arc = false
+                o.arc = true   // SwiftPM compiles Objective-C with ARC
                 o.extraFlags = ((mod["flags"] as? [String]) ?? []).filter { $0.hasPrefix("-W") == false && $0.hasPrefix("-f") }
                 objects += try cc.compile(cfiles.map { URL(fileURLWithPath: $0) }, into: work.appendingPathComponent("pkgc-\(name)", isDirectory: true), options: o, label: name)
                 // a module map over the public headers so Swift can `import name`
