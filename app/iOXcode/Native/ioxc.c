@@ -12,6 +12,7 @@ static void *handle;
 static abi_fn abiFn;
 static run_fn frontendFn;
 static run_fn linkFn;
+static run_fn clangFn;
 static release_fn releaseFn;
 
 static void setError(char *error, size_t length, const char *text) {
@@ -33,6 +34,7 @@ int ioxc_load(const char *path, char *error, size_t errorLength) {
   abiFn = (abi_fn)dlsym(h, "swift_compiler_abi_version");
   frontendFn = (run_fn)dlsym(h, "swift_compiler_frontend");
   linkFn = (run_fn)dlsym(h, "swift_compiler_link");
+  clangFn = (run_fn)dlsym(h, "swift_compiler_clang");   // ABI 4; older libraries have no C compiler
   releaseFn = (release_fn)dlsym(h, "swift_compiler_release");
   if (!abiFn || !frontendFn || !linkFn || !releaseFn) {
     setError(error, errorLength, "the library is missing swift_compiler_* symbols");
@@ -61,6 +63,16 @@ SwiftCompilerResult ioxc_link(int32_t count, const char *const *arguments) {
     return r;
   }
   return linkFn(count, arguments);
+}
+
+int ioxc_has_clang(void) { return clangFn != NULL; }
+
+SwiftCompilerResult ioxc_clang(int32_t count, const char *const *arguments) {
+  if (!clangFn) {
+    SwiftCompilerResult r = {1, 1, NULL, 0};
+    return r;
+  }
+  return clangFn(count, arguments);
 }
 
 void ioxc_release(char *message) {

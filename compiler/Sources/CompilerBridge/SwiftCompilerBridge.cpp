@@ -123,6 +123,10 @@ SwiftCompilerResult swift_compiler_autolink(int32_t count, const char *const *ar
   return invoke(count, arguments, swift_toolchain::runAutolink);
 }
 
+SwiftCompilerResult swift_compiler_clang(int32_t count, const char *const *arguments) noexcept {
+  return invoke(count, arguments, swift_toolchain::runClang);
+}
+
 SwiftCompilerResult swift_compiler_link(int32_t count, const char *const *arguments) noexcept {
   return invoke(count, arguments, swift_toolchain::runLinker);
 }

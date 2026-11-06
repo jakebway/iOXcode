@@ -14,6 +14,9 @@ uint32_t ioxc_abi_version(void);
 SwiftCompilerResult ioxc_frontend(int32_t count, const char *const *arguments);
 /// Linker arguments start with the program name "ld64.lld".
 SwiftCompilerResult ioxc_link(int32_t count, const char *const *arguments);
+/// Clang arguments are a normal command line (argv[0] is "clang") for one compile step. Needs ABI 4.
+int ioxc_has_clang(void);
+SwiftCompilerResult ioxc_clang(int32_t count, const char *const *arguments);
 void ioxc_release(char *message);
 
 /// Bytes the process may still allocate (os_proc_available_memory), or 0 if unknown.

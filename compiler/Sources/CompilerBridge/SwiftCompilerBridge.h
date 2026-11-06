@@ -7,8 +7,8 @@
 /// Consumers compare this version before exchanging result storage with the library.
 ///
 /// Version 2 adds semantic completion and version 3 adds semantic annotation. The layouts of the
-/// earlier operations are unchanged.
-#define SWIFT_COMPILER_BRIDGE_ABI_VERSION 3u
+/// earlier operations are unchanged. Version 4 adds swift_compiler_clang.
+#define SWIFT_COMPILER_BRIDGE_ABI_VERSION 4u
 
 /// The exit code of a completion or an annotation that swift_compiler_cancel_completion stopped.
 #define SWIFT_COMPILER_COMPLETION_CANCELLED 2
@@ -58,6 +58,11 @@ swift_compiler_autolink(int32_t count, const char *const *arguments) SWIFT_COMPI
 /// annotation call.
 __attribute__((visibility("default"))) SwiftCompilerResult
 swift_compiler_link(int32_t count, const char *const *arguments) SWIFT_COMPILER_NOEXCEPT;
+
+/// Compiles one C, Objective-C or C++ file. The arguments are a clang command line (argv[0] is "clang") that
+/// ends in a single compile step such as `-c file.m -o file.o`; the work runs in this process.
+__attribute__((visibility("default"))) SwiftCompilerResult
+swift_compiler_clang(int32_t count, const char *const *arguments) SWIFT_COMPILER_NOEXCEPT;
 
 /// One semantic completion request, which the embedding editor sends for a cursor in a source file.
 ///

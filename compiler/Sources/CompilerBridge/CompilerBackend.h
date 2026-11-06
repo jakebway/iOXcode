@@ -25,6 +25,10 @@ BackendResult runFrontend(int32_t count, const char *const *arguments);
 /// The bridge keeps object metadata extraction in the same process-wide operation sequence.
 BackendResult runAutolink(int32_t count, const char *const *arguments);
 
+/// Compiles C, Objective-C and C++ with clang's driver and frontend inside this process. The arguments are a
+/// normal clang command line, starting with the program name.
+BackendResult runClang(int32_t count, const char *const *arguments);
+
 /// The bridge retains LLD's reuse decision after every Mach-O link.
 BackendResult runLinker(int32_t count, const char *const *arguments);
 

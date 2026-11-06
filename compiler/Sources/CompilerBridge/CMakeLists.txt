@@ -16,9 +16,12 @@ target_sources(SwiftCompilerBridge PRIVATE
   "${TOOLCHAIN_SWIFT_SOURCE}/lib/DriverTool/autolink_extract_main.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/../NativeProfile/BundledPluginPolicy.cpp")
 target_include_directories(SwiftCompilerBridge PRIVATE "${CMAKE_CURRENT_LIST_DIR}/../NativeProfile")
-target_include_directories(SwiftCompilerBridge PRIVATE "${TOOLCHAIN_LLVM_SOURCE}/lld/include")
+target_include_directories(SwiftCompilerBridge PRIVATE "${TOOLCHAIN_LLVM_SOURCE}/lld/include"
+  "${TOOLCHAIN_LLVM_SOURCE}/clang/include"
+  "${TOOLCHAIN_BUILD_ROOT}/llvm-ios/tools/clang/include")
 target_link_libraries(SwiftCompilerBridge PRIVATE
-  swiftFrontendTool swiftCompilerModules swiftIDETool swiftIDE lldMachO lldCommon)
+  swiftFrontendTool swiftCompilerModules swiftIDETool swiftIDE lldMachO lldCommon
+  clangDriver clangFrontendTool clangFrontend clangCodeGen clangSerialization)
 if(APPLE)
   target_link_libraries(SwiftCompilerBridge PRIVATE "-framework CoreFoundation")
 endif()
