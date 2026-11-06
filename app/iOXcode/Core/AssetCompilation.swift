@@ -72,6 +72,13 @@ enum AssetCompilation {
         let fixed = normalizeAppleOptimizedPNGs(in: merged)
         if fixed > 0 { log.log("note: converted \(fixed) Xcode-optimized (CgBI) PNG image\(fixed == 1 ? "" : "s") to standard PNG") }
 
+        // app icons are written separately (below), including sets nested inside folders, which AssetKit is strict about
+        if let en = fm.enumerator(at: merged, includingPropertiesForKeys: nil) {
+            var icons: [URL] = []
+            for case let u as URL in en where u.pathExtension == "appiconset" || u.pathExtension == "launchimage" { icons.append(u) }
+            for u in icons { try? fm.removeItem(at: u) }
+        }
+
         let pdfs = rasterizePDFAssets(in: merged)
         if pdfs > 0 { log.log("note: rasterized \(pdfs) PDF image\(pdfs == 1 ? "" : "s") (3x) for the asset catalog") }
 
