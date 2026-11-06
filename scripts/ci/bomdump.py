@@ -72,3 +72,20 @@ if only is None or only == 'RENDITIONS':
                 val = blk(v); kk = blk(k)
                 print('   key', kk.hex(), 'csi', val[:64].hex(), 'len', len(val))
         cur = f; li += 1
+
+if only is None or only == 'RENDITIONS':
+    kf = blk(vars_['KEYFORMAT'])
+    cnt_attr = struct.unpack('<I', kf[8:12])[0]
+    print('KEYFORMAT attrs', struct.unpack('<%dI' % cnt_attr, kf[12:12+4*cnt_attr]), 'magic', kf[:4])
+    b = blk(vars_['RENDITIONS']); child = struct.unpack('>I', b[8:12])[0]
+    _, _, _, _, ents, _ = node(child)
+    cur = ents[0][0]; keys = []
+    while cur:
+        il, c, f, bk, es, l = node(cur)
+        keys += [blk(k) for (v, k) in es]
+        cur = f
+    def u16(k): return struct.unpack('<%dH' % (len(k)//2), k)
+    for label, fn in (('bytewise', lambda k: k), ('LE u16 tuple', u16)):
+        bad = [i for i in range(1, len(keys)) if fn(keys[i-1]) > fn(keys[i])]
+        print(f'order check {label}: {len(keys)} keys, {len(bad)} out of order; first violations {bad[:5]}')
+    print('first/last keys as u16:', u16(keys[0]), u16(keys[-1]))
