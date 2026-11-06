@@ -1,25 +1,24 @@
 # Compiler build status
-started: 2026-11-06T14:10:20Z  budget: 19972s  jobs: 3
+started: 2026-11-06T16:24:20Z  budget: 19909s  jobs: 3
 bootstrap: /Library/Developer/Toolchains/swift-6.4.0-RELEASE.xctoolchain/usr
 Apple Swift version 6.4 (swift-6.4-RELEASE)
 Target: arm64-apple-macosx15.0
 xcode: Xcode 26.3 Build version 17C529 
-disk: /dev/disk2s1s1   320Gi    10Gi    41Gi    21%    426k  427M    0%   /
+disk: /dev/disk2s1s1   320Gi    10Gi    40Gi    21%    426k  424M    0%   /
 
 ## configure
 configure ok
 
-## toolchain-sources (time left 19966s, disk: 41Gi free)
-toolchain-sources: ok in 92s
+## toolchain-sources (time left 19901s, disk: 40Gi free)
+toolchain-sources: ok in 115s
 
-## host-tools (time left 19874s, disk: 38Gi free)
-host-tools: ok in 179s
+## host-tools (time left 19786s, disk: 37Gi free)
+host-tools: ok in 59s
 
-## llvm-ios (time left 19695s, disk: 38Gi free)
-llvm-ios: ok in 3438s
+## llvm-ios (time left 19727s, disk: 37Gi free)
+llvm-ios: ok in 219s
 
-## cmark-ios (time left 16257s, disk: 36Gi free)
-cmark-ios: ok in 6s
+## cmark-ios (time left 19508s, disk: 37Gi free)
+cmark-ios: ok in 3s
 
-## swift-ios (time left 16251s, disk: 36Gi free)
-swift-ios: FAILED rc=1 after 3813s
+## swift-ios (time left 19505s, disk: 37Gi free)

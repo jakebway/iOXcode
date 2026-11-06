@@ -1,26 +1,26 @@
-snapshot: 2026-11-06T16:15:34Z  elapsed: 7514s  disk: 35Gi free
+snapshot: 2026-11-06T16:49:21Z  elapsed: 1501s  disk: 35Gi free
 --- cmark-ios.log (last 25 lines)
-[15/28] Building C object src/CMakeFiles/libcmark-gfm.dir/man.c.o
-[16/28] Building C object src/CMakeFiles/libcmark-gfm.dir/map.c.o
-[17/28] Building C object src/CMakeFiles/libcmark-gfm.dir/plaintext.c.o
-[18/28] Building C object src/CMakeFiles/libcmark-gfm.dir/plugin.c.o
-[19/28] Building C object src/CMakeFiles/libcmark-gfm.dir/node.c.o
+[15/28] Building C object src/CMakeFiles/libcmark-gfm.dir/latex.c.o
+[16/28] Building C object src/CMakeFiles/libcmark-gfm.dir/man.c.o
+[17/28] Building C object src/CMakeFiles/libcmark-gfm.dir/map.c.o
+[18/28] Building C object src/CMakeFiles/libcmark-gfm.dir/node.c.o
 /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6/src/node.c:29:36: warning: a function declaration without a prototype is deprecated in all versions of C [-Wstrict-prototypes]
    29 | static bool S_safety_checks_enabled() {
       |                                    ^
       |                                     void
 1 warning generated.
-[20/28] Building C object src/CMakeFiles/libcmark-gfm.dir/registry.c.o
+[19/28] Building C object src/CMakeFiles/libcmark-gfm.dir/plaintext.c.o
+[20/28] Building C object src/CMakeFiles/libcmark-gfm.dir/plugin.c.o
+[21/28] Building C object src/CMakeFiles/libcmark-gfm.dir/references.c.o
+[22/28] Building C object src/CMakeFiles/libcmark-gfm.dir/registry.c.o
 /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6/src/registry.c:16:30: warning: extra ';' outside of a function [-Wextra-semi]
    16 | CMARK_DEFINE_LOCK(extensions);
       |                              ^
 1 warning generated.
-[21/28] Building C object src/CMakeFiles/libcmark-gfm.dir/references.c.o
-[22/28] Building C object src/CMakeFiles/libcmark-gfm.dir/inlines.c.o
 [23/28] Building C object src/CMakeFiles/libcmark-gfm.dir/render.c.o
-[24/28] Building C object src/CMakeFiles/libcmark-gfm.dir/syntax_extension.c.o
-[25/28] Building C object src/CMakeFiles/libcmark-gfm.dir/xml.c.o
-[26/28] Building C object src/CMakeFiles/libcmark-gfm.dir/scanners.c.o
+[24/28] Building C object src/CMakeFiles/libcmark-gfm.dir/scanners.c.o
+[25/28] Building C object src/CMakeFiles/libcmark-gfm.dir/syntax_extension.c.o
+[26/28] Building C object src/CMakeFiles/libcmark-gfm.dir/xml.c.o
 [27/28] Building C object src/CMakeFiles/libcmark-gfm.dir/utf8.c.o
 [28/28] Linking C static library src/libcmark-gfm.a
 [16/17] No install step for 'cmark-ios'
@@ -41,7 +41,7 @@ snapshot: 2026-11-06T16:15:34Z  elapsed: 7514s  disk: 35Gi free
 -- Compiler host arm64-apple-ios18.0. Program target arm64-apple-ios16.0.
 -- Native build root /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/build/55a329f9d685404d50d437ef9abfa9eadda9586d98dcd87f9c32f7ca782c847d/device
 -- Compiler production is explicit. Build toolchain-compiler only with a resource budget.
--- Configuring done (5.1s)
+-- Configuring done (7.2s)
 -- Generating done (0.0s)
 CMake Warning (unused-cli):
   Manually-specified variables were not used by the project:
@@ -51,28 +51,28 @@ CMake Warning (unused-cli):
 
 -- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler
 --- host-tools.log (last 25 lines)
-[300/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/VarLenCodeEmitterGen.cpp.o
-[301/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangBuiltinsEmitter.cpp.o
-[302/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangCommentCommandInfoEmitter.cpp.o
-[303/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangBuiltinTemplatesEmitter.cpp.o
-[304/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangCommentHTMLTagsEmitter.cpp.o
-[305/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangCommentHTMLNamedCharacterReferenceEmitter.cpp.o
-[306/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangDataCollectorsEmitter.cpp.o
-[307/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangAttrEmitter.cpp.o
-[308/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangOpcodesEmitter.cpp.o
-[309/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangDiagnosticsEmitter.cpp.o
-[310/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangSACheckersEmitter.cpp.o
-[311/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangOptionDocEmitter.cpp.o
-[312/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangOpenCLBuiltinEmitter.cpp.o
-[313/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangTypeNodesEmitter.cpp.o
-[314/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangSyntaxEmitter.cpp.o
+[300/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/CodeGenInstruction.cpp.o
+[301/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/CodeGenRegisters.cpp.o
+[302/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/CodeGenSchedule.cpp.o
+[303/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/CodeGenTarget.cpp.o
+[304/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/DAGISelMatcher.cpp.o
+[305/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/InfoByHwMode.cpp.o
+[306/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/OptEmitter.cpp.o
+[307/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/PredicateExpander.cpp.o
+[308/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/SubtargetFeatureInfo.cpp.o
+[309/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/Types.cpp.o
+[310/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/Utils.cpp.o
+[311/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/VarLenCodeEmitterGen.cpp.o
+[312/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangSACheckersEmitter.cpp.o
+[313/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangSyntaxEmitter.cpp.o
+[314/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangTypeNodesEmitter.cpp.o
 [315/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/MveEmitter.cpp.o
-[316/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/RISCVVEmitter.cpp.o
-[317/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/NeonEmitter.cpp.o
-[318/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/TableGen.cpp.o
-[319/322] Linking CXX executable bin/llvm-tblgen
+[316/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/NeonEmitter.cpp.o
+[317/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/RISCVVEmitter.cpp.o
+[318/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/SveEmitter.cpp.o
+[319/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/TableGen.cpp.o
 [320/322] Building CXX object tools/clang/lib/Support/CMakeFiles/obj.clangSupport.dir/RISCVVIntrinsicUtils.cpp.o
-[321/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/SveEmitter.cpp.o
+[321/322] Linking CXX executable bin/llvm-tblgen
 [322/322] Linking CXX executable bin/clang-tblgen
 [9/10] No install step for 'host-tools'
 [10/10] Completed 'host-tools'
@@ -82,23 +82,23 @@ CMake Warning (unused-cli):
 [2914/2934] Building CXX object tools/clang/lib/Tooling/CMakeFiles/obj.clangTooling.dir/LocateToolCompilationDatabase.cpp.o
 [2915/2934] Building CXX object tools/clang/lib/Tooling/CMakeFiles/obj.clangTooling.dir/Refactoring.cpp.o
 [2916/2934] Building CXX object tools/clang/lib/Tooling/CMakeFiles/obj.clangTooling.dir/RefactoringCallbacks.cpp.o
-[2917/2934] Building CXX object tools/clang/lib/Tooling/CMakeFiles/obj.clangTooling.dir/StandaloneExecution.cpp.o
-[2918/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/DependencyScanningService.cpp.o
-[2919/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/DependencyScanningFilesystem.cpp.o
+[2917/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/DependencyScanningFilesystem.cpp.o
+[2918/2934] Building CXX object tools/clang/lib/Tooling/CMakeFiles/obj.clangTooling.dir/StandaloneExecution.cpp.o
+[2919/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/DependencyScanningService.cpp.o
 [2920/2934] Building CXX object tools/clang/lib/Tooling/CMakeFiles/obj.clangTooling.dir/Tooling.cpp.o
-[2921/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/DependencyScanningWorker.cpp.o
-[2922/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/DependencyScanningTool.cpp.o
-[2923/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/InProcessModuleCache.cpp.o
-[2924/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/IncludeTreeActionController.cpp.o
+[2921/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/DependencyScanningTool.cpp.o
+[2922/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/DependencyScanningWorker.cpp.o
+[2923/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/IncludeTreeActionController.cpp.o
+[2924/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/InProcessModuleCache.cpp.o
 [2925/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/ScanAndUpdateArgs.cpp.o
-[2926/2934] Linking CXX static library lib/liblldMachO.a
-[2927/2934] Linking CXX static library lib/libclangToolingRefactor.a
-[2928/2934] Linking CXX static library lib/libclangToolingRefactoring.a
-[2929/2934] Linking CXX static library lib/libclangStaticAnalyzerFrontend.a
-[2930/2934] Linking CXX static library lib/libclangFrontendTool.a
-[2931/2934] Linking CXX static library lib/libclangTooling.a
-[2932/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/DependencyScannerImpl.cpp.o
-[2933/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/ModuleDepCollector.cpp.o
+[2926/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/DependencyScannerImpl.cpp.o
+[2927/2934] Building CXX object tools/clang/lib/Tooling/DependencyScanning/CMakeFiles/obj.clangDependencyScanning.dir/ModuleDepCollector.cpp.o
+[2928/2934] Linking CXX static library lib/liblldMachO.a
+[2929/2934] Linking CXX static library lib/libclangToolingRefactor.a
+[2930/2934] Linking CXX static library lib/libclangToolingRefactoring.a
+[2931/2934] Linking CXX static library lib/libclangStaticAnalyzerFrontend.a
+[2932/2934] Linking CXX static library lib/libclangTooling.a
+[2933/2934] Linking CXX static library lib/libclangFrontendTool.a
 [2934/2934] Linking CXX static library lib/libclangDependencyScanning.a
 [12/13] No install step for 'llvm-ios'
 [13/13] Completed 'llvm-ios'
@@ -125,7 +125,7 @@ CMake Warning at stdlib/public/SwiftShims/swift/shims/CMakeLists.txt:102 (messag
 -- Looking for include file xpc/xpc.h
 -- Looking for include file xpc/xpc.h - found
 -- Pointing 'swift' and 'swiftc' symlinks at 'swift-frontend' - no early SwiftDriver build found.
--- Configuring done (21.7s)
+-- Configuring done (20.7s)
 -- Generating done (1.3s)
 -- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/build/55a329f9d685404d50d437ef9abfa9eadda9586d98dcd87f9c32f7ca782c847d/device/swift-ios
 --- toolchain-sources.log (last 25 lines)
