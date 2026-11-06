@@ -118,11 +118,11 @@ enum AssetCompilation {
             guard head.count == 16, head[12] == 0x43, head[13] == 0x67, head[14] == 0x42, head[15] == 0x49 else { continue }   // "CgBI"
             guard let src = CGImageSourceCreateWithURL(u as CFURL, nil),
                   let image = CGImageSourceCreateImageAtIndex(src, 0, nil),
-                  let tmp = Optional(u.appendingPathExtension("tmp")),
-                  let dest = CGImageDestinationCreateWithURL(tmp! as CFURL, UTType.png.identifier as CFString, 1, nil) else { continue }
+                  let dest = CGImageDestinationCreateWithURL(u.appendingPathExtension("tmp") as CFURL, UTType.png.identifier as CFString, 1, nil) else { continue }
+            let tmp = u.appendingPathExtension("tmp")
             CGImageDestinationAddImage(dest, image, nil)
-            if CGImageDestinationFinalize(dest), (try? fm.removeItem(at: u)) != nil, (try? fm.moveItem(at: tmp!, to: u)) != nil { count += 1 }
-            else { try? fm.removeItem(at: tmp!) }
+            if CGImageDestinationFinalize(dest), (try? fm.removeItem(at: u)) != nil, (try? fm.moveItem(at: tmp, to: u)) != nil { count += 1 }
+            else { try? fm.removeItem(at: tmp) }
         }
         return count
     }
