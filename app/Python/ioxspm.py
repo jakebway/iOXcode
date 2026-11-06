@@ -262,9 +262,12 @@ def load_manifest(pkg_dir):
         if not isinstance(t, Call):
             continue
         kind = t.name
-        td = {"kind": kind, "name": t.get("name"), "path": t.get("path"), "sources": t.get("sources"),
-              "exclude": as_list(t.get("exclude")), "resources": [], "deps": [], "flags": [], "defines": [],
-              "publicHeadersPath": t.get("publicHeadersPath")}
+        def _strs(v):
+            return [x for x in as_list(v) if isinstance(x, str)]
+        _p = t.get("path")
+        td = {"kind": kind, "name": t.get("name"), "path": _p if isinstance(_p, str) else None, "sources": _strs(t.get("sources")) or None,
+              "exclude": _strs(t.get("exclude")), "resources": [], "deps": [], "flags": [], "defines": [],
+              "publicHeadersPath": (lambda v: v if isinstance(v, str) else None)(t.get("publicHeadersPath"))}
         for d in as_list(t.get("dependencies")):
             td["deps"].append(parse_target_dep(d))
         for r in as_list(t.get("resources")):
