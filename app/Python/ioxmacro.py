@@ -333,6 +333,24 @@ _ENTRY_KEYS = {
 _EXT_RE = re.compile(r"extension\s+(?:SwiftUI\.)?(EnvironmentValues|FocusedValues|Transaction|ContainerValues)\b[^{]*\{")
 
 
+def _infer_literal_type(d):
+    if d is None:
+        return None
+    d = d.strip()
+    if d in ("true", "false"):
+        return "Bool"
+    if re.fullmatch(r"-?\d[\d_]*", d):
+        return "Int"
+    if re.fullmatch(r"-?\d[\d_]*\.\d+", d):
+        return "Double"
+    if re.fullmatch(r'"(?:\\.|[^"\\])*"', d):
+        return "String"
+    m = re.fullmatch(r"([A-Z]\w*(?:\.[A-Z]\w*)*)\s*\(.*\)", d, re.S)
+    if m:
+        return m.group(1)
+    return None
+
+
 def expand_entry(src):
     if "@Entry" not in src:
         return None
@@ -356,19 +374,29 @@ def expand_entry(src):
         flat = _flat_mask(clean[body_s:body_e])
         for pm in _PROP_RE.finditer(flat):
             attrs_clean = pm.group(2) or ""
-            if not re.search(r"@Entry\b", attrs_clean) or pm.group(5) != "var" or not pm.group(7):
+            if not re.search(r"@Entry\b", attrs_clean) or pm.group(5) != "var":
                 continue
             name = pm.group(6)
             a0, a1 = body_s + pm.start(2), body_s + pm.end(2)
-            type_start = body_s + pm.start(7)
-            type_end = body_s + pm.end(7)
-            type_text = src[type_start:type_end][1:].strip()
+            inferred = None
+            if pm.group(7):
+                type_start = body_s + pm.start(7)
+                type_end = body_s + pm.end(7)
+                type_text = src[type_start:type_end][1:].strip()
+            else:
+                type_start = type_end = body_s + pm.end(6)
+                type_text = None
             tail = flat[pm.end():]
             m_end = re.search(r"[\n;]", tail)
             stmt = tail[:m_end.start()] if m_end else tail
             decl_end = body_s + pm.end() + len(stmt)
             eq = stmt.find("=")
             default = src[body_s + pm.end() + eq + 1:decl_end].strip() if eq >= 0 else None
+            if type_text is None:
+                type_text = _infer_literal_type(default)
+                if type_text is None:
+                    continue
+                inferred = ": " + type_text
             optional = type_text.endswith("?") or type_text.endswith("!") or type_text.startswith("Optional<")
             if default is None and optional:
                 default = "nil"
@@ -382,7 +410,7 @@ def expand_entry(src):
                 key = "private struct __Key_%s: %s {\n    static var defaultValue: %s { %s }\n}" % (name, _ENTRY_KEYS[base], type_text, default)
             # drop @Entry, drop "= default", add accessors and the key type
             edits.append((a0, a1, re.sub(r"@Entry\b[ \t]*(\(\s*\))?", "", src[a0:a1])))
-            edits.append((type_end, decl_end, accessors + key))
+            edits.append((type_end, decl_end, (inferred or "") + accessors + key))
     if not edits:
         return None
     edits.sort(key=lambda e: (e[0], e[1]), reverse=True)
