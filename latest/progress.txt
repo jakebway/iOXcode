@@ -1,0 +1,104 @@
+snapshot: 2026-11-06T14:35:21Z  elapsed: 1501s  disk: 37Gi free
+--- configure.log (last 25 lines)
+-- The C compiler identification is AppleClang 17.0.0.17000604
+-- The CXX compiler identification is AppleClang 17.0.0.17000604
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Compiler host arm64-apple-ios18.0. Program target arm64-apple-ios16.0.
+-- Native build root /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/build/55a329f9d685404d50d437ef9abfa9eadda9586d98dcd87f9c32f7ca782c847d/device
+-- Compiler production is explicit. Build toolchain-compiler only with a resource budget.
+-- Configuring done (5.1s)
+-- Generating done (0.0s)
+CMake Warning (unused-cli):
+  Manually-specified variables were not used by the project:
+
+    BUILD_TESTING
+
+
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler
+--- host-tools.log (last 25 lines)
+[300/322] Building CXX object utils/TableGen/Common/CMakeFiles/obj.LLVMTableGenCommon.dir/VarLenCodeEmitterGen.cpp.o
+[301/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangBuiltinsEmitter.cpp.o
+[302/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangCommentCommandInfoEmitter.cpp.o
+[303/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangBuiltinTemplatesEmitter.cpp.o
+[304/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangCommentHTMLTagsEmitter.cpp.o
+[305/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangCommentHTMLNamedCharacterReferenceEmitter.cpp.o
+[306/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangDataCollectorsEmitter.cpp.o
+[307/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangAttrEmitter.cpp.o
+[308/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangOpcodesEmitter.cpp.o
+[309/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangDiagnosticsEmitter.cpp.o
+[310/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangSACheckersEmitter.cpp.o
+[311/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangOptionDocEmitter.cpp.o
+[312/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangOpenCLBuiltinEmitter.cpp.o
+[313/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangTypeNodesEmitter.cpp.o
+[314/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/ClangSyntaxEmitter.cpp.o
+[315/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/MveEmitter.cpp.o
+[316/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/RISCVVEmitter.cpp.o
+[317/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/NeonEmitter.cpp.o
+[318/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/TableGen.cpp.o
+[319/322] Linking CXX executable bin/llvm-tblgen
+[320/322] Building CXX object tools/clang/lib/Support/CMakeFiles/obj.clangSupport.dir/RISCVVIntrinsicUtils.cpp.o
+[321/322] Building CXX object tools/clang/utils/TableGen/CMakeFiles/clang-tblgen.dir/SveEmitter.cpp.o
+[322/322] Linking CXX executable bin/clang-tblgen
+[9/10] No install step for 'host-tools'
+[10/10] Completed 'host-tools'
+--- llvm-ios.log (last 25 lines)
+-- Looking for __x86_64__
+-- Looking for __x86_64__ - not found
+-- Found Git: /opt/homebrew/bin/git (found version "2.56.0")
+-- Looking for logf128
+-- Looking for logf128 - not found
+-- Targeting AArch64
+-- LLD version: 21.1.6
+-- Looking for sys/resource.h
+-- Looking for sys/resource.h - found
+-- Looking for dlfcn.h
+-- Looking for dlfcn.h - found
+-- Looking for dladdr
+-- Looking for dladdr - found
+-- Clang version: 21.1.6
+-- Host linker version: 1230.1
+-- Looking for include file CoreServices/CoreServices.h
+-- Looking for include file CoreServices/CoreServices.h - found
+-- Performing Test HAVE_LINKER_FLAG_LONG_PLT
+-- Performing Test HAVE_LINKER_FLAG_LONG_PLT - Failed
+-- Looking for include file CoreServices/CoreServices.h
+-- Looking for include file CoreServices/CoreServices.h - found
+-- Not building llvm-mt because libxml2 is not available
+-- Configuring done (16.0s)
+-- Generating done (1.9s)
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/build/55a329f9d685404d50d437ef9abfa9eadda9586d98dcd87f9c32f7ca782c847d/device/llvm-ios
+--- toolchain-sources.log (last 25 lines)
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250
+[1/8] Creating directories for 'prepare-source'
+[2/8] Performing download step (download, verify and extract) for 'prepare-source'
+-- Downloading...
+   dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250.tar.gz'
+   timeout='300 seconds'
+   inactivity timeout='30 seconds'
+-- Using src='https://codeload.github.com/swiftlang/swift-experimental-string-processing/tar.gz/bf9cd9a0cfb0481f0825509aeb81ff3135bac250'
+-- verifying file...
+       file='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250.tar.gz'
+-- Downloading... done
+-- extracting...
+     src='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250.tar.gz'
+     dst='/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/string-processing-bf9cd9a0cfb0481f0825509aeb81ff3135bac250'
+-- extracting... [tar xf]
+-- extracting... [analysis]
+-- extracting... [rename]
+-- extracting... [clean up]
+-- extracting... done
+[3/8] No update step for 'prepare-source'
+[4/8] No patch step for 'prepare-source'
+[5/8] No configure step for 'prepare-source'
+[6/8] No build step for 'prepare-source'
+[7/8] No install step for 'prepare-source'
+[8/8] Completed 'prepare-source'
