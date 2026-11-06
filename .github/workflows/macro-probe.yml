@@ -4,7 +4,11 @@ on:
   workflow_dispatch:
 jobs:
   probe:
-    runs-on: macos-15
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-26]
     steps:
       - uses: actions/checkout@v4
       - name: Show toolchain
@@ -17,6 +21,9 @@ jobs:
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           xcrun swiftc -sdk "$SDK" -target arm64-apple-ios17.0 -parse-as-library -typecheck \
             -Xfrontend -dump-macro-expansions tools/macro-probe/Probe.swift 2>&1 | tee /tmp/expansions.txt || true
+          echo "=========== PROBE2 ==========="
+          xcrun swiftc -sdk "$SDK" -target arm64-apple-ios17.0 -parse-as-library -typecheck \
+            -Xfrontend -dump-macro-expansions tools/macro-probe/Probe2.swift 2>&1 | tee -a /tmp/expansions.txt || true
       - name: Check iOXcode's own @Model expansion compiles (no SwiftData macros involved)
         run: |
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
@@ -37,5 +44,5 @@ jobs:
           echo "typecheck exit: ${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         with:
-          name: macro-expansions
+          name: macro-expansions-${{ matrix.runner }}
           path: /tmp/expansions.txt
