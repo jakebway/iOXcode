@@ -53,14 +53,7 @@ jobs:
         run: |
           for V in none A B AB; do
             xcrun assetutil --info work/assetkit-$V.car > work/v-$V.json 2> work/v-$V.err || true
-            python3 - "$V" <<'PY' >> ci-out/variants.txt
-import json, sys, collections
-v = sys.argv[1]
-try: d = json.load(open(f"work/v-{v}.json"))
-except Exception as e: d = []
-errs = sum(1 for _ in open(f"work/v-{v}.err"))
-print(v, "entries", len(d), collections.Counter(x.get("AssetType") for x in d if isinstance(x, dict)), "stderr lines", errs)
-PY
+            python3 scripts/ci/variant-summary.py $V >> ci-out/variants.txt
           done
           cat ci-out/variants.txt
       - name: Dump both with assetutil
