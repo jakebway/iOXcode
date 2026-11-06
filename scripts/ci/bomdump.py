@@ -50,3 +50,25 @@ if only is None or only == 'RENDITIONS':
         print(f'RAW leaf {cur}: isLeaf {il} count {c} fwd {f} bwd {bk} blocklen {l} tailhex {tail.hex()}')
         print('    first entries', es[:3], 'last', es[-2:], ' value-block lens', [blocks[e[0]][1] for e in es[:3]], [blocks[e[0]][1] for e in es[-3:]], 'key-block lens', [blocks[e[1]][1] for e in es[-2:]])
         cur = f; seen += 1
+
+if only is None or only == 'RENDITIONS':
+    import collections
+    b = blk(vars_['RENDITIONS']); child = struct.unpack('>I', b[8:12])[0]
+    _, _, _, _, ents, _ = node(child)
+    cur = ents[0][0]; li = 0
+    while cur:
+        il, c, f, bk, es, l = node(cur)
+        bad = collections.Counter(); pix = collections.Counter(); layout = collections.Counter()
+        for (v, k) in es:
+            val = blk(v)
+            magic = val[:4]
+            bad[magic] += 1
+            if magic == b'CTSI':
+                pix[val[24:28]] += 1
+                layout[struct.unpack('<HH', val[0x24+0x8*0:0x24+4])] += 0
+        print(f'CSI leaf#{li} block {cur}: magics {dict(bad)} pixfmt {dict(pix)}')
+        if li == 0 or f == 0:
+            for (v, k) in es[:2] + es[-2:]:
+                val = blk(v); kk = blk(k)
+                print('   key', kk.hex(), 'csi', val[:64].hex(), 'len', len(val))
+        cur = f; li += 1
