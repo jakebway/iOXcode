@@ -72,14 +72,32 @@ enum AssetCompilation {
         let fixed = normalizeAppleOptimizedPNGs(in: merged)
         if fixed > 0 { log.log("note: converted \(fixed) Xcode-optimized (CgBI) PNG image\(fixed == 1 ? "" : "s") to standard PNG") }
 
-        let box = Box()
-        let sem = DispatchSemaphore(value: 0)
-        Task.detached {
-            do { box.value = .success(try await XCAssetCompiler(deploymentTarget: minOS).compile(catalog: merged)) }
-            catch { box.value = .failure(error) }
-            sem.signal()
+        let pdfs = rasterizePDFAssets(in: merged)
+        if pdfs > 0 { log.log("note: rasterized \(pdfs) PDF image\(pdfs == 1 ? "" : "s") (3x) for the asset catalog") }
+
+        func attempt() -> Box {
+            let b = Box()
+            let sem = DispatchSemaphore(value: 0)
+            Task.detached {
+                do { b.value = .success(try await XCAssetCompiler(deploymentTarget: minOS).compile(catalog: merged)) }
+                catch { b.value = .failure(error) }
+                sem.signal()
+            }
+            sem.wait()
+            return b
         }
-        sem.wait()
+        var box = attempt()
+        // an asset type AssetKit cannot read must not cost the whole catalog: leave that one asset out and carry on
+        var dropped = 0
+        while dropped < 40, case .failure(let e)? = box.value {
+            let text = "\(e)"
+            guard let r = text.range(of: "Unsupported asset type: ") else { break }
+            let name = text[r.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let victim = removeAsset(named: name, in: merged) else { break }
+            log.log("note: left out \(victim) (asset type not supported by the catalog compiler)")
+            dropped += 1
+            box = attempt()
+        }
         switch box.value {
         case .success(let res)?:
             do {
@@ -103,6 +121,59 @@ enum AssetCompilation {
         case nil:
             return nil
         }
+    }
+
+    /// Removes the asset (its .imageset/.colorset/... folder, else the file) that holds `fileName`. Returns what was removed.
+    static func removeAsset(named fileName: String, in root: URL) -> String? {
+        let fm = FileManager.default
+        guard let en = fm.enumerator(at: root, includingPropertiesForKeys: nil) else { return nil }
+        let assetFolders: Set<String> = ["imageset", "colorset", "dataset", "symbolset", "spriteatlas", "textureset", "cubetextureset", "imagestack", "brandassets"]
+        for case let u as URL in en where u.lastPathComponent == fileName {
+            let parent = u.deletingLastPathComponent()
+            let victim = assetFolders.contains(parent.pathExtension) ? parent : u
+            let label = victim.lastPathComponent
+            try? fm.removeItem(at: victim)
+            return label
+        }
+        return nil
+    }
+
+    /// AssetKit reads bitmap images only. A vector PDF in an image set is drawn once at 3x and stored as a PNG instead.
+    static func rasterizePDFAssets(in root: URL) -> Int {
+        let fm = FileManager.default
+        guard let en = fm.enumerator(at: root, includingPropertiesForKeys: nil) else { return 0 }
+        var sets: [URL] = []
+        for case let u as URL in en where u.pathExtension == "imageset" { sets.append(u) }
+        var count = 0
+        for set in sets {
+            let json = set.appendingPathComponent("Contents.json")
+            guard let data = try? Data(contentsOf: json),
+                  var obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  var images = obj["images"] as? [[String: Any]] else { continue }
+            guard let pdfName = images.compactMap({ $0["filename"] as? String }).first(where: { $0.lowercased().hasSuffix(".pdf") }) else { continue }
+            let pdfURL = set.appendingPathComponent(pdfName)
+            guard let doc = CGPDFDocument(pdfURL as CFURL), let page = doc.page(at: 1) else { continue }
+            let box = page.getBoxRect(.cropBox)
+            let scale: CGFloat = 3
+            let w = max(1, Int((box.width * scale).rounded())), h = max(1, Int((box.height * scale).rounded()))
+            guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { continue }
+            ctx.concatenate(page.getDrawingTransform(.cropBox, rect: CGRect(x: 0, y: 0, width: w, height: h), rotate: 0, preserveAspectRatio: true))
+            ctx.drawPDFPage(page)
+            guard let img = ctx.makeImage() else { continue }
+            let pngName = (pdfName as NSString).deletingPathExtension + ".png"
+            let pngURL = set.appendingPathComponent(pngName)
+            guard let dest = CGImageDestinationCreateWithURL(pngURL as CFURL, UTType.png.identifier as CFString, 1, nil) else { continue }
+            CGImageDestinationAddImage(dest, img, nil)
+            guard CGImageDestinationFinalize(dest) else { continue }
+            try? fm.removeItem(at: pdfURL)
+            images = [["idiom": "universal", "filename": pngName, "scale": "3x"]]
+            obj["images"] = images
+            obj.removeValue(forKey: "properties")
+            if let out = try? JSONSerialization.data(withJSONObject: obj) { try? out.write(to: json) }
+            count += 1
+        }
+        return count
     }
 
     /// Old Xcode versions "optimized" PNGs for iOS (a CgBI chunk, raw deflate, BGRA, premultiplied). iOS reads them,
