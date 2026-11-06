@@ -233,6 +233,31 @@ def _name_of(x):
     return x.name if isinstance(x, (Member, Ident)) else x
 
 
+def _setting_applies(call):
+    """False when a setting carries .when(platforms: [...]) without iOS, or .when(configuration: .debug)."""
+    for v in call.positional()[1:]:
+        if isinstance(v, Call) and v.name == "when":
+            pl = v.get("platforms")
+            if pl is not None:
+                names = [getattr(x, "name", None) for x in as_list(pl)]
+                if "iOS" not in names:
+                    return False
+            cfg = v.get("configuration")
+            if cfg is not None and getattr(cfg, "name", "") == "debug":
+                return False
+    return True
+
+
+def _define_text(call):
+    name = (call.positional() or [""])[0]
+    if not isinstance(name, str):
+        return None
+    val = call.get("to")
+    if isinstance(val, str):
+        return "%s=%s" % (name, val)
+    return name
+
+
 def load_manifest(pkg_dir):
     path = os.path.join(pkg_dir, "Package.swift")
     if not os.path.isfile(path):
@@ -275,13 +300,17 @@ def load_manifest(pkg_dir):
                 td["resources"].append({"kind": r.name, "path": (r.positional() or [None])[0]})
         for s in as_list(t.get("swiftSettings")):
             if isinstance(s, Call) and s.name == "define":
-                td["defines"].append((s.positional() or [""])[0])
+                d = _define_text(s)
+                if d and _setting_applies(s):
+                    td["defines"].append(d)
             elif isinstance(s, Call) and s.name == "unsafeFlags":
                 fl = (s.positional() or [[]])[0]
                 td["flags"] += [x for x in fl if isinstance(x, str)]
         for s in as_list(t.get("cSettings")):
             if isinstance(s, Call) and s.name == "define":
-                td["defines"].append("C:" + (s.positional() or [""])[0])
+                d = _define_text(s)
+                if d and _setting_applies(s):
+                    td["defines"].append("C:" + d)
         man["targets"].append(td)
     if not man["targets"]:
         infer_targets(pkg_dir, man)
