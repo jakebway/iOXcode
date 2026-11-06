@@ -1,5 +1,7 @@
 import Foundation
 import AssetKit
+import ImageIO
+import UniformTypeIdentifiers
 
 /// Compiles .xcassets folders into a real Assets.car with AssetKit (a clean-room Swift actool, MIT), so
 /// `Color("name")`, `Image("name")`, `UIImage(named:)` and app icons work the way Xcode builds them.
@@ -67,6 +69,9 @@ enum AssetCompilation {
             return nil
         }
 
+        let fixed = normalizeAppleOptimizedPNGs(in: merged)
+        if fixed > 0 { log.log("note: converted \(fixed) Xcode-optimized (CgBI) PNG image\(fixed == 1 ? "" : "s") to standard PNG") }
+
         let box = Box()
         let sem = DispatchSemaphore(value: 0)
         Task.detached {
@@ -98,5 +103,25 @@ enum AssetCompilation {
         case nil:
             return nil
         }
+    }
+
+    /// Old Xcode versions "optimized" PNGs for iOS (a CgBI chunk, raw deflate, BGRA, premultiplied). iOS reads them,
+    /// but asset compilers that follow the PNG standard cannot, so decode with ImageIO and write a standard PNG.
+    static func normalizeAppleOptimizedPNGs(in root: URL) -> Int {
+        let fm = FileManager.default
+        guard let en = fm.enumerator(at: root, includingPropertiesForKeys: nil) else { return 0 }
+        var count = 0
+        for case let u as URL in en where u.pathExtension.lowercased() == "png" {
+            guard let h = try? FileHandle(forReadingFrom: u) else { continue }
+            let head = (try? h.read(upToCount: 16)) ?? Data()
+            try? h.close()
+            guard head.count == 16, head[12] == 0x43, head[13] == 0x67, head[14] == 0x42, head[15] == 0x49 else { continue }   // "CgBI"
+            guard let src = CGImageSourceCreateWithURL(u as CFURL, nil),
+                  let image = CGImageSourceCreateImageAtIndex(src, 0, nil),
+                  let dest = CGImageDestinationCreateWithURL(u as CFURL, UTType.png.identifier as CFString, 1, nil) else { continue }
+            CGImageDestinationAddImage(dest, image, nil)
+            if CGImageDestinationFinalize(dest) { count += 1 }
+        }
+        return count
     }
 }
