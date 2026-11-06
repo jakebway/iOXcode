@@ -273,13 +273,10 @@ def load_manifest(pkg_dir):
     man = {"name": call.get("name") or os.path.basename(pkg_dir), "targets": [], "products": [], "deps": []}
     def _std(v, cxx):
         n = getattr(v, "name", None)
-        if not isinstance(n, str):
-            return None
-        m = re.match(r"(gnu|c)(?:xx)?(\d+)$", n)
+        m = re.match(r"(gnucxx|cxx|gnu|c)(\d+)$", n) if isinstance(n, str) else None
         if not m:
             return None
-        gnu, num = m.group(1) == "gnu", m.group(2)
-        return ("gnu++" if cxx else "gnu") + num if gnu else ("c++" if cxx else "c") + num
+        return {"gnucxx": "gnu++", "cxx": "c++", "gnu": "gnu", "c": "c"}[m.group(1)] + m.group(2)
     man["cStd"] = _std(call.get("cLanguageStandard"), False)
     man["cxxStd"] = _std(call.get("cxxLanguageStandard"), True)
     for prod in as_list(call.get("products")):
