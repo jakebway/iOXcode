@@ -7,6 +7,7 @@ struct RootView: View {
         TabView(selection: $model.tab) {
             ProjectsView().tabItem { Label("Projects", systemImage: "folder") }.tag(0)
             ConsoleView().tabItem { Label("Console", systemImage: "terminal") }.tag(1)
+            BuildsView().tabItem { Label("Builds", systemImage: "shippingbox") }.tag(3)
             SetupView().tabItem { Label("Setup", systemImage: "gearshape") }.tag(2)
         }
         .sheet(isPresented: $model.shareIPA) {

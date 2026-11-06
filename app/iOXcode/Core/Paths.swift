@@ -9,6 +9,8 @@ enum Paths {
     static var projects: URL { root.appendingPathComponent("Projects", isDirectory: true) }
     static var work: URL { root.appendingPathComponent("Work", isDirectory: true) }
     static var output: URL { root.appendingPathComponent("Output", isDirectory: true) }
+    static var builds: URL { root.appendingPathComponent("Builds", isDirectory: true) }
+    static var origins: URL { root.appendingPathComponent("Origins", isDirectory: true) }
     static var caches: URL {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("iOXcode", isDirectory: true)
     }
@@ -32,6 +34,6 @@ enum Paths {
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     }
     static func prepare() {
-        [root, sdkRoot, projects, work, output, caches].forEach(ensure)
+        [root, sdkRoot, projects, work, output, builds, origins, caches].forEach(ensure)
     }
 }

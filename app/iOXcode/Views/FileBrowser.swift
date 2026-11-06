@@ -44,6 +44,11 @@ struct FileBrowserView: View {
 
     var body: some View {
         List {
+            if folder == projectRoot, let origin = Origins.load(projectRoot.lastPathComponent) {
+                NavigationLink(destination: ReleasesView(origin: origin)) {
+                    Label("Releases (\(origin.owner)/\(origin.repo))", systemImage: "shippingbox")
+                }
+            }
             if items.isEmpty {
                 Text(query.isEmpty ? "This folder is empty." : "Nothing matches “\(query)”.").foregroundColor(.secondary)
             }

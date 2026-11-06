@@ -14,6 +14,7 @@ final class AppModel: ObservableObject {
     @Published var importMessage = ""
     @Published var notice: String?
     @Published var tab = 0
+    @Published var builds: [BuildRecord] = BuildLibrary.load()
 
     init() {
         Paths.prepare()
@@ -70,7 +71,13 @@ final class AppModel: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let ipa = try BuildPipeline(project: p, log: sink).run()
-                DispatchQueue.main.async { self.lastIPA = ipa; self.shareIPA = true; self.building = false }
+                let rec = BuildLibrary.add(ipa: ipa, manifest: p.manifest, projectName: p.name)
+                DispatchQueue.main.async {
+                    self.lastIPA = rec.map { BuildLibrary.url(for: $0) } ?? ipa
+                    self.builds = BuildLibrary.load()
+                    self.shareIPA = true
+                    self.building = false
+                }
             } catch {
                 sink.log("BUILD FAILED: \(error)")
                 DispatchQueue.main.async { self.building = false }
@@ -79,7 +86,7 @@ final class AppModel: ObservableObject {
     }
 
     /// Imports a project folder or a .zip chosen in Files.
-    func importProject(_ url: URL) {
+    func importProject(_ url: URL, origin: GitHubOrigin? = nil) {
         let fm = FileManager.default
         var isDir: ObjCBool = false
         fm.fileExists(atPath: url.path, isDirectory: &isDir)
@@ -124,6 +131,7 @@ final class AppModel: ObservableObject {
                     }
                 }
             }
+            if let origin { Origins.save(origin, for: name) }
             console.line("Imported project \(name)")
             notice = "Added \(name)"
             let proj = Project(url: dest)
@@ -160,7 +168,7 @@ final class AppModel: ObservableObject {
                 try FileManager.default.moveItem(at: tmp, to: zip)
                 await MainActor.run {
                     self.importing = false
-                    self.importProject(zip)
+                    self.importProject(zip, origin: GitHubOrigin(owner: owner, repo: repo))
                 }
             } catch {
                 await MainActor.run {
@@ -193,5 +201,22 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func delete(_ p: Project) { try? FileManager.default.removeItem(at: p.url); refresh() }
+    func delete(_ p: Project) { try? FileManager.default.removeItem(at: p.url); Origins.remove(p.url.lastPathComponent); refresh() }
+
+    func deleteBuild(_ r: BuildRecord) { BuildLibrary.remove(r); builds = BuildLibrary.load() }
+
+    /// Downloads a release asset. An .ipa lands in the Builds tab; anything else is handed to the share sheet.
+    func downloadAsset(_ asset: ReleaseAsset, release: GitHubRelease, origin: GitHubOrigin) async {
+        do {
+            let tmp = try await Releases.download(asset)
+            if asset.name.lowercased().hasSuffix(".ipa") {
+                BuildLibrary.addDownloaded(tmp, name: origin.repo, version: release.tag, fileName: asset.name)
+                builds = BuildLibrary.load()
+                notice = "Saved \(asset.name) to Builds"
+            } else {
+                lastIPA = tmp
+                shareIPA = true
+            }
+        } catch { notice = "Download failed: \(error.localizedDescription)" }
+    }
 }
