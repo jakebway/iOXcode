@@ -516,7 +516,7 @@ def fetch_package(url, req, cache_dir, notes):
         ref = "HEAD"
     key = "%s__%s__%s" % (owner, repo, re.sub(r"[^A-Za-z0-9._-]", "_", ref))
     dest = os.path.join(cache_dir, key)
-    if os.path.isdir(dest) and os.path.isfile(os.path.join(dest, ".ioxcode-complete")):
+    if os.path.isdir(dest) and os.path.isfile(os.path.join(dest, ".ioxcode-complete2")):
         return dest, ref
     data = None
     for u in ("https://codeload.github.com/%s/%s/zip/%s" % (owner, repo, ref),):
@@ -546,7 +546,7 @@ def fetch_package(url, req, cache_dir, notes):
     shutil.rmtree(dest, ignore_errors=True)
     shutil.move(top, dest)
     shutil.rmtree(stage, ignore_errors=True)
-    open(os.path.join(dest, ".ioxcode-complete"), "w").close()
+    open(os.path.join(dest, ".ioxcode-complete2"), "w").close()
     return dest, ref
 
 
