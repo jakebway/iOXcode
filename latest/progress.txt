@@ -1,4 +1,4 @@
-snapshot: 2026-11-06T14:35:21Z  elapsed: 1501s  disk: 37Gi free
+snapshot: 2026-11-06T15:00:25Z  elapsed: 3005s  disk: 37Gi free
 --- configure.log (last 25 lines)
 -- The C compiler identification is AppleClang 17.0.0.17000604
 -- The CXX compiler identification is AppleClang 17.0.0.17000604
