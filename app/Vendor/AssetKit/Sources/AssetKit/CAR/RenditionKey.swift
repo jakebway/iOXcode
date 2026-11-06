@@ -38,13 +38,13 @@ struct RenditionKey: Hashable, Sendable {
         case vectorSource = 42
     }
 
-    init(rendition: Rendition) {
+    init(rendition: Rendition, identifier: UInt16) {
         self.appearance = (rendition.appearance?.darkLuminosity == true) ? 1 : 0
         self.localization = 0
         self.scale = rendition.scale?.rawValueByte ?? 0
         self.idiom = rendition.idiom.rawValueByte
         self.subtype = 0
-        self.identifier = UInt16(FacetKeys.nameHash(rendition.name) & 0xFFFF)
+        self.identifier = identifier
         switch rendition.body {
         case .bitmap(let body):
             self.element = Element.bitmap.rawValue

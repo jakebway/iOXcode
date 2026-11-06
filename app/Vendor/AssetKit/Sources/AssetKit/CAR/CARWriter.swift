@@ -24,9 +24,10 @@ struct CARWriter: Sendable {
         let headerBlockID = bom.addBlock(CARHeaderBlock.data(renditionCount: UInt32(renditions.count)))
         bom.setVariable("CARHEADER", blockID: headerBlockID)
 
+        let ids = FacetKeys.identifiers(for: renditions.map(\.name))
         let renditionEntries: [BOMTree.Entry] = renditions.map { rendition in
             BOMTree.Entry(
-                key: RenditionKey(rendition: rendition).encode(),
+                key: RenditionKey(rendition: rendition, identifier: ids[rendition.name] ?? 0).encode(),
                 value: csiData(for: rendition)
             )
         }
@@ -36,7 +37,7 @@ struct CARWriter: Sendable {
         let facetEntries = layout.assets.map { asset in
             BOMTree.Entry(
                 key: Data(asset.name.utf8),
-                value: FacetKeys.value(for: asset.name, kind: asset.kind)
+                value: FacetKeys.value(for: asset.name, kind: asset.kind, identifier: ids[asset.name] ?? 0)
             )
         }
         let facetTreeID = BOMTree.insert(into: &bom, entries: facetEntries)
@@ -65,7 +66,7 @@ struct CARWriter: Sendable {
         if !bitmapAssets.isEmpty {
             let bitmapKeysTreeID = BOMTree.insertInlineKey(
                 into: &bom,
-                entries: BitmapKeys.entries(for: bitmapAssets),
+                entries: BitmapKeys.entries(for: bitmapAssets, identifiers: ids),
                 blockSize: 1024
             )
             bom.setVariable("BITMAPKEYS", blockID: bitmapKeysTreeID)

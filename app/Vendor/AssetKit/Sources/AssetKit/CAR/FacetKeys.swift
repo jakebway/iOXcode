@@ -8,12 +8,10 @@ import Foundation
 /// - `numberOfAttributes u16`
 /// - array of `(attributeName u16, attributeValue u16)`
 enum FacetKeys {
-    static func value(for name: String, kind: Kind) -> Data {
+    static func value(for name: String, kind: Kind, identifier: UInt16) -> Data {
         var w = ByteWriter()
         w.writeLE(UInt16(0))            // cursorHotSpotX
         w.writeLE(UInt16(0))            // cursorHotSpotY
-        let crc = nameHash(name)
-        let identifier = UInt16(crc & 0xFFFF)
         let pairs = kind.pairs(identifier: identifier)
         w.writeLE(UInt16(pairs.count))
         for (attrName, attrValue) in pairs {
@@ -48,6 +46,20 @@ enum FacetKeys {
                 ]
             }
         }
+    }
+
+    /// One 16-bit identifier per asset name: the CRC32 of the name, moved to the next free value when two names
+    /// collide (with hundreds of assets that happens, and two assets sharing an identifier shadow each other).
+    static func identifiers(for names: [String]) -> [String: UInt16] {
+        var used = Set<UInt16>()
+        var out: [String: UInt16] = [:]
+        for name in Set(names).sorted() {
+            var id = UInt16(nameHash(name) & 0xFFFF)
+            while used.contains(id) || id == 0 { id &+= 1 }
+            used.insert(id)
+            out[name] = id
+        }
+        return out
     }
 
     /// CRC32 (IEEE) of the asset name, truncated to 16 bits for the identifier slot.
