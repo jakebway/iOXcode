@@ -77,11 +77,260 @@ def atunion_builder(args):
 FREESTANDING = {"ATUnionBuilder": atunion_builder}
 
 
-def expand_source(src):
-    """Returns the source with emulated freestanding macros expanded, or None when nothing changed."""
-    if "#" not in src:
+# ---------------------------------------------------------------- SwiftData @Model
+# Written from what Apple's macro produces for the same input (observed with `swiftc -dump-macro-expansions`
+# on a Mac; see .github/workflows/macro-probe.yml), not from its binary.
+
+def _blank_literals(src):
+    """Same text with comments and the inside of string literals replaced by spaces (newlines kept)."""
+    out = list(src)
+    i, n = 0, len(src)
+
+    def blank(a, b):
+        for k in range(a, b):
+            if out[k] != "\n":
+                out[k] = " "
+    while i < n:
+        if src.startswith("//", i):
+            j = src.find("\n", i)
+            j = n if j < 0 else j
+            blank(i, j)
+            i = j
+        elif src.startswith("/*", i):
+            depth, j = 1, i + 2
+            while j < n and depth:
+                if src.startswith("/*", j):
+                    depth += 1
+                    j += 2
+                elif src.startswith("*/", j):
+                    depth -= 1
+                    j += 2
+                else:
+                    j += 1
+            blank(i, j)
+            i = j
+        elif src[i] == '"':
+            if src.startswith('"""', i):
+                j = src.find('"""', i + 3)
+                j = n if j < 0 else j + 3
+                blank(i + 3, max(i + 3, j - 3))
+                i = j
+            else:
+                j = i + 1
+                while j < n and src[j] != '"' and src[j] != "\n":
+                    j += 2 if src[j] == "\\" else 1
+                blank(i + 1, min(j, n))
+                i = j + 1
+        else:
+            i += 1
+    return "".join(out)
+
+
+def _flat_mask(text):
+    """Blank everything nested inside (), [], {} (delimiters stay); newlines inside become spaces."""
+    out = list(text)
+    depth = 0
+    for k, c in enumerate(text):
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+            continue
+        elif depth > 0:
+            out[k] = " "
+    return "".join(out)
+
+
+_ACCESS = r"(?:public|open|internal|package|fileprivate|private)"
+_MODEL_RE = re.compile(r"@Model\b\s*(?:\(\s*\))?")
+_CLASS_RE = re.compile(r"((?:(?:" + _ACCESS + r"|final|@\w+(?:\(\s*\))?)\s+)*)class\s+(\w+)")
+_PROP_RE = re.compile(
+    r"(?m)^([ \t]*)((?:@\w+(?:\(\s*\))?[ \t\n]*)*)((?:(?:" + _ACCESS + r"(?:\(set\))?|final|weak|unowned|nonisolated|override|dynamic)[ \t]+)*)"
+    r"(static[ \t]+|class[ \t]+|lazy[ \t]+)?(var|let)[ \t]+(\w+)[ \t]*(:[^=\n{;]*)?")
+
+
+def _expand_model_class(src, clean, attr_start, attr_end):
+    """Rewrites one `@Model class` found at src[attr_start:attr_end]. Returns (new_text_for_range, end_index) or None."""
+    m = _CLASS_RE.match(clean, attr_end if clean[attr_end:attr_end + 1] else attr_end, ) if False else None
+    rest = clean[attr_end:]
+    m = re.match(r"\s*" + _CLASS_RE.pattern, rest)
+    if not m:
         return None
+    mods = m.group(1) or ""
+    name = m.group(2)
+    brace = clean.find("{", attr_end + m.end())
+    if brace < 0:
+        return None
+    depth, k = 0, brace
+    while k < len(clean):
+        if clean[k] == "{":
+            depth += 1
+        elif clean[k] == "}":
+            depth -= 1
+            if depth == 0:
+                break
+        k += 1
+    if depth != 0:
+        return None
+    close = k
+    body_s, body_e = brace + 1, close
+    flat = _flat_mask(clean[body_s:body_e])
+    public = bool(re.search(r"\b(public|open)\b", mods))
+    final = bool(re.search(r"\bfinal\b", mods))
+    acc = "public " if public else ""
+    props = []
+    edits = []      # (start, end, replacement) in absolute coordinates
+    for pm in _PROP_RE.finditer(flat):
+        attrs_clean = pm.group(2) or ""
+        if pm.group(5) == "let" or pm.group(4):
+            if re.search(r"@Transient", attrs_clean) or True:
+                # strip macro attributes only
+                pass
+        pname = pm.group(6)
+        a0 = body_s + pm.start(2)
+        a1 = body_s + pm.end(2)
+        attr_text = src[a0:a1]
+        has_transient = bool(re.search(r"@Transient\b", attrs_clean))
+        # what follows the declaration head
+        head_end = body_s + pm.end()
+        # computed / observed property: next significant char is "{"
+        tail = flat[pm.end():]
+        stmt_end_rel = re.search(r"[\n;]", tail)
+        stmt = tail[:stmt_end_rel.start()] if stmt_end_rel else tail
+        init_rel = stmt.find("=")
+        has_body = "{" in (stmt if init_rel < 0 else stmt[init_rel:]) or ("{" in stmt and init_rel < 0)
+        def strip_macros():
+            nonlocal_attr = re.sub(r"@(Transient|Attribute|Relationship|Unique|Index)\b(\s*\([^)]*\))?", "", attr_text) if False else None
+        if pm.group(5) == "let" or pm.group(4) or has_transient or has_body:
+            # not persisted: only drop @Transient / @Attribute / @Relationship text
+            new_attr = _strip_model_attrs(attr_text)
+            if new_attr != attr_text:
+                edits.append((a0, a1, new_attr))
+            continue
+        type_text = (src[body_s + pm.start(7):body_s + pm.end(7)][1:].strip() if pm.group(7) else "")
+        default = None
+        stmt_abs_start = body_s + pm.end()
+        if init_rel >= 0:
+            default = src[stmt_abs_start + init_rel + 1:stmt_abs_start + len(stmt)].strip()
+        decl_end = stmt_abs_start + len(stmt)
+        metadata = "nil"
+        am = re.search(r"@Attribute\b\s*(\(.*\))?", attr_text, re.S)
+        rm = re.search(r"@Relationship\b\s*(\(.*\))?", attr_text, re.S)
+        if am:
+            metadata = "SwiftData.Schema.Attribute" + (am.group(1) or "()")
+        elif rm:
+            metadata = "SwiftData.Schema.Relationship" + (rm.group(1) or "()")
+        optional = bool(re.search(r"(\?|!)\s*$", type_text)) or type_text.startswith("Optional<")
+        props.append({"name": pname, "type": type_text, "default": default, "optional": optional, "meta": metadata,
+                      "attrs": (a0, a1, _strip_model_attrs(attr_text)), "decl_end": decl_end})
+    # build edits for persisted properties
+    for p in props:
+        a0, a1, new_attr = p["attrs"]
+        edits.append((a0, a1, new_attr))
+        n = p["name"]
+        accessors = (
+            " {\n"
+            "    @storageRestrictions(accesses: _$backingData, initializes: _%(n)s)\n"
+            "    init(initialValue) {\n"
+            "        _$backingData.setValue(forKey: \\.%(n)s, to: initialValue)\n"
+            "        _%(n)s = _SwiftDataNoType()\n"
+            "    }\n"
+            "    get {\n"
+            "        _$observationRegistrar.access(self, keyPath: \\.%(n)s)\n"
+            "        return self.getValue(forKey: \\.%(n)s)\n"
+            "    }\n"
+            "    set {\n"
+            "        _$observationRegistrar.withMutation(of: self, keyPath: \\.%(n)s) {\n"
+            "            self.setValue(forKey: \\.%(n)s, to: newValue)\n"
+            "        }\n"
+            "    }\n"
+            "}" % {"n": n})
+        storage = "\nprivate var _%s: _SwiftDataNoType%s%s" % (
+            n, "?" if p["optional"] else "", " = _SwiftDataNoType()" if p["default"] is not None else "")
+        edits.append((p["decl_end"], p["decl_end"], accessors + storage))
+    req = "" if final else "required "
+    members = (
+        "\n    private var _$backingData: any SwiftData.BackingData<%(c)s> = %(c)s.createBackingData()\n"
+        "    %(a)spublic_placeholder var persistentBackingData: any SwiftData.BackingData<%(c)s> {\n"
+        "        get { return _$backingData }\n"
+        "        set { _$backingData = newValue }\n"
+        "    }\n"
+        "    %(a)sstatic var schemaMetadata: [SwiftData.Schema.PropertyMetadata] {\n"
+        "        return [\n%(meta)s\n        ]\n"
+        "    }\n"
+        "    %(req)s%(a)sinit(backingData: any SwiftData.BackingData<%(c)s>) {\n%(inits)s"
+        "        self.persistentBackingData = backingData\n"
+        "    }\n"
+        "    private let _$observationRegistrar = Observation.ObservationRegistrar()\n"
+        "    internal nonisolated func access<_M>(keyPath: KeyPath<%(c)s, _M>) {\n"
+        "        _$observationRegistrar.access(self, keyPath: keyPath)\n"
+        "    }\n"
+        "    internal nonisolated func withMutation<_M, _MR>(keyPath: KeyPath<%(c)s, _M>, _ mutation: () throws -> _MR) rethrows -> _MR {\n"
+        "        try _$observationRegistrar.withMutation(of: self, keyPath: keyPath, mutation)\n"
+        "    }\n"
+        "    struct _SwiftDataNoType {}\n"
+    ) % {
+        "c": name, "a": acc, "req": req,
+        "meta": ",\n".join('            SwiftData.Schema.PropertyMetadata(name: "%s", keypath: \\%s.%s, defaultValue: %s, metadata: %s)' % (
+            p["name"], name, p["name"], p["default"] if p["default"] is not None else "nil", p["meta"]) for p in props),
+        "inits": "".join("        _%s = _SwiftDataNoType()\n" % p["name"] for p in props),
+    }
+    members = members.replace("public_placeholder ", "")
+    edits.append((brace + 1, brace + 1, members))
+    # apply edits back to front over src[attr_start : close+1]
+    edits.sort(key=lambda e: (e[0], e[1]), reverse=True)
+    text = src
+    for a, b, r in edits:
+        text = text[:a] + r + text[b:]
+    delta = len(text) - len(src)
+    new_class = text[attr_end:close + 1 + delta]
+    ext = (
+        "\n\nextension %(c)s: SwiftData.PersistentModel {}\n"
+        "extension %(c)s: Observation.Observable {}\n"
+        "@available(*, unavailable, message: \"PersistentModels are not Sendable, consider utilizing a ModelActor or use %(c)s's persistentModelID instead\")\n"
+        "extension %(c)s: Sendable {}\n"
+    ) % {"c": name}
+    return new_class + ext, close + 1
+
+
+def _strip_model_attrs(attr_text):
+    out = attr_text
+    for nm in ("Transient", "Attribute", "Relationship"):
+        out = re.sub(r"@" + nm + r"\b[ \t]*(\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))?", "", out)
+    return out
+
+
+def expand_model(src):
+    if "@Model" not in src:
+        return None
+    clean = _blank_literals(src)
+    result, pos, changed = [], 0, False
+    while True:
+        m = _MODEL_RE.search(clean, pos)
+        if not m:
+            break
+        got = _expand_model_class(src, clean, m.start(), m.end())
+        if not got:
+            result.append(src[pos:m.end()])
+            pos = m.end()
+            continue
+        text, end = got
+        result.append(src[pos:m.start()])
+        result.append(text)
+        pos = end
+        changed = True
+    result.append(src[pos:])
+    return "".join(result) if changed else None
+
+
+def expand_source(src):
+    """Returns the source with emulated macros expanded, or None when nothing changed."""
     changed = False
+    mdl = expand_model(src)
+    if mdl is not None:
+        src, changed = mdl, True
+    if "#" not in src:
+        return src if changed else None
     for name, fn in FREESTANDING.items():
         pat = re.compile(r'(?<![A-Za-z0-9_])#' + name + r'\s*\(')
         pos = 0

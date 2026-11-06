@@ -17,6 +17,24 @@ jobs:
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           xcrun swiftc -sdk "$SDK" -target arm64-apple-ios17.0 -parse-as-library -typecheck \
             -Xfrontend -dump-macro-expansions tools/macro-probe/Probe.swift 2>&1 | tee /tmp/expansions.txt || true
+      - name: Check iOXcode's own @Model expansion compiles (no SwiftData macros involved)
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          mkdir -p /tmp/expanded
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "app/Python")
+          import ioxmacro
+          src = open("tools/macro-probe/Models.swift").read()
+          out = ioxmacro.expand_source(src)
+          open("/tmp/expanded/Models.swift", "w").write(out)
+          print(out)
+          PY
+          # the real plugin is pointed at a path that does not exist: any leftover @Model/@Attribute would fail
+          xcrun swiftc -sdk "$SDK" -target arm64-apple-ios17.0 -parse-as-library -typecheck \
+            -Xfrontend -disable-implicit-string-processing-module-import \
+            /tmp/expanded/Models.swift 2>&1 | tee /tmp/check.txt
+          echo "typecheck exit: ${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         with:
           name: macro-expansions
