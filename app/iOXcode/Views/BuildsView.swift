@@ -86,3 +86,30 @@ struct ReleasesView: View {
         catch { self.error = error.localizedDescription }
     }
 }
+
+/// Opens a project's releases. Projects that were not imported from a GitHub link ask for the repo once.
+struct ReleasesEntry: View {
+    let projectName: String
+    @State private var origin: GitHubOrigin?
+    @State private var text = ""
+    @State private var bad = false
+
+    var body: some View {
+        if let origin { ReleasesView(origin: origin) }
+        else {
+            Form {
+                Section {
+                    TextField("github.com/owner/repo", text: $text).autocapitalization(.none).disableAutocorrection(true)
+                    Button("Show releases") {
+                        if let o = GitHubOrigin.parse(text) { Origins.save(o, for: projectName); origin = o }
+                        else { bad = true }
+                    }
+                } header: { Text("Which GitHub repo is this?") } footer: {
+                    Text(bad ? "That doesn't look like owner/repo or a GitHub link." : "This project wasn't imported from a GitHub link, so iOXcode doesn't know where its releases are. It is remembered after this.")
+                }
+            }
+            .navigationTitle("Releases")
+            .onAppear { origin = Origins.load(projectName) }
+        }
+    }
+}

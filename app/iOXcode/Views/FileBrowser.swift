@@ -44,9 +44,9 @@ struct FileBrowserView: View {
 
     var body: some View {
         List {
-            if folder == projectRoot, let origin = Origins.load(projectRoot.lastPathComponent) {
-                NavigationLink(destination: ReleasesView(origin: origin)) {
-                    Label("Releases (\(origin.owner)/\(origin.repo))", systemImage: "shippingbox")
+            if folder == projectRoot {
+                NavigationLink(destination: ReleasesEntry(projectName: projectRoot.lastPathComponent)) {
+                    Label("Releases", systemImage: "shippingbox")
                 }
             }
             if items.isEmpty {
@@ -63,6 +63,7 @@ struct FileBrowserView: View {
                         .contextMenu { menu(item) }
                 }
             }
+            if query.isEmpty { ReadmeSection(folder: folder) }
         }
         .listStyle(.plain)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search files in \(title)")

@@ -3,6 +3,17 @@ import Foundation
 struct GitHubOrigin: Codable, Hashable {
     var owner: String
     var repo: String
+
+    /// Accepts "owner/repo" or any github.com link to the repo.
+    static func parse(_ text: String) -> GitHubOrigin? {
+        var t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        for p in ["https://", "http://", "www.", "github.com/"] where t.lowercased().hasPrefix(p) { t = String(t.dropFirst(p.count)) }
+        let parts = t.split(separator: "/").map(String.init)
+        guard parts.count >= 2, !parts[0].isEmpty, !parts[1].isEmpty else { return nil }
+        var repo = parts[1]
+        if repo.hasSuffix(".git") { repo = String(repo.dropLast(4)) }
+        return GitHubOrigin(owner: parts[0], repo: repo)
+    }
 }
 
 /// Remembers which GitHub repo a project came from (kept outside the project, so the repo's files stay untouched).
