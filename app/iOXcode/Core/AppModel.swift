@@ -180,6 +180,8 @@ final class AppModel: ObservableObject {
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             do {
                 try? FileManager.default.removeItem(at: Paths.sdkRoot)
+                // compiled module caches remember the old SDK files' timestamps and would refuse to load
+                try? FileManager.default.removeItem(at: Paths.caches.appendingPathComponent("ModuleCache", isDirectory: true))
                 Paths.ensure(Paths.sdkRoot)
                 try Zip.extract(url, to: Paths.sdkRoot) { i, n in
                     if i % 500 == 0 { DispatchQueue.main.async { self.importMessage = "Unpacking \(i) of \(n)" } }
