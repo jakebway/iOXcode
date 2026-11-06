@@ -1,4 +1,1 @@
-** BUILD FAILED **
-/Users/runner/work/iOXcode/iOXcode/app/iOXcode/Core/AssetCompilation.swift:122:65: error: cannot force unwrap value of non-optional type 'URL'
-/Users/runner/work/iOXcode/iOXcode/app/iOXcode/Core/AssetCompilation.swift:124:111: error: cannot force unwrap value of non-optional type 'URL'
-/Users/runner/work/iOXcode/iOXcode/app/iOXcode/Core/AssetCompilation.swift:125:46: error: cannot force unwrap value of non-optional type 'URL'
+** BUILD SUCCEEDED **
