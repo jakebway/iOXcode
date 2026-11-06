@@ -42,6 +42,19 @@ jobs:
             -Xfrontend -disable-implicit-string-processing-module-import \
             /tmp/expanded/Models.swift 2>&1 | tee /tmp/check.txt
           echo "typecheck exit: ${PIPESTATUS[0]}"
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "app/Python")
+          import ioxmacro
+          src = open("tools/macro-probe/Entry.swift").read()
+          out = ioxmacro.expand_source(src)
+          assert "@Entry" not in out
+          open("/tmp/expanded/Entry.swift", "w").write(out)
+          PY
+          for MODE in 5 6; do
+            xcrun swiftc -sdk "$SDK" -target arm64-apple-ios17.0 -parse-as-library -typecheck -swift-version $MODE /tmp/expanded/Entry.swift 2>&1 | tee /tmp/check_entry.txt
+            echo "entry typecheck (swift $MODE) exit: ${PIPESTATUS[0]}"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: macro-expansions-${{ matrix.runner }}

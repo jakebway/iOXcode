@@ -323,12 +323,84 @@ def expand_model(src):
     return "".join(result) if changed else None
 
 
+# ---------------------------------------------------------------- SwiftUI @Entry
+_ENTRY_KEYS = {
+    "EnvironmentValues": "SwiftUI.EnvironmentKey",
+    "Transaction": "SwiftUI.TransactionKey",
+    "ContainerValues": "SwiftUI.ContainerValueKey",
+    "FocusedValues": "SwiftUI.FocusedValueKey",
+}
+_EXT_RE = re.compile(r"extension\s+(?:SwiftUI\.)?(EnvironmentValues|FocusedValues|Transaction|ContainerValues)\b[^{]*\{")
+
+
+def expand_entry(src):
+    if "@Entry" not in src:
+        return None
+    clean = _blank_literals(src)
+    edits = []
+    for em in _EXT_RE.finditer(clean):
+        base = em.group(1)
+        brace = em.end() - 1
+        depth, k = 0, brace
+        while k < len(clean):
+            if clean[k] == "{":
+                depth += 1
+            elif clean[k] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        if depth != 0:
+            continue
+        body_s, body_e = brace + 1, k
+        flat = _flat_mask(clean[body_s:body_e])
+        for pm in _PROP_RE.finditer(flat):
+            attrs_clean = pm.group(2) or ""
+            if not re.search(r"@Entry\b", attrs_clean) or pm.group(5) != "var" or not pm.group(7):
+                continue
+            name = pm.group(6)
+            a0, a1 = body_s + pm.start(2), body_s + pm.end(2)
+            type_start = body_s + pm.start(7)
+            type_end = body_s + pm.end(7)
+            type_text = src[type_start:type_end][1:].strip()
+            tail = flat[pm.end():]
+            m_end = re.search(r"[\n;]", tail)
+            stmt = tail[:m_end.start()] if m_end else tail
+            decl_end = body_s + pm.end() + len(stmt)
+            eq = stmt.find("=")
+            default = src[body_s + pm.end() + eq + 1:decl_end].strip() if eq >= 0 else None
+            optional = type_text.endswith("?") or type_text.endswith("!") or type_text.startswith("Optional<")
+            if default is None and optional:
+                default = "nil"
+            if default is None:
+                continue
+            accessors = (" {\n    get { self[__Key_%(n)s.self] }\n    set { self[__Key_%(n)s.self] = newValue }\n}\n" % {"n": name})
+            if base == "FocusedValues":
+                value_t = type_text[:-1] if type_text.endswith("?") else type_text
+                key = "private struct __Key_%s: SwiftUI.FocusedValueKey {\n    typealias Value = %s\n}" % (name, value_t)
+            else:
+                key = "private struct __Key_%s: %s {\n    static var defaultValue: %s { %s }\n}" % (name, _ENTRY_KEYS[base], type_text, default)
+            # drop @Entry, drop "= default", add accessors and the key type
+            edits.append((a0, a1, re.sub(r"@Entry\b[ \t]*(\(\s*\))?", "", src[a0:a1])))
+            edits.append((type_end, decl_end, accessors + key))
+    if not edits:
+        return None
+    edits.sort(key=lambda e: (e[0], e[1]), reverse=True)
+    out = src
+    for a, b, r in edits:
+        out = out[:a] + r + out[b:]
+    return out
+
+
 def expand_source(src):
     """Returns the source with emulated macros expanded, or None when nothing changed."""
     changed = False
     mdl = expand_model(src)
     if mdl is not None:
         src, changed = mdl, True
+    ent = expand_entry(src)
+    if ent is not None:
+        src, changed = ent, True
     if "#" not in src:
         return src if changed else None
     for name, fn in FREESTANDING.items():
@@ -372,3 +444,14 @@ def expand_files(files, out_dir):
             f.write(new)
         result.append(dest)
     return result
+
+
+def run(request_path, result_path):
+    """Entry point for the app: {"files": [...], "out": dir} -> {original path: path to compile}."""
+    import json
+    with open(request_path) as f:
+        req = json.load(f)
+    files = req["files"]
+    new = expand_files(files, req["out"])
+    with open(result_path, "w") as f:
+        json.dump(dict(zip(files, new)), f)

@@ -117,7 +117,8 @@ final class BuildPipeline {
             try fm.createDirectory(at: moduleDir, withIntermediateDirectories: true)
             packageObjects = try buildPackages(m, work: work, moduleDir: moduleDir, common: commonArgs)
         }
-        let sourcesForCompile = PreviewStripper.prepare(files, root: project.root, work: work, log: log)
+        let strippedSources = PreviewStripper.prepare(files, root: project.root, work: work, log: log)
+        let sourcesForCompile = MacroEmulation.prepare(strippedSources, work: work, log: log)
         var fe: [String] = ["-c"] + sourcesForCompile.map { $0.path }
         fe += ["-target", target, "-sdk", layout.sdk.path,
                "-module-name", m.name, "-parse-as-library", "-swift-version", m.swiftVersion,
@@ -422,6 +423,35 @@ enum MacroPlugins {
 
 /// `#Preview { ... }` only feeds Xcode's canvas, and its macro ships with Xcode, not with the SDK:
 /// those blocks are removed from a copy of each file before compiling.
+/// Expands the macros iOXcode emulates (SwiftData @Model, SwiftUI @Entry, ...) in the app's own sources.
+enum MacroEmulation {
+    static func prepare(_ files: [URL], work: URL, log: LogSink) -> [URL] {
+        let wanted = files.filter {
+            guard let t = try? String(contentsOf: $0, encoding: .utf8) else { return false }
+            return t.contains("@Model") || t.contains("@Entry") || t.contains("#ATUnionBuilder")
+        }
+        if wanted.isEmpty { return files }
+        let outDir = work.appendingPathComponent("expanded-app", isDirectory: true)
+        let req: [String: Any] = ["files": wanted.map { $0.path }, "out": outDir.path]
+        let reqURL = work.appendingPathComponent("macro-request.json")
+        let resURL = work.appendingPathComponent("macro-result.json")
+        guard (try? JSONSerialization.data(withJSONObject: req).write(to: reqURL)) != nil else { return files }
+        let r = PythonHost.shared.run(.shell("python3 -c 'import ioxmacro; ioxmacro.run(\"\(reqURL.path)\", \"\(resURL.path)\")'"), cwd: work, log: nil)
+        guard r.exitCode == 0, let d = try? Data(contentsOf: resURL),
+              let obj = try? JSONSerialization.jsonObject(with: d) as? [String: String] else {
+            log.log("note: macro emulation did not run: \(r.message.suffix(300))")
+            return files
+        }
+        var changed = 0
+        let out = files.map { f -> URL in
+            if let n = obj[f.path], n != f.path { changed += 1; return URL(fileURLWithPath: n) }
+            return f
+        }
+        if changed > 0 { log.log("expanded emulated macros in \(changed) file(s)") }
+        return out
+    }
+}
+
 enum PreviewStripper {
     static func prepare(_ files: [URL], root: URL, work: URL, log: LogSink) -> [URL] {
         let fm = FileManager.default
