@@ -1,0 +1,23 @@
+name: macro-probe
+# Research aid: prints what Apple's SwiftData / Preview macros expand to, so iOXcode's own expansion can be checked against it.
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcrun swiftc --version
+          xcrun --sdk iphoneos --show-sdk-version
+      - name: Dump macro expansions
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          xcrun swiftc -sdk "$SDK" -target arm64-apple-ios17.0 -parse-as-library -typecheck \
+            -Xfrontend -dump-macro-expansions tools/macro-probe/Probe.swift 2>&1 | tee /tmp/expansions.txt || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macro-expansions
+          path: /tmp/expansions.txt
