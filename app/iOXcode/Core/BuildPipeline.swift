@@ -326,7 +326,9 @@ final class BuildPipeline {
         var objects: [URL] = []
         let modules = (obj["modules"] as? [[String: Any]]) ?? []
         for mod in modules {
-            guard let name = mod["name"] as? String else { continue }
+            guard let rawName = mod["name"] as? String else { continue }
+            // SwiftPM turns "Camera-SwiftUI" into the module name "Camera_SwiftUI"
+            let name = String(rawName.map { $0.isLetter || $0.isNumber || $0 == "_" ? $0 : "_" })
             if let bundle = mod["resourceBundle"] as? String {
                 packageResourceBundles.append((bundle, ((mod["resources"] as? [String]) ?? []).map { URL(fileURLWithPath: $0) }))
             }
