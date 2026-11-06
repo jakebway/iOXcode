@@ -482,9 +482,31 @@ final class BuildPipeline {
         if let f = m.infoPlistFile,
            let data = try? Data(contentsOf: base.appendingPathComponent(f)),
            let extra = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {
+            let vars: [String: String] = [
+                "PRODUCT_MODULE_NAME": m.name, "PRODUCT_NAME": m.name, "TARGET_NAME": m.name, "EXECUTABLE_NAME": m.name,
+                "PRODUCT_BUNDLE_IDENTIFIER": m.bundleId, "MARKETING_VERSION": m.version, "CURRENT_PROJECT_VERSION": m.build,
+                "DEVELOPMENT_LANGUAGE": "en", "PRODUCT_BUNDLE_PACKAGE_TYPE": "APPL", "EXECUTABLE_PREFIX": "",
+                "PRODUCT_MODULE_NAME_C99": m.name]
+            // Build variables inside the file (even nested ones such as the scene delegate class) get Xcode's values.
+            func substitute(_ v: Any) -> Any? {
+                if var str = v as? String {
+                    for (k, val) in vars {
+                        str = str.replacingOccurrences(of: "$(\(k))", with: val).replacingOccurrences(of: "${\(k)}", with: val)
+                        str = str.replacingOccurrences(of: "$(\(k):rfc1034identifier)", with: val.replacingOccurrences(of: "_", with: "-"))
+                    }
+                    return str.contains("$(") || str.contains("${") ? nil : str
+                }
+                if let dict = v as? [String: Any] {
+                    var out: [String: Any] = [:]
+                    for (k, x) in dict { if let y = substitute(x) { out[k] = y } }
+                    return out
+                }
+                if let arr = v as? [Any] { return arr.compactMap { substitute($0) } }
+                return v
+            }
             for (k, v) in extra {
-                if let sv = v as? String, sv.contains("$(") { continue }   // build variables: keep our own values
-                d[k] = v
+                guard let sv = substitute(v) else { continue }   // still has unknown variables: keep our own values
+                d[k] = sv
             }
         }
         if m.icon != nil {
