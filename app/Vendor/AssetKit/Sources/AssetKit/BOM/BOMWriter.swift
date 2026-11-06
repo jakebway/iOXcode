@@ -29,6 +29,9 @@ struct BOMWriter {
         blocks.append(Block(data: Data()))
     }
 
+    /// The ID the next added block will get.
+    var nextBlockID: UInt32 { UInt32(blocks.count) }
+
     @discardableResult
     mutating func addBlock(_ data: Data) -> UInt32 {
         blocks.append(Block(data: data))
