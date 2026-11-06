@@ -95,6 +95,8 @@ class Parser:
                 node = node + rhs
             elif isinstance(node, str) and isinstance(rhs, str):
                 node = node + rhs
+            else:
+                node = Call("__concat__", [(None, node), (None, rhs)])
         return node
 
     def parse_primary(self):
@@ -209,7 +211,15 @@ def _resolve_consts(node, consts, depth=0):
     if isinstance(node, list):
         return [_resolve_consts(x, consts, depth + 1) for x in node]
     if isinstance(node, Call):
-        return Call(node.name, [(k, _resolve_consts(v, consts, depth + 1)) for k, v in node.args])
+        c = Call(node.name, [(k, _resolve_consts(v, consts, depth + 1)) for k, v in node.args])
+        if c.name == "__concat__":
+            a, b = c.args[0][1], c.args[1][1]
+            if isinstance(a, list) and isinstance(b, list):
+                return a + b
+            if isinstance(a, str) and isinstance(b, str):
+                return a + b
+            return a if isinstance(a, list) else b
+        return c
     return node
 
 
