@@ -140,7 +140,7 @@ enum XcodeProjectReader {
         var frameworks: [String] = []
         var libs: [String] = []
         var libDirs: [String] = []
-        var skippedSources: [String] = []
+        var cSources: [String] = []
         var scripts: [BuildScript] = []
         var sawSources = false
         for phaseId in (target.value["buildPhases"] as? [String]) ?? [] {
@@ -162,7 +162,7 @@ enum XcodeProjectReader {
                 switch isa {
                 case "PBXSourcesBuildPhase":
                     if ext == "swift", let p = resolve(ref) { swiftFiles.append(p) }
-                    else if ["m", "mm", "c", "cpp", "cc"].contains(ext) { skippedSources.append(name) }
+                    else if CCompiler.extensions.contains(ext), let p = resolve(ref) { cSources.append(p) }
                 case "PBXResourcesBuildPhase":
                     if (fo["isa"] as? String) == "PBXVariantGroup" { continue }
                     if let p = resolve(ref) { resources.append(p) }
@@ -199,7 +199,9 @@ enum XcodeProjectReader {
                     if u.lastPathComponent.hasPrefix(".") { en.skipDescendants(); continue }
                     let path = u.standardizedFileURL.path
                     if ex.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) { en.skipDescendants(); continue }
-                    if u.pathExtension == "swift" { swiftFiles.append(String(path.dropFirst(root.standardizedFileURL.path.count + 1))) }
+                    let rel = String(path.dropFirst(root.standardizedFileURL.path.count + 1))
+                    if u.pathExtension == "swift" { swiftFiles.append(rel) }
+                    else if CCompiler.extensions.contains(u.pathExtension.lowercased()) { cSources.append(rel) }
                 }
             }
             m.sources = syncedDirs
@@ -254,8 +256,10 @@ enum XcodeProjectReader {
             }
         }
         m.packages = packages
-        if !skippedSources.isEmpty { warnings.append("C/Objective-C files are not compiled yet (\(skippedSources.count)): \(skippedSources.prefix(3).joined(separator: ", "))") }
         m.swiftFiles = swiftFiles
+        m.cFiles = cSources
+        if let d = str("GCC_PREPROCESSOR_DEFINITIONS") { m.cDefines = d.split(separator: " ").map(String.init).filter { !$0.contains("$") && !$0.isEmpty } }
+        if let a = str("CLANG_ENABLE_OBJC_ARC") { m.objcArc = a != "NO" }
         m.scripts = scripts
         m.resources = resources
         m.frameworks = frameworks + extraFrameworks

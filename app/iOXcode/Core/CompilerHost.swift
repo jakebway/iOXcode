@@ -27,17 +27,24 @@ final class CompilerHost {
     var abiVersion: UInt32 { ioxc_abi_version() }
     var availableMemoryMB: Int { Int(ioxc_available_memory() / 1_048_576) }
 
-    func frontend(_ args: [String]) -> ToolResult { run(args, link: false) }
+    func frontend(_ args: [String]) -> ToolResult { run(args, mode: .frontend) }
+    /// `args` is a clang command line starting with "clang" and describing one compile step. Needs ABI 4.
+    func clang(_ args: [String]) -> ToolResult {
+        guard ioxc_has_clang() != 0 else { return ToolResult(exitCode: 1, message: "This compiler build cannot compile C or Objective-C yet. Build the app after a new Compiler run finishes.") }
+        return run(args, mode: .clang)
+    }
     /// `args` must start with the program name, for example "ld64.lld".
-    func link(_ args: [String]) -> ToolResult { run(args, link: true) }
+    func link(_ args: [String]) -> ToolResult { run(args, mode: .link) }
 
-    private func run(_ args: [String], link: Bool) -> ToolResult {
+    enum Mode { case frontend, link, clang }
+
+    private func run(_ args: [String], mode: Mode) -> ToolResult {
         gate.lock()
         defer { gate.unlock() }
         var result = ToolResult(exitCode: 1, message: "did not run")
         let done = DispatchSemaphore(value: 0)
         let thread = Thread {
-            result = CompilerHost.invoke(args, link: link)
+            result = CompilerHost.invoke(args, mode: mode)
             done.signal()
         }
         thread.stackSize = 512 * 1024 * 1024
@@ -47,7 +54,7 @@ final class CompilerHost {
         return result
     }
 
-    private static func invoke(_ args: [String], link: Bool) -> ToolResult {
+    private static func invoke(_ args: [String], mode: Mode) -> ToolResult {
         // The compiler prints its detailed diagnostics to stderr: capture them in a file for the duration of the call.
         let path = NSTemporaryDirectory() + "ioxc-stderr.txt"
         fflush(stderr)
@@ -59,7 +66,11 @@ final class CompilerHost {
         var pointers: [UnsafeMutablePointer<CChar>?] = args.map { strdup($0) }
         let r: SwiftCompilerResult = pointers.withUnsafeMutableBufferPointer { buf in
             let base = UnsafeRawPointer(buf.baseAddress!).assumingMemoryBound(to: UnsafePointer<CChar>?.self)
-            return link ? ioxc_link(Int32(args.count), base) : ioxc_frontend(Int32(args.count), base)
+            switch mode {
+            case .link: return ioxc_link(Int32(args.count), base)
+            case .clang: return ioxc_clang(Int32(args.count), base)
+            case .frontend: return ioxc_frontend(Int32(args.count), base)
+            }
         }
         pointers.forEach { free($0) }
 

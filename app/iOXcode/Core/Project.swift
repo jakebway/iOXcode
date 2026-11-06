@@ -75,6 +75,11 @@ struct Manifest: Codable {
     var infoPlist: [String: String] = [:]      // extra string keys
     var infoPlistFile: String?                 // an Info.plist from an Xcode project
     var swiftFiles: [String]?                  // explicit file list (from an Xcode project)
+    var cFiles: [String]?                      // explicit C/ObjC/C++ file list (from an Xcode project)
+    var cDefines: [String] = []
+    var cFlags: [String] = []
+    var headerDirs: [String] = []
+    var objcArc = true
     var scripts: [BuildScript] = []            // run by ioxsh before/after compiling
     var packages: [PackageRef] = []            // Swift package dependencies
     var excludes: [String] = []                // folders/files under `sources` that are not compiled
@@ -92,11 +97,12 @@ struct Manifest: Codable {
         resources = get(.resources, []); icon = get(.icon, nil as String?)
         swiftFlags = get(.swiftFlags, []); linkerFlags = get(.linkerFlags, []); infoPlist = get(.infoPlist, [:])
         infoPlistFile = get(.infoPlistFile, nil as String?); swiftFiles = get(.swiftFiles, nil as [String]?)
+        cFiles = get(.cFiles, nil as [String]?); cDefines = get(.cDefines, []); cFlags = get(.cFlags, []); headerDirs = get(.headerDirs, []); objcArc = get(.objcArc, true)
         scripts = get(.scripts, []); packages = get(.packages, []); excludes = get(.excludes, []); sourceResources = get(.sourceResources, false)
     }
     enum Keys: String, CodingKey {
         case name, displayName, bundleId, version, build, minOS, sources, bridgingHeader, optimization, swiftVersion
-        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles, scripts, excludes, sourceResources, packages
+        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles, cFiles, cDefines, cFlags, headerDirs, objcArc, scripts, excludes, sourceResources, packages
     }
 
     static func load(from dir: URL) -> Manifest {
@@ -162,6 +168,26 @@ struct Project: Identifiable, Hashable {
                     if u.lastPathComponent.hasPrefix(".") { en.skipDescendants(); continue }
                     if u.pathExtension == "swift" && !u.path.contains("/.build/") { out.append(u) }
                 }
+            }
+        }
+        return Array(Set(out)).sorted { $0.path < $1.path }
+    }
+
+    func cFiles(for m: Manifest) -> [URL] {
+        let fm = FileManager.default
+        if let list = m.cFiles {
+            return list.map { root.appendingPathComponent($0) }.filter { fm.fileExists(atPath: $0.path) }
+        }
+        guard m.swiftFiles == nil else { return [] }
+        var out: [URL] = []
+        let excluded = m.excludes.map { self.root.appendingPathComponent($0).standardizedFileURL.path }
+        for s in m.sources {
+            guard let en = fm.enumerator(at: root.appendingPathComponent(s), includingPropertiesForKeys: nil) else { continue }
+            for case let u as URL in en {
+                let p = u.standardizedFileURL.path
+                if excluded.contains(where: { p == $0 || p.hasPrefix($0 + "/") }) { en.skipDescendants(); continue }
+                if u.lastPathComponent.hasPrefix(".") || u.lastPathComponent == "Pods" { en.skipDescendants(); continue }
+                if CCompiler.extensions.contains(u.pathExtension.lowercased()) && !p.contains("/.build/") { out.append(u) }
             }
         }
         return Array(Set(out)).sorted { $0.path < $1.path }

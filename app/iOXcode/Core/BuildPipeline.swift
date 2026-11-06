@@ -51,6 +51,9 @@ final class BuildPipeline {
     let log: LogSink
     /// Resource bundles that Swift package targets expect next to the executable (Bundle.module): name -> files/folders.
     var packageResourceBundles: [(name: String, sources: [URL])] = []
+    /// `-Xcc` arguments that let Swift import the C modules of the packages.
+    var packageCArgs: [String] = []
+    var packageCCompiler: CCompiler?
     init(project: Project, log: LogSink) { self.project = project; self.log = log }
 
     /// Returns the finished .ipa.
@@ -137,8 +140,29 @@ final class BuildPipeline {
                "-no-auto-bridging-header-chaining", "-enable-cross-import-overlays",
                "-target-sdk-version", sdkVersion(layout.sdk), "-target-sdk-name", "iphoneos" + sdkVersion(layout.sdk)]
         if !m.packages.isEmpty {
+            packageCCompiler = CCompiler(log: log, sdk: layout.sdk, clangResource: clangDir, target: target, moduleCache: moduleCache)
             try fm.createDirectory(at: moduleDir, withIntermediateDirectories: true)
             packageObjects = try buildPackages(m, work: work, moduleDir: moduleDir, common: commonArgs)
+        }
+        // C / Objective-C / C++ of the app itself, compiled by the in-process clang
+        var cObjects: [URL] = []
+        var headerArgs: [String] = []
+        let cFiles = project.cFiles(for: m)
+        let ccompiler = CCompiler(log: log, sdk: layout.sdk, clangResource: clangDir, target: target, moduleCache: moduleCache)
+        var copts = CCompiler.Options()
+        if !cFiles.isEmpty || m.bridgingHeader != nil {
+            var dirs = CCompiler.headerDirectories(under: [project.root])
+            dirs += m.headerDirs.map { project.root.appendingPathComponent($0).path }
+            dirs.append(project.root.path)
+            copts.includeDirs = dirs
+            copts.defines = m.cDefines
+            copts.arc = m.objcArc
+            copts.optimize = m.optimization != "none"
+            copts.extraFlags = m.cFlags
+            if m.bridgingHeader != nil { for d in dirs { headerArgs += ["-Xcc", "-I", "-Xcc", d] } }
+        }
+        if !cFiles.isEmpty {
+            cObjects = try ccompiler.compile(cFiles, into: work.appendingPathComponent("c", isDirectory: true), options: copts, label: m.name)
         }
         let strippedSources = PreviewStripper.prepare(files, root: project.root, work: work, log: log)
         var sourcesForCompile = MacroEmulation.prepare(strippedSources, work: work, log: log)
@@ -164,6 +188,7 @@ final class BuildPipeline {
         }
         fe += MacroPlugins.arguments(log: log)
         if !packageObjects.isEmpty { fe += ["-I", moduleDir.path] }
+        fe += headerArgs + packageCArgs
         if let h = m.bridgingHeader { fe += ["-import-objc-header", project.root.appendingPathComponent(h).path] }
         fe += m.swiftFlags
         log.log("-- compiling Swift")
@@ -185,7 +210,7 @@ final class BuildPipeline {
         for f in m.frameworks { ld += ["-framework", f] }
         ld += ["-lSystem", "-lc++", "-lobjc",
                "-rpath", "/usr/lib/swift", "-rpath", "@executable_path/Frameworks",
-               "-dead_strip", "-e", "_main", obj.path] + packageObjects.map { $0.path }
+               "-dead_strip", "-e", "_main", obj.path] + packageObjects.map { $0.path } + cObjects.map { $0.path }
         // Apple's own link line also adds the back-deployment pack
         let compat = layout.swiftResource.appendingPathComponent("iphoneos/libswiftCompatibilityPacks.a")
         if fm.fileExists(atPath: compat.path) { ld.append(compat.path) }
@@ -307,7 +332,27 @@ final class BuildPipeline {
             }
             let files = ((mod["files"] as? [String]) ?? [])
             let cfiles = (mod["cfiles"] as? [String]) ?? []
-            if !cfiles.isEmpty { log.log("warning: \(name) has \(cfiles.count) C/Objective-C files, which are not compiled yet") }
+            if !cfiles.isEmpty, let cc = packageCCompiler {
+                let inc = (mod["includeDir"] as? String) ?? ""
+                var o = CCompiler.Options()
+                o.includeDirs = [inc] + CCompiler.headerDirectories(under: [URL(fileURLWithPath: (mod["dir"] as? String) ?? "")], limit: 60)
+                o.defines = (mod["cdefines"] as? [String]) ?? []
+                o.optimize = true
+                o.arc = false
+                o.extraFlags = ((mod["flags"] as? [String]) ?? []).filter { $0.hasPrefix("-W") == false && $0.hasPrefix("-f") }
+                objects += try cc.compile(cfiles.map { URL(fileURLWithPath: $0) }, into: work.appendingPathComponent("pkgc-\(name)", isDirectory: true), options: o, label: name)
+                // a module map over the public headers so Swift can `import name`
+                var mapDir = URL(fileURLWithPath: inc)
+                let existing = mapDir.appendingPathComponent("module.modulemap")
+                if !fm.fileExists(atPath: existing.path) {
+                    mapDir = work.appendingPathComponent("modmaps/\(name)", isDirectory: true)
+                    try fm.createDirectory(at: mapDir, withIntermediateDirectories: true)
+                    try "module \(name) {\n  umbrella \"\(inc)\"\n  export *\n  module * { export * }\n}\n".write(to: mapDir.appendingPathComponent("module.modulemap"), atomically: true, encoding: .utf8)
+                }
+                packageCArgs += ["-Xcc", "-fmodule-map-file=" + mapDir.appendingPathComponent("module.modulemap").path, "-Xcc", "-I", "-Xcc", inc]
+            } else if !cfiles.isEmpty {
+                log.log("warning: \(name) has \(cfiles.count) C/Objective-C files, which are not compiled yet")
+            }
             if files.isEmpty { continue }
             log.log("-- module \(name) (\(files.count) files)")
             let o = work.appendingPathComponent("pkg-\(name).o")
@@ -316,6 +361,7 @@ final class BuildPipeline {
                       "-I", moduleDir.path, "-o", o.path, "-O"]
             for d in (mod["defines"] as? [String]) ?? [] { fe += ["-D", d] }
             fe += MacroPlugins.arguments(log: LogSink { _ in })
+            fe += packageCArgs
             let res = CompilerHost.shared.frontend(fe)
             if !res.message.isEmpty { log.log(res.message) }
             guard res.exitCode == 0 else { throw BuildError.message("Swift package module \(name) failed to compile (exit \(res.exitCode))") }
