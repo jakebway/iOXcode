@@ -216,7 +216,7 @@ final class BuildPipeline {
         if !appCatalogs.isEmpty {
             if let out = AssetCompilation.compile(catalogs: appCatalogs, minOS: m.minOS, into: app, scratch: work, label: "app", log: log) {
                 catalogPlist = out.plistAdditions
-                if out.hasAppIcon { iconFromCatalog = nil }
+                iconFromCatalog = out.hasAppIcon ? nil : out.iconSource
             } else {
                 log.log("note: falling back to plain image files for the app's asset catalogs")
                 for c in appCatalogs { iconFromCatalog = iconFromCatalog ?? Assets.extract(catalog: c, into: app, log: log) }
