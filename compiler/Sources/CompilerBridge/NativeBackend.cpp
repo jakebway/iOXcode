@@ -6,6 +6,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
+#include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
@@ -96,7 +97,7 @@ std::once_flag clangTargetInitialization;
 /// cache, the timers and the process-level crash handling, none of which apply inside an app.
 bool runClangFrontendJob(llvm::ArrayRef<const char *> cc1Arguments, llvm::raw_ostream &diagnosticStream) {
   using namespace clang;
-  ensureSufficientStack();
+  noteBottomOfStack();
   std::call_once(clangTargetInitialization, [] {
     llvm::InitializeAllTargets();
     llvm::InitializeAllTargetMCs();
