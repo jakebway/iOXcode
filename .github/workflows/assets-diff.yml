@@ -45,7 +45,24 @@ jobs:
         run: |
           cd scratch/assetdump
           swift build -c release 2>&1 | tail -5
-          .build/release/assetdump "$CATALOG" "$GITHUB_WORKSPACE/work/assetkit.car" 2>&1 | tail -5
+          for V in none A B AB; do
+            ASSETKIT_TREE=$V .build/release/assetdump "$CATALOG" "$GITHUB_WORKSPACE/work/assetkit-$V.car" 2>&1 | tail -1
+          done
+          cp "$GITHUB_WORKSPACE/work/assetkit-none.car" "$GITHUB_WORKSPACE/work/assetkit.car"
+      - name: Variants
+        run: |
+          for V in none A B AB; do
+            xcrun assetutil --info work/assetkit-$V.car > work/v-$V.json 2> work/v-$V.err || true
+            python3 - "$V" <<'PY' >> ci-out/variants.txt
+import json, sys, collections
+v = sys.argv[1]
+try: d = json.load(open(f"work/v-{v}.json"))
+except Exception as e: d = []
+errs = sum(1 for _ in open(f"work/v-{v}.err"))
+print(v, "entries", len(d), collections.Counter(x.get("AssetType") for x in d if isinstance(x, dict)), "stderr lines", errs)
+PY
+          done
+          cat ci-out/variants.txt
       - name: Dump both with assetutil
         run: |
           xcrun assetutil --info work/actool/Assets.car > work/a.json 2> ci-out/assetutil-actool.err || true

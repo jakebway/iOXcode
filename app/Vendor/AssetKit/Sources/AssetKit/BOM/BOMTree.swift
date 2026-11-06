@@ -52,7 +52,7 @@ struct BOMTree {
 
         let blockSize: UInt32 = 4096
         let pairs = (0..<sorted.count).map { (valueBlockIDs[$0], keyBlockIDs[$0]) }
-        let leafID = writeNodes(into: &bom, pairs: pairs, blockSize: blockSize, maxPerLeaf: 256)
+        let leafID = writeNodes(into: &bom, pairs: pairs, blockSize: blockSize, maxPerLeaf: 256, keys: sorted.map { $0.key })
 
         // Tree header block. actool's tree headers are 29 bytes -- 21 bytes
         // of fixed fields plus 8 trailing zeros (probably reserved/align).
@@ -111,9 +111,13 @@ struct BOMTree {
         into bom: inout BOMWriter,
         pairs: [(UInt32, UInt32)],
         blockSize: UInt32,
-        maxPerLeaf: Int
+        maxPerLeaf: Int,
+        keys: [Data]? = nil
     ) -> UInt32 {
-        func page(isLeaf: Bool, entries: ArraySlice<(UInt32, UInt32)>, forward: UInt32, backward: UInt32) -> Data {
+        let variant = ProcessInfo.processInfo.environment["ASSETKIT_TREE"] ?? ""
+        let listAll = variant.contains("A")
+        let appendKeys = variant.contains("B") && keys != nil
+        func page(isLeaf: Bool, entries: ArraySlice<(UInt32, UInt32)>, forward: UInt32, backward: UInt32, keyData: [Data] = []) -> Data {
             var w = ByteWriter()
             w.writeBE(UInt16(isLeaf ? 1 : 0))
             w.writeBE(UInt16(entries.count))
@@ -123,11 +127,12 @@ struct BOMTree {
             // macOS 26.4+'s assetutil reads a page as a `blockSize`-sized stream and faults with
             // `BOMStreamGetDataPointer buffer overflow` if the underlying block is shorter.
             if w.offset < Int(blockSize) { w.writeZeros(Int(blockSize) - w.offset) }
+            if appendKeys { for k in keyData { w.write(Array(k)) } }
             return w.data
         }
 
         if pairs.count <= maxPerLeaf {
-            return bom.addBlock(page(isLeaf: true, entries: pairs[...], forward: 0, backward: 0))
+            return bom.addBlock(page(isLeaf: true, entries: pairs[...], forward: 0, backward: 0, keyData: keys ?? []))
         }
 
         var chunks: [ArraySlice<(UInt32, UInt32)>] = []
@@ -138,16 +143,20 @@ struct BOMTree {
         }
         let first = bom.nextBlockID
         var branch: [(UInt32, UInt32)] = []
+        var branchKeys: [Data] = []
         for (n, chunk) in chunks.enumerated() {
             let id = first + UInt32(n)
             let forward = n + 1 < chunks.count ? id + 1 : 0
             let backward = n > 0 ? id - 1 : 0
-            let added = bom.addBlock(page(isLeaf: true, entries: chunk, forward: forward, backward: backward))
+            let lo = n * maxPerLeaf
+            let kd: [Data] = keys.map { Array($0[lo..<(lo + chunk.count)]) } ?? []
+            let added = bom.addBlock(page(isLeaf: true, entries: chunk, forward: forward, backward: backward, keyData: kd))
             precondition(added == id)
-            if n + 1 < chunks.count { branch.append((id, chunk.last!.1)) }
+            if n + 1 < chunks.count || listAll { branch.append((id, chunk.last!.1)) }
+            if n + 1 < chunks.count || listAll { branchKeys.append(keys?[lo + chunk.count - 1] ?? Data()) }
         }
         precondition(branch.count <= Int(blockSize - 12) / 8, "tree too large for one branch page")
-        return bom.addBlock(page(isLeaf: false, entries: branch[...], forward: 0, backward: 0))
+        return bom.addBlock(page(isLeaf: false, entries: branch[...], forward: 0, backward: 0, keyData: branchKeys))
     }
 
     static func byteCompare(_ a: Data, _ b: Data) -> Int {
