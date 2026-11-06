@@ -54,6 +54,27 @@ final class BuildPipeline {
     init(project: Project, log: LogSink) { self.project = project; self.log = log }
 
     /// Returns the finished .ipa.
+    static let runtimeShim = """
+    import Foundation
+
+    @_cdecl("__isPlatformVersionAtLeast")
+    public func iox_isPlatformVersionAtLeast(_ platform: UInt32, _ major: UInt32, _ minor: UInt32, _ sub: UInt32) -> Int32 {
+        // platform 2 is iOS; any other platform is not what this device runs, so answer "yes"
+        guard platform == 2 else { return 1 }
+        let v = ProcessInfo.processInfo.operatingSystemVersion
+        let cur = (v.majorVersion, v.minorVersion, v.patchVersion)
+        let want = (Int(major), Int(minor), Int(sub))
+        if cur.0 != want.0 { return cur.0 > want.0 ? 1 : 0 }
+        if cur.1 != want.1 { return cur.1 > want.1 ? 1 : 0 }
+        return cur.2 >= want.2 ? 1 : 0
+    }
+
+    @_cdecl("__isOSVersionAtLeast")
+    public func iox_isOSVersionAtLeast(_ major: Int32, _ minor: Int32, _ sub: Int32) -> Int32 {
+        return iox_isPlatformVersionAtLeast(2, UInt32(max(major, 0)), UInt32(max(minor, 0)), UInt32(max(sub, 0)))
+    }
+    """
+
     func run() throws -> URL {
         let fm = FileManager.default
         Generator.refresh(project, log: log)
@@ -120,7 +141,12 @@ final class BuildPipeline {
             packageObjects = try buildPackages(m, work: work, moduleDir: moduleDir, common: commonArgs)
         }
         let strippedSources = PreviewStripper.prepare(files, root: project.root, work: work, log: log)
-        let sourcesForCompile = MacroEmulation.prepare(strippedSources, work: work, log: log)
+        var sourcesForCompile = MacroEmulation.prepare(strippedSources, work: work, log: log)
+        // Apple's linker line adds libclang_rt, which provides the runtime check behind `#available`. We have no
+        // libclang_rt on the device, so the app carries its own copy of that one function.
+        let shim = work.appendingPathComponent("iox_runtime_shim.swift")
+        try Self.runtimeShim.write(to: shim, atomically: true, encoding: .utf8)
+        sourcesForCompile.append(shim)
         var fe: [String] = ["-c"] + sourcesForCompile.map { $0.path }
         fe += ["-target", target, "-sdk", layout.sdk.path,
                "-module-name", m.name, "-parse-as-library", "-swift-version", m.swiftVersion,
