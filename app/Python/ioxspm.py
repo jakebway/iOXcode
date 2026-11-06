@@ -530,6 +530,8 @@ def fetch_package(url, req, cache_dir, notes):
 # ---------------------------------------------------------------- graph
 
 SWIFT_EXT = {".swift"}
+IMPLICIT_RESOURCE_DIRS = {".xcassets", ".xcdatamodeld", ".xcdatamodel", ".xcmappingmodel", ".lproj", ".intentdefinition"}
+IMPLICIT_RESOURCE_FILES = {".storyboard", ".xib", ".xcstrings", ".xcprivacy"}
 C_EXT = {".c", ".m", ".mm", ".cpp", ".cc", ".cxx"}
 
 
@@ -546,22 +548,33 @@ def target_sources(pkg_dir, td):
     excl = [os.path.normpath(os.path.join(root, e)) for e in td.get("exclude") or []]
     roots = [os.path.join(root, s) for s in td["sources"]] if td.get("sources") else [root]
     swift, cfiles, resources = [], [], []
+    implicit = []
     for r in roots:
         walk = [(r, [], [os.path.basename(r)])] if os.path.isfile(r) else os.walk(r)
         for dp, dirs, files in walk:
             dirs[:] = [d for d in dirs if not d.startswith(".") and os.path.normpath(os.path.join(dp, d)) not in excl]
+            # SwiftPM treats these as resources without being told (tools version 5.3+)
+            for d in list(dirs):
+                if os.path.splitext(d)[1].lower() in IMPLICIT_RESOURCE_DIRS:
+                    implicit.append(os.path.join(dp, d))
+                    dirs.remove(d)
             for f in sorted(files):
                 full = os.path.join(dp, f) if not os.path.isfile(r) else r
                 if os.path.normpath(full) in excl:
                     continue
                 ext = os.path.splitext(f)[1].lower()
-                if ext in SWIFT_EXT:
+                if ext in IMPLICIT_RESOURCE_FILES:
+                    implicit.append(full)
+                elif ext in SWIFT_EXT:
                     swift.append(full)
                 elif ext in C_EXT:
                     cfiles.append(full)
     for res in td.get("resources") or []:
         if res.get("path"):
             resources.append(os.path.join(root, res["path"]))
+    for path in implicit:
+        if not any(path == r or path.startswith(r.rstrip("/") + "/") for r in resources):
+            resources.append(path)
     return root, swift, cfiles, resources
 
 
