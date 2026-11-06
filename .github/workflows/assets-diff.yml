@@ -1,0 +1,61 @@
+name: Assets - compare AssetKit with Apple's actool
+
+# Compiles one real catalog (OldOS by default) with Apple's actool and with the AssetKit copy used on the
+# iPhone, then dumps both with assetutil so the differences can be read. Logs go to the ci-logs branch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "owner/repo with the catalog"
+        default: "zzanehip/The-OldOS-Project"
+      catalog:
+        description: "path of the .xcassets inside it"
+        default: "OldOS/OldOS/Assets.xcassets"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: assets-diff
+  cancel-in-progress: true
+
+jobs:
+  diff:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the catalog
+        run: |
+          mkdir -p work ci-out
+          curl -sSL "https://codeload.github.com/${{ inputs.repo }}/zip/HEAD" -o work/repo.zip
+          unzip -q work/repo.zip -d work/repo
+          CAT=$(ls -d work/repo/*/"${{ inputs.catalog }}")
+          echo "CATALOG=$PWD/$CAT" >> "$GITHUB_ENV"
+      - name: actool (Apple)
+        run: |
+          mkdir -p work/actool
+          xcrun actool "$CATALOG" --compile work/actool --platform iphoneos --minimum-deployment-target 16.0 \
+            --target-device iphone --target-device ipad --app-icon AppIcon \
+            --output-partial-info-plist work/actool/partial.plist > ci-out/actool.log 2>&1 || true
+          ls -la work/actool | head >> ci-out/actool.log
+          tail -5 ci-out/actool.log
+      - name: AssetKit
+        run: |
+          cd scratch/assetdump
+          swift build -c release 2>&1 | tail -5
+          .build/release/assetdump "$CATALOG" "$GITHUB_WORKSPACE/work/assetkit.car" 2>&1 | tail -5
+      - name: Dump both with assetutil
+        run: |
+          xcrun assetutil --info work/actool/Assets.car > work/a.json 2> ci-out/assetutil-actool.err || true
+          xcrun assetutil --info work/assetkit.car > work/b.json 2> ci-out/assetutil-assetkit.err || true
+          ls -la work/*.json work/actool/Assets.car work/assetkit.car > ci-out/sizes.txt
+          python3 scripts/ci/compare-cars.py work/a.json work/b.json > ci-out/compare.txt 2>&1 || true
+          cat ci-out/compare.txt | head -120
+          head -c 4000 ci-out/assetutil-assetkit.err || true
+      - name: Publish logs to the ci-logs branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "assets-diff-${{ github.run_id }}"
