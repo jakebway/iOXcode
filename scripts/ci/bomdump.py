@@ -36,3 +36,17 @@ for name, idx in vars_.items():
             if not isleaf and ents:
                 print('  first key blocks lens:', [len(blk(e[1])) if e[1] < cnt and e[1] else None for e in ents[:3]])
         level = nxt; depth += 1
+
+if only is None or only == 'RENDITIONS':
+    b = blk(vars_['RENDITIONS']); child = struct.unpack('>I', b[8:12])[0]
+    isleaf, count, fwd, bwd, ents, ln = node(child)
+    print('RAW root', child, isleaf, count, fwd, bwd, ln)
+    cur = ents[0][0]
+    seen = 0
+    while cur and seen < 12:
+        nb = blk(cur)
+        il, c, f, bk, es, l = node(cur)
+        tail = nb[12 + 8*c: 12 + 8*c + 48]
+        print(f'RAW leaf {cur}: isLeaf {il} count {c} fwd {f} bwd {bk} blocklen {l} tailhex {tail.hex()}')
+        print('    first entries', es[:3], 'last', es[-2:], ' value-block lens', [blocks[e[0]][1] for e in es[:3]], [blocks[e[0]][1] for e in es[-3:]], 'key-block lens', [blocks[e[1]][1] for e in es[-2:]])
+        cur = f; seen += 1
