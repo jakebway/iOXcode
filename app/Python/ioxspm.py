@@ -678,6 +678,20 @@ def resolve(request_path):
         p = packages[k]
         td = modules[mid]
         root, swift, cfiles, resources = target_sources(p["dir"], td)
+        bundle_name = None
+        if resources:
+            bundle_name = "%s_%s.bundle" % (p["manifest"]["name"], name)
+            acc_dir = os.path.join(work, "expanded", name)
+            os.makedirs(acc_dir, exist_ok=True)
+            acc = os.path.join(acc_dir, "resource_bundle_accessor.swift")
+            with open(acc, "w") as f:
+                f.write("import Foundation\n\nextension Foundation.Bundle {\n"
+                        "    static let module: Bundle = {\n"
+                        "        let path = Bundle.main.bundleURL.appendingPathComponent(\"%s\").path\n"
+                        "        if let b = Bundle(path: path) { return b }\n"
+                        "        fatalError(\"could not load resource bundle: \\(path)\")\n"
+                        "    }()\n}\n" % bundle_name)
+            swift = list(swift) + [acc]
         try:
             import ioxmacro
             expanded = ioxmacro.expand_files(swift, os.path.join(work, "expanded", name))
@@ -698,7 +712,7 @@ def resolve(request_path):
             notes.append("%s (%s) is a %s target; not built on iPhone yet" % (name, p["manifest"]["name"], kind))
             if kind in ("plugin", "macro", "binaryTarget", "systemLibrary"):
                 continue
-        out.append({"name": name, "package": p["manifest"]["name"], "dir": root, "files": swift, "cfiles": cfiles,
+        out.append({"name": name, "package": p["manifest"]["name"], "dir": root, "files": swift, "resourceBundle": bundle_name, "cfiles": cfiles,
                     "deps": sorted(set(deps)), "resources": resources, "flags": td["flags"], "defines": [d for d in td["defines"] if not d.startswith("C:")],
                     "cdefines": [d[2:] for d in td["defines"] if d.startswith("C:")],
                     "includeDir": os.path.join(root, td.get("publicHeadersPath") or "include") if cfiles else None})

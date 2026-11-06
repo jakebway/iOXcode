@@ -392,9 +392,51 @@ def expand_entry(src):
     return out
 
 
+def strip_previews(src):
+    """Removes `#Preview ... { }` blocks (previews are Xcode-only and need Apple's preview macro plugin)."""
+    if "#Preview" not in src:
+        return None
+    clean = _blank_literals(src)
+    out, pos, changed = [], 0, False
+    for m in re.finditer(r"(?<![A-Za-z0-9_])#Preview\b", clean):
+        if m.start() < pos:
+            continue
+        i = m.end()
+        n = len(clean)
+        # optional (name, traits) arguments, then optional trailing closure(s)
+        while i < n and clean[i] in " \t\r\n":
+            i += 1
+        if i < n and clean[i] == "(":
+            j = _find_close(clean, i)
+            if j < 0:
+                continue
+            i = j + 1
+            while i < n and clean[i] in " \t\r\n":
+                i += 1
+        if i < n and clean[i] == "{":
+            depth = 0
+            while i < n:
+                if clean[i] == "{":
+                    depth += 1
+                elif clean[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        i += 1
+                        break
+                i += 1
+            out.append(src[pos:m.start()])
+            pos = i
+            changed = True
+    out.append(src[pos:])
+    return "".join(out) if changed else None
+
+
 def expand_source(src):
     """Returns the source with emulated macros expanded, or None when nothing changed."""
     changed = False
+    sp = strip_previews(src)
+    if sp is not None:
+        src, changed = sp, True
     mdl = expand_model(src)
     if mdl is not None:
         src, changed = mdl, True

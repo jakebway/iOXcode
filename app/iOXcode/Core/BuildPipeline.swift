@@ -49,6 +49,8 @@ enum BuildError: Error, CustomStringConvertible {
 final class BuildPipeline {
     let project: Project
     let log: LogSink
+    /// Resource bundles that Swift package targets expect next to the executable (Bundle.module): name -> files/folders.
+    var packageResourceBundles: [(name: String, sources: [URL])] = []
     init(project: Project, log: LogSink) { self.project = project; self.log = log }
 
     /// Returns the finished .ipa.
@@ -183,6 +185,30 @@ final class BuildPipeline {
             if fm.fileExists(atPath: src.path) { try fm.copyItem(at: src, to: dst) }
             else { log.log("warning: resource not found: \(r)") }
         }
+        for rb in packageResourceBundles {
+            let dir = app.appendingPathComponent(rb.name, isDirectory: true)
+            try? fm.removeItem(at: dir)
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            let info: [String: Any] = ["CFBundleName": rb.name, "CFBundleIdentifier": "\(m.bundleId).\(rb.name.replacingOccurrences(of: ".bundle", with: ""))",
+                                       "CFBundlePackageType": "BNDL", "CFBundleVersion": "1", "CFBundleShortVersionString": "1.0"]
+            (info as NSDictionary).write(to: dir.appendingPathComponent("Info.plist"), atomically: true)
+            for src in rb.sources {
+                var isDir: ObjCBool = false
+                guard fm.fileExists(atPath: src.path, isDirectory: &isDir) else { continue }
+                let items: [URL] = isDir.boolValue && src.pathExtension.lowercased() != "xcassets"
+                    ? ((try? fm.contentsOfDirectory(at: src, includingPropertiesForKeys: nil)) ?? []) : [src]
+                for item in items {
+                    if item.pathExtension.lowercased() == "xcassets" {
+                        log.log("note: \(rb.name): asset catalog \(item.lastPathComponent) is not compiled yet, so its colors and images will be missing at runtime")
+                        continue
+                    }
+                    if item.lastPathComponent.hasPrefix(".") { continue }
+                    let dst = dir.appendingPathComponent(item.lastPathComponent)
+                    try? fm.removeItem(at: dst)
+                    try? fm.copyItem(at: item, to: dst)
+                }
+            }
+        }
         var m2 = m
         if m2.icon == nil, let ic = iconFromCatalog { IconWriter.write(ic, into: app, log: log); m2.icon = "-" }
         try writeInfoPlist(m2, to: app.appendingPathComponent("Info.plist"), base: project.root)
@@ -227,6 +253,9 @@ final class BuildPipeline {
         let modules = (obj["modules"] as? [[String: Any]]) ?? []
         for mod in modules {
             guard let name = mod["name"] as? String else { continue }
+            if let bundle = mod["resourceBundle"] as? String {
+                packageResourceBundles.append((bundle, ((mod["resources"] as? [String]) ?? []).map { URL(fileURLWithPath: $0) }))
+            }
             let files = ((mod["files"] as? [String]) ?? [])
             let cfiles = (mod["cfiles"] as? [String]) ?? []
             if !cfiles.isEmpty { log.log("warning: \(name) has \(cfiles.count) C/Objective-C files, which are not compiled yet") }
