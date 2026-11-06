@@ -166,6 +166,10 @@ jobs:
             python3 scripts/ci/install-python.py "$PY_XCF" "$APP" "$PY_PACKAGES"
             echo "python embedded: $(du -sh "$APP/python" | cut -f1) stdlib, $(du -sh "$APP/app_packages" | cut -f1) packages"
           fi
+          # iOS 27 (iPhone Duo) lays out apps linked against an older SDK with a blank strip; stamp 27.1
+          MINOS=$(vtool -show-build "$APP/iOXcode" | awk '/minos/{print $2; exit}')
+          xcrun vtool -set-build-version ios "${MINOS:-17.0}" 27.1 -replace -output "$APP/iOXcode.new" "$APP/iOXcode" && mv "$APP/iOXcode.new" "$APP/iOXcode" && chmod +x "$APP/iOXcode"
+          vtool -show-build "$APP/iOXcode" | grep -E "platform|minos|sdk"
           rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
           zip -qry iOXcode.ipa Payload
           ls -lh iOXcode.ipa

@@ -176,7 +176,7 @@ final class BuildPipeline {
         try fm.createDirectory(at: app, withIntermediateDirectories: true)
         let exe = app.appendingPathComponent(m.name)
         var ld: [String] = ["ld64.lld", "-arch", "arm64",
-                            "-platform_version", "ios", m.minOS, sdkVersion(layout.sdk),
+                            "-platform_version", "ios", m.minOS, Self.linkedSDK(sdkVersion(layout.sdk)),
                             "-syslibroot", layout.sdk.path,
                             "-L", layout.sdk.appendingPathComponent("usr/lib/swift").path,
                             "-L", layout.swiftResource.appendingPathComponent("iphoneos").path]
@@ -250,6 +250,14 @@ final class BuildPipeline {
         let size = (attrs?[.size] as? NSNumber)?.intValue ?? 0
         log.log("== Done in \(Int(Date().timeIntervalSince(t0)))s: \(ipa.lastPathComponent) (\(size / 1024) KB)")
         return ipa
+    }
+
+    /// iOS 27 gives apps linked against an older SDK a compatibility layout (iPhone Duo shows a blank strip at the
+    /// right edge). The pack's SDK is 26.x, so the binary is stamped as linked against 27.1, which turns on the
+    /// native layout for the folding screen. The APIs the app can call are still those of the pack's SDK.
+    static func linkedSDK(_ real: String) -> String {
+        let r = real.split(separator: ".").compactMap { Int($0) }
+        return (r.first ?? 0) >= 27 ? real : "27.1"
     }
 
     private func sdkVersion(_ sdk: URL) -> String {
@@ -350,6 +358,7 @@ final class BuildPipeline {
             "CFBundlePackageType": "APPL",
             "CFBundleInfoDictionaryVersion": "6.0",
             "MinimumOSVersion": m.minOS,
+            "DTPlatformName": "iphoneos", "DTPlatformVersion": "27.1", "DTSDKName": "iphoneos27.1",
             "CFBundleSupportedPlatforms": ["iPhoneOS"],
             "UIDeviceFamily": [1, 2],
             "LSRequiresIPhoneOS": true,
