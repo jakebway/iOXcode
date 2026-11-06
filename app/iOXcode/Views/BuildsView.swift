@@ -87,29 +87,47 @@ struct ReleasesView: View {
     }
 }
 
-/// Opens a project's releases. Projects that were not imported from a GitHub link ask for the repo once.
+/// Opens a project's releases. The GitHub repo is remembered from the import, or worked out from the project itself.
 struct ReleasesEntry: View {
     let projectName: String
     @State private var origin: GitHubOrigin?
+    @State private var searching = true
     @State private var text = ""
     @State private var bad = false
 
     var body: some View {
-        if let origin { ReleasesView(origin: origin) }
-        else {
-            Form {
-                Section {
-                    TextField("github.com/owner/repo", text: $text).autocapitalization(.none).disableAutocorrection(true)
-                    Button("Show releases") {
-                        if let o = GitHubOrigin.parse(text) { Origins.save(o, for: projectName); origin = o }
-                        else { bad = true }
+        Group {
+            if let origin { ReleasesView(origin: origin) }
+            else if searching {
+                VStack(spacing: 12) { ProgressView(); Text("Finding this project on GitHub…").foregroundColor(.secondary) }
+            } else {
+                Form {
+                    Section {
+                        TextField("github.com/owner/repo", text: $text).autocapitalization(.none).disableAutocorrection(true)
+                        Button("Show releases") {
+                            if let o = GitHubOrigin.parse(text) { Origins.save(o, for: projectName); origin = o }
+                            else { bad = true }
+                        }
+                    } header: { Text("Which GitHub repo is this?") } footer: {
+                        Text(bad ? "That doesn't look like owner/repo or a GitHub link." : "iOXcode couldn't tell where this project came from. It is remembered after this.")
                     }
-                } header: { Text("Which GitHub repo is this?") } footer: {
-                    Text(bad ? "That doesn't look like owner/repo or a GitHub link." : "This project wasn't imported from a GitHub link, so iOXcode doesn't know where its releases are. It is remembered after this.")
                 }
             }
-            .navigationTitle("Releases")
-            .onAppear { origin = Origins.load(projectName) }
+        }
+        .navigationTitle("Releases")
+        .toolbar {
+            if origin != nil {
+                Menu {
+                    Text("\(origin!.owner)/\(origin!.repo)")
+                    Button { Origins.remove(projectName); origin = nil; searching = false; text = "" } label: { Label("Use a different repo", systemImage: "arrow.triangle.2.circlepath") }
+                } label: { Image(systemName: "ellipsis.circle") }
+            }
+        }
+        .task {
+            if let o = Origins.load(projectName) { origin = o; searching = false; return }
+            let root = Paths.projects.appendingPathComponent(projectName, isDirectory: true)
+            if let o = await GitHubOrigin.infer(from: root) { Origins.save(o, for: projectName); origin = o }
+            searching = false
         }
     }
 }

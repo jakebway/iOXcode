@@ -132,6 +132,10 @@ final class AppModel: ObservableObject {
                 }
             }
             if let origin { Origins.save(origin, for: name) }
+            else {
+                // not imported from a link: find the repo in the background so Releases is ready when it is opened
+                Task.detached { if let o = await GitHubOrigin.infer(from: dest) { Origins.save(o, for: name) } }
+            }
             console.line("Imported project \(name)")
             notice = "Added \(name)"
             let proj = Project(url: dest)
