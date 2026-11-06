@@ -48,7 +48,7 @@ jobs:
           for V in none A B AB; do
             ASSETKIT_TREE=$V .build/release/assetdump "$CATALOG" "$GITHUB_WORKSPACE/work/assetkit-$V.car" 2>&1 | tail -1
           done
-          cp "$GITHUB_WORKSPACE/work/assetkit-none.car" "$GITHUB_WORKSPACE/work/assetkit.car"
+          cp "$GITHUB_WORKSPACE/work/assetkit-A.car" "$GITHUB_WORKSPACE/work/assetkit.car"
       - name: Variants
         run: |
           for V in none A B AB; do

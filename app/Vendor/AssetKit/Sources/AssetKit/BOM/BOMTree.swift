@@ -115,7 +115,7 @@ struct BOMTree {
         keys: [Data]? = nil
     ) -> UInt32 {
         let variant = ProcessInfo.processInfo.environment["ASSETKIT_TREE"] ?? ""
-        let listAll = variant.contains("A")
+        let listAll = !variant.contains("none") && !variant.contains("last")
         let appendKeys = variant.contains("B") && keys != nil
         func page(isLeaf: Bool, entries: ArraySlice<(UInt32, UInt32)>, forward: UInt32, backward: UInt32, keyData: [Data] = []) -> Data {
             var w = ByteWriter()
