@@ -531,6 +531,16 @@ def fetch_package(url, req, cache_dir, notes):
     shutil.rmtree(stage, ignore_errors=True)
     with zipfile.ZipFile(io.BytesIO(data)) as z:
         z.extractall(stage)
+        # zip archives store symlinks as small files holding the target path; turn them back into symlinks
+        for info in z.infolist():
+            if ((info.external_attr >> 16) & 0o170000) == 0o120000:
+                p = os.path.join(stage, info.filename.rstrip("/"))
+                try:
+                    target = z.read(info).decode("utf-8")
+                    os.remove(p)
+                    os.symlink(target, p)
+                except OSError:
+                    pass
     kids = os.listdir(stage)
     top = os.path.join(stage, kids[0]) if len(kids) == 1 else stage
     shutil.rmtree(dest, ignore_errors=True)
