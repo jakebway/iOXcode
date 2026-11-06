@@ -200,18 +200,30 @@ final class BuildPipeline {
         // 3. bundle
         log.log("-- packaging")
         var iconFromCatalog: URL?
+        var appCatalogs: [URL] = []
+        var catalogPlist: [String: Any] = [:]
         let resourceURLs = m.resources.map { project.root.appendingPathComponent($0) } + project.sourceResourceFiles(for: m)
         for src in resourceURLs {
             let r = src.lastPathComponent
             let ext = src.pathExtension.lowercased()
-            if ext == "xcassets" { iconFromCatalog = iconFromCatalog ?? Assets.extract(catalog: src, into: app, log: log); continue }
+            if ext == "xcassets" { appCatalogs.append(src); continue }
             if ["storyboard", "xib"].contains(ext) { log.log("note: \(src.lastPathComponent) is not compiled yet (no interface compiler on device)"); continue }
             let dst = app.appendingPathComponent(src.lastPathComponent)
             try? fm.removeItem(at: dst)
             if fm.fileExists(atPath: src.path) { try fm.copyItem(at: src, to: dst) }
             else { log.log("warning: resource not found: \(r)") }
         }
+        if !appCatalogs.isEmpty {
+            if let out = AssetCompilation.compile(catalogs: appCatalogs, minOS: m.minOS, into: app, scratch: work, label: "app", log: log) {
+                catalogPlist = out.plistAdditions
+                if out.hasAppIcon { iconFromCatalog = nil }
+            } else {
+                log.log("note: falling back to plain image files for the app's asset catalogs")
+                for c in appCatalogs { iconFromCatalog = iconFromCatalog ?? Assets.extract(catalog: c, into: app, log: log) }
+            }
+        }
         for rb in packageResourceBundles {
+            var bundleCatalogs: [URL] = []
             let dir = app.appendingPathComponent(rb.name, isDirectory: true)
             try? fm.removeItem(at: dir)
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -224,20 +236,23 @@ final class BuildPipeline {
                 let items: [URL] = isDir.boolValue && src.pathExtension.lowercased() != "xcassets"
                     ? ((try? fm.contentsOfDirectory(at: src, includingPropertiesForKeys: nil)) ?? []) : [src]
                 for item in items {
-                    if item.pathExtension.lowercased() == "xcassets" {
-                        log.log("note: \(rb.name): asset catalog \(item.lastPathComponent) is not compiled yet, so its colors and images will be missing at runtime")
-                        continue
-                    }
+                    if item.pathExtension.lowercased() == "xcassets" { bundleCatalogs.append(item); continue }
                     if item.lastPathComponent.hasPrefix(".") { continue }
                     let dst = dir.appendingPathComponent(item.lastPathComponent)
                     try? fm.removeItem(at: dst)
                     try? fm.copyItem(at: item, to: dst)
                 }
             }
+            if !bundleCatalogs.isEmpty {
+                let label = rb.name.replacingOccurrences(of: ".bundle", with: "")
+                if AssetCompilation.compile(catalogs: bundleCatalogs, minOS: m.minOS, into: dir, scratch: work, label: label, log: log) == nil {
+                    log.log("note: \(rb.name): colors and images from its asset catalog will be missing at runtime")
+                }
+            }
         }
         var m2 = m
         if m2.icon == nil, let ic = iconFromCatalog { IconWriter.write(ic, into: app, log: log); m2.icon = "-" }
-        try writeInfoPlist(m2, to: app.appendingPathComponent("Info.plist"), base: project.root)
+        try writeInfoPlist(m2, to: app.appendingPathComponent("Info.plist"), base: project.root, extra: catalogPlist)
         if let icon = m.icon, icon != "-" {
             let src = project.root.appendingPathComponent(icon)
             if fm.fileExists(atPath: src.path) { IconWriter.write(src, into: app, log: log) }
@@ -347,7 +362,7 @@ final class BuildPipeline {
         }
     }
 
-    private func writeInfoPlist(_ m: Manifest, to url: URL, base: URL) throws {
+    private func writeInfoPlist(_ m: Manifest, to url: URL, base: URL, extra: [String: Any] = [:]) throws {
         var d: [String: Any] = [
             "CFBundleExecutable": m.name,
             "CFBundleIdentifier": m.bundleId,
@@ -377,6 +392,7 @@ final class BuildPipeline {
         if m.icon != nil {
             d["CFBundleIcons"] = ["CFBundlePrimaryIcon": ["CFBundleIconFiles": ["AppIcon60x60", "AppIcon76x76"]]]
         }
+        for (k, v) in extra { d[k] = v }
         for (k, v) in m.infoPlist { d[k] = v }
         let data = try PropertyListSerialization.data(fromPropertyList: d, format: .xml, options: 0)
         try data.write(to: url)

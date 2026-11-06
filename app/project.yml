@@ -3,12 +3,18 @@ options:
   bundleIdPrefix: com.jakebway
   deploymentTarget:
     iOS: "16.0"
+packages:
+  AssetKit:
+    path: Vendor/AssetKit
 targets:
   iOXcode:
     type: application
     platform: iOS
     sources:
       - path: iOXcode
+    dependencies:
+      - package: AssetKit
+        product: AssetKit
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jakebway.ioxcode
