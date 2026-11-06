@@ -322,7 +322,7 @@ SYSTEM_MODULES = {"Foundation", "Swift", "SwiftUI", "UIKit", "Combine", "Dispatc
 
 def parse_target_dep(d):
     if isinstance(d, str):
-        return {"kind": "target", "name": d}
+        return {"kind": "byName", "name": d}      # a bare string may be a target of this package or a product of a dependency
     if isinstance(d, Call):
         pos = d.positional()
         if d.name == "product":
