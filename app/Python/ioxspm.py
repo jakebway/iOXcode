@@ -271,6 +271,17 @@ def load_manifest(pkg_dir):
         return None
     call = _resolve_consts(call, consts)
     man = {"name": call.get("name") or os.path.basename(pkg_dir), "targets": [], "products": [], "deps": []}
+    def _std(v, cxx):
+        n = getattr(v, "name", None)
+        if not isinstance(n, str):
+            return None
+        m = re.match(r"(gnu|c)(?:xx)?(\d+)$", n)
+        if not m:
+            return None
+        gnu, num = m.group(1) == "gnu", m.group(2)
+        return ("gnu++" if cxx else "gnu") + num if gnu else ("c++" if cxx else "c") + num
+    man["cStd"] = _std(call.get("cLanguageStandard"), False)
+    man["cxxStd"] = _std(call.get("cxxLanguageStandard"), True)
     for prod in as_list(call.get("products")):
         if not isinstance(prod, Call):
             continue
@@ -826,6 +837,7 @@ def resolve(request_path):
                     "deps": sorted(set(deps)), "resources": resources, "flags": td["flags"], "defines": [d for d in td["defines"] if not d.startswith("C:")],
                     "cdefines": [d[2:] for d in td["defines"] if d.startswith("C:")],
                     "cflags": td.get("cflags", []),
+                    "cStd": p["manifest"].get("cStd"), "cxxStd": p["manifest"].get("cxxStd"),
                     "headerSearch": [os.path.normpath(os.path.join(root, h)) for h in td.get("headerSearch", [])],
                     "includeDir": os.path.join(root, td.get("publicHeadersPath") or "include") if cfiles else None})
     result = {"modules": out, "notes": notes}

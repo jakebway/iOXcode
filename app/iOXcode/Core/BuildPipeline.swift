@@ -363,7 +363,8 @@ final class BuildPipeline {
                 }
                 o.defines = (mod["cdefines"] as? [String]) ?? []
                 o.optimize = true
-                o.cxxStd = "gnu++20"
+                if let c = mod["cStd"] as? String { o.cStd = c }
+                if let c = mod["cxxStd"] as? String { o.cxxStd = c }
                 o.arc = true   // SwiftPM compiles Objective-C with ARC unless the target says otherwise
                 o.extraFlags = ((mod["cflags"] as? [String]) ?? []).filter { !$0.hasPrefix("-W") }
                 cModuleIncludes[rawName] = [inc]
