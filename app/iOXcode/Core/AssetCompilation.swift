@@ -1,6 +1,7 @@
 import Foundation
 import AssetKit
 import ImageIO
+import UIKit
 import UniformTypeIdentifiers
 
 /// Compiles .xcassets folders into a real Assets.car with AssetKit (a clean-room Swift actool, MIT), so
@@ -117,6 +118,7 @@ enum AssetCompilation {
                     out.hasAppIcon = true
                 }
                 log.log("compiled asset catalog\(catalogs.count > 1 ? "s" : "") (\(label)): Assets.car \(res.carData.count / 1024) KB")
+                verify(catalog: merged, in: dir, label: label, log: log)
                 return out
             } catch {
                 log.log("warning: could not write Assets.car: \(error.localizedDescription)")
@@ -128,6 +130,24 @@ enum AssetCompilation {
         case nil:
             return nil
         }
+    }
+
+    /// Loads every image of the catalog back out of the freshly written Assets.car, the way the app will at run time.
+    /// Anything that does not come out gets a plain image file next to the car instead, so it still shows up.
+    static func verify(catalog: URL, in dir: URL, label: String, log: LogSink) {
+        let fm = FileManager.default
+        guard let bundle = Bundle(url: dir), let en = fm.enumerator(at: catalog, includingPropertiesForKeys: nil) else { return }
+        var names: [String] = []
+        for case let u as URL in en where u.pathExtension == "imageset" { names.append(u.deletingPathExtension().lastPathComponent) }
+        var missing: Set<String> = []
+        for n in names {
+            if let img = UIImage(named: n, in: bundle, compatibleWith: nil), img.size.width > 0, img.cgImage != nil { continue }
+            missing.insert(n)
+        }
+        log.log("verified Assets.car (\(label)): \(names.count - missing.count) of \(names.count) images load")
+        guard !missing.isEmpty else { return }
+        log.log("warning: \(missing.count) images did not load from Assets.car, e.g. \(missing.sorted().prefix(6).joined(separator: ", ")); adding them as plain files")
+        _ = Assets.extract(catalog: catalog, into: dir, log: log, only: missing)
     }
 
     /// Removes the asset (its .imageset/.colorset/... folder, else the file) that holds `fileName`. Returns what was removed.

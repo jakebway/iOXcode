@@ -522,7 +522,7 @@ final class BuildPipeline {
 /// No asset compiler exists on the phone, so images are copied out of the catalog as plain files
 /// (UIImage(named:) and Image("name") find them), and the biggest app icon is used for the home screen.
 enum Assets {
-    static func extract(catalog: URL, into app: URL, log: LogSink) -> URL? {
+    static func extract(catalog: URL, into app: URL, log: LogSink, only: Set<String>? = nil) -> URL? {
         let fm = FileManager.default
         var icon: URL?
         var iconSize = 0
@@ -537,6 +537,7 @@ enum Assets {
                 }
             } else if ext == "imageset" {
                 let name = u.deletingPathExtension().lastPathComponent
+                if let only, !only.contains(name) { continue }
                 let files = ((try? fm.contentsOfDirectory(at: u, includingPropertiesForKeys: nil)) ?? [])
                     .filter { ["png", "jpg", "jpeg"].contains($0.pathExtension.lowercased()) }
                 // use scale suffixes the loader understands when the catalog has several sizes
@@ -557,7 +558,7 @@ enum Assets {
                 }
             } else if ext == "colorset" { colorSets += 1 }
         }
-        if colorSets > 0 { log.log("note: \(colorSets) named colors in \(catalog.lastPathComponent) are not available (Color(\"name\") needs a compiled catalog)") }
+        if colorSets > 0, only == nil { log.log("note: \(colorSets) named colors in \(catalog.lastPathComponent) are not available (Color(\"name\") needs a compiled catalog)") }
         return icon
     }
 }
