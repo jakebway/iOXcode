@@ -188,7 +188,7 @@ def extract_package_call(src):
         if src[m.end():m.end() + 8].startswith("Package("):
             continue
         try:
-            p = Parser(tokenize(src[m.end():m.end() + 6000]))
+            p = Parser(tokenize(src[m.end():m.end() + 200000]))
             val = p.parse_expr()
         except Exception:
             continue
@@ -314,6 +314,15 @@ def load_manifest(pkg_dir):
             elif isinstance(s, Call) and s.name == "unsafeFlags":
                 fl = (s.positional() or [[]])[0]
                 td["flags"] += [x for x in fl if isinstance(x, str)]
+        td["libs"], td["fws"] = [], []
+        for s in as_list(t.get("linkerSettings")):
+            if isinstance(s, Call) and _setting_applies(s):
+                n = (s.positional() or [None])[0]
+                if isinstance(n, str):
+                    if s.name == "linkedLibrary":
+                        td["libs"].append(n)
+                    elif s.name == "linkedFramework":
+                        td["fws"].append(n)
         td["cflags"], td["headerSearch"] = [], []
         for key in ("cSettings", "cxxSettings"):
             for s in as_list(t.get(key)):
@@ -833,6 +842,7 @@ def resolve(request_path):
         out.append({"name": name, "package": p["manifest"]["name"], "dir": root, "files": swift, "resourceBundle": bundle_name, "cfiles": cfiles,
                     "deps": sorted(set(deps)), "resources": resources, "flags": td["flags"], "defines": [d for d in td["defines"] if not d.startswith("C:")],
                     "cdefines": [d[2:] for d in td["defines"] if d.startswith("C:")],
+                    "libs": td.get("libs", []), "frameworks": td.get("fws", []),
                     "cflags": td.get("cflags", []),
                     "cStd": p["manifest"].get("cStd"), "cxxStd": p["manifest"].get("cxxStd"),
                     "headerSearch": [os.path.normpath(os.path.join(root, h)) for h in td.get("headerSearch", [])],

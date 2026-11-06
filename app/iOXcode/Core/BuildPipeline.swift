@@ -53,6 +53,9 @@ final class BuildPipeline {
     var packageResourceBundles: [(name: String, sources: [URL])] = []
     /// `-Xcc` arguments that let Swift import the C modules of the packages.
     var packageCArgs: [String] = []
+    /// Libraries and frameworks the packages ask to be linked (linkerSettings)
+    var packageLibraries: [String] = []
+    var packageFrameworks: [String] = []
     var packageCCompiler: CCompiler?
     init(project: Project, log: LogSink) { self.project = project; self.log = log }
 
@@ -230,6 +233,8 @@ final class BuildPipeline {
         for d in m.libraryDirs { ld += ["-L", project.root.appendingPathComponent(d).path] }
         for l in m.libraries { ld += ["-l" + l] }
         for f in m.frameworks { ld += ["-framework", f] }
+        for l in packageLibraries where !m.libraries.contains(l) && l != "c++" { ld += ["-l" + l] }
+        for f in packageFrameworks where !m.frameworks.contains(f) { ld += ["-framework", f] }
         ld += ["-lSystem", "-lc++", "-lobjc",
                "-rpath", "/usr/lib/swift", "-rpath", "@executable_path/Frameworks",
                "-dead_strip", "-e", "_main", obj.path] + packageObjects.map { $0.path } + cObjects.map { $0.path }
@@ -362,6 +367,8 @@ final class BuildPipeline {
             }
             let files = ((mod["files"] as? [String]) ?? [])
             let cfiles = (mod["cfiles"] as? [String]) ?? []
+            for l in (mod["libs"] as? [String]) ?? [] where !packageLibraries.contains(l) { packageLibraries.append(l) }
+            for f in (mod["frameworks"] as? [String]) ?? [] where !packageFrameworks.contains(f) { packageFrameworks.append(f) }
             if !cfiles.isEmpty, let cc = packageCCompiler {
                 let inc = (mod["includeDir"] as? String) ?? ""
                 var o = CCompiler.Options()
