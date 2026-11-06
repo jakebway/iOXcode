@@ -20,6 +20,8 @@ struct CCompiler {
         var optimize = false
         var modules = true
         var prefixHeader: String?
+        var cStd = "gnu11"
+        var cxxStd = "gnu++17"
     }
 
     /// Every directory below `roots` that holds a header, so `#include "x.h"` and `#include <x.h>` find it the way
@@ -58,10 +60,10 @@ struct CCompiler {
                                "-fvisibility=default", "-ffunction-sections", "-fdata-sections"]
             if let c = clangResource { a += ["-resource-dir", c.path] }
             switch ext {
-            case "c": a += ["-std=gnu11"]
-            case "m": a += ["-std=gnu11", "-fobjc-exceptions"]
-            case "mm": a += ["-std=gnu++17", "-fobjc-exceptions"]
-            default: a += ["-std=gnu++17"]
+            case "c": a += ["-std=" + o.cStd]
+            case "m": a += ["-std=" + o.cStd, "-fobjc-exceptions"]
+            case "mm": a += ["-std=" + o.cxxStd, "-fobjc-exceptions"]
+            default: a += ["-std=" + o.cxxStd]
             }
             if ext == "m" || ext == "mm" { a += [o.arc ? "-fobjc-arc" : "-fno-objc-arc"] }
             if o.modules {

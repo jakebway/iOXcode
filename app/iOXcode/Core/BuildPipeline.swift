@@ -334,6 +334,8 @@ final class BuildPipeline {
         }
         for n in (obj["notes"] as? [String]) ?? [] { log.log("  \(n)") }
         var objects: [URL] = []
+        var cModuleIncludes: [String: [String]] = [:]
+        var cModuleDeps: [String: [String]] = [:]
         let modules = (obj["modules"] as? [[String: Any]]) ?? []
         for mod in modules {
             guard let rawName = mod["name"] as? String else { continue }
@@ -347,11 +349,25 @@ final class BuildPipeline {
             if !cfiles.isEmpty, let cc = packageCCompiler {
                 let inc = (mod["includeDir"] as? String) ?? ""
                 var o = CCompiler.Options()
-                o.includeDirs = [inc] + CCompiler.headerDirectories(under: [URL(fileURLWithPath: (mod["dir"] as? String) ?? "")], limit: 60)
+                let declared = (mod["headerSearch"] as? [String]) ?? []
+                o.includeDirs = [inc] + declared
+                if declared.isEmpty {
+                    o.includeDirs += CCompiler.headerDirectories(under: [URL(fileURLWithPath: (mod["dir"] as? String) ?? "")], limit: 200)
+                }
+                // public headers of the C modules this one depends on, directly or through other modules
+                var seen = Set<String>(), queue = ((mod["deps"] as? [String]) ?? [])
+                while let d = queue.popLast() {
+                    if !seen.insert(d).inserted { continue }
+                    o.includeDirs += cModuleIncludes[d] ?? []
+                    queue += cModuleDeps[d] ?? []
+                }
                 o.defines = (mod["cdefines"] as? [String]) ?? []
                 o.optimize = true
-                o.arc = true   // SwiftPM compiles Objective-C with ARC
-                o.extraFlags = ((mod["flags"] as? [String]) ?? []).filter { $0.hasPrefix("-W") == false && $0.hasPrefix("-f") }
+                o.cxxStd = "gnu++20"
+                o.arc = true   // SwiftPM compiles Objective-C with ARC unless the target says otherwise
+                o.extraFlags = ((mod["cflags"] as? [String]) ?? []).filter { !$0.hasPrefix("-W") }
+                cModuleIncludes[rawName] = [inc]
+                cModuleDeps[rawName] = (mod["deps"] as? [String]) ?? []
                 objects += try cc.compile(cfiles.map { URL(fileURLWithPath: $0) }, into: work.appendingPathComponent("pkgc-\(name)", isDirectory: true), options: o, label: name)
                 // a module map over the public headers so Swift can `import name`
                 var mapDir = URL(fileURLWithPath: inc)

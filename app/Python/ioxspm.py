@@ -306,11 +306,22 @@ def load_manifest(pkg_dir):
             elif isinstance(s, Call) and s.name == "unsafeFlags":
                 fl = (s.positional() or [[]])[0]
                 td["flags"] += [x for x in fl if isinstance(x, str)]
-        for s in as_list(t.get("cSettings")):
-            if isinstance(s, Call) and s.name == "define":
-                d = _define_text(s)
-                if d and _setting_applies(s):
-                    td["defines"].append("C:" + d)
+        td["cflags"], td["headerSearch"] = [], []
+        for key in ("cSettings", "cxxSettings"):
+            for s in as_list(t.get(key)):
+                if not isinstance(s, Call):
+                    continue
+                if s.name == "define" and key == "cSettings":
+                    d = _define_text(s)
+                    if d and _setting_applies(s):
+                        td["defines"].append("C:" + d)
+                elif s.name == "headerSearchPath" and _setting_applies(s):
+                    p = (s.positional() or [None])[0]
+                    if isinstance(p, str):
+                        td["headerSearch"].append(p)
+                elif s.name == "unsafeFlags" and _setting_applies(s):
+                    fl = (s.positional() or [[]])[0]
+                    td["cflags"] += [x for x in as_list(fl) if isinstance(x, str)]
         man["targets"].append(td)
     if not man["targets"]:
         infer_targets(pkg_dir, man)
@@ -814,6 +825,8 @@ def resolve(request_path):
         out.append({"name": name, "package": p["manifest"]["name"], "dir": root, "files": swift, "resourceBundle": bundle_name, "cfiles": cfiles,
                     "deps": sorted(set(deps)), "resources": resources, "flags": td["flags"], "defines": [d for d in td["defines"] if not d.startswith("C:")],
                     "cdefines": [d[2:] for d in td["defines"] if d.startswith("C:")],
+                    "cflags": td.get("cflags", []),
+                    "headerSearch": [os.path.normpath(os.path.join(root, h)) for h in td.get("headerSearch", [])],
                     "includeDir": os.path.join(root, td.get("publicHeadersPath") or "include") if cfiles else None})
     result = {"modules": out, "notes": notes}
     with open(os.path.join(work, "packages.json"), "w") as f:
