@@ -457,7 +457,7 @@ enum MacroEmulation {
     static func prepare(_ files: [URL], work: URL, log: LogSink) -> [URL] {
         let wanted = files.filter {
             guard let t = try? String(contentsOf: $0, encoding: .utf8) else { return false }
-            return t.contains("@Model") || t.contains("@Entry") || t.contains("#ATUnionBuilder")
+            return t.contains("@Model") || t.contains("@Entry") || t.contains("#ATUnionBuilder") || t.contains("@Query") || t.contains("#Predicate") || t.contains("#Expression")
         }
         if wanted.isEmpty { return files }
         let outDir = work.appendingPathComponent("expanded-app", isDirectory: true)

@@ -473,6 +473,281 @@ def strip_previews(src):
     return "".join(out) if changed else None
 
 
+# ---------------------------------------------------------------- #Predicate / #Expression
+# Clean-room translator: Swift closure expression -> Foundation.PredicateExpressions builder calls.
+# Output shapes were captured from Apple's compiler (tools/macro-probe/Predicates.swift).
+
+def _find_brace(clean, i):
+    depth = 0
+    for k in range(i, len(clean)):
+        if clean[k] == "{":
+            depth += 1
+        elif clean[k] == "}":
+            depth -= 1
+            if depth == 0:
+                return k
+    return -1
+
+
+class _Unsupported(Exception):
+    pass
+
+
+_P_TOK = re.compile(r'\s*(?:(?P<str>"(?:\\.|[^"\\])*")|(?P<num>\d[\d_]*(?:\.\d+)?)|(?P<id>\$\d+|[A-Za-z_]\w*)|(?P<op>\.\.\.|\.\.<|==|!=|<=|>=|&&|\|\||\?\?|\?\.|[-+*/%<>!?.:,(){}\[\]]))')
+_P_CMP = {"==": "Equal", "!=": "NotEqual"}
+_P_REL = {"<": "lessThan", "<=": "lessThanOrEqual", ">": "greaterThan", ">=": "greaterThanOrEqual"}
+_B = "PredicateExpressions.build_"
+
+
+def _p_tokens(text):
+    toks, i, n = [], 0, len(text)
+    while i < n:
+        if text[i:].strip() == "":
+            break
+        m = _P_TOK.match(text, i)
+        if not m:
+            raise _Unsupported("token")
+        k = m.lastgroup
+        toks.append((k, m.group(k)))
+        i = m.end()
+    return toks
+
+
+class _PredParser:
+    LEVELS = [["||"], ["&&"], ["==", "!=", "<", "<=", ">", ">="], ["??"], ["...", "..<"], ["+", "-"], ["*", "/", "%"]]
+
+    def __init__(self, toks):
+        self.t, self.i = toks, 0
+
+    def peek(self, off=0):
+        j = self.i + off
+        return self.t[j] if j < len(self.t) else (None, None)
+
+    def eat(self, val=None):
+        tok = self.peek()
+        if tok[0] is None or (val is not None and tok[1] != val):
+            raise _Unsupported("expected " + str(val))
+        self.i += 1
+        return tok
+
+    def at(self, val):
+        return self.peek()[1] == val and self.peek()[0] in ("op", "id")
+
+    def done(self):
+        return self.i >= len(self.t)
+
+    def expr(self):
+        c = self.binary(0)
+        if self.at("?"):
+            self.eat("?")
+            a = self.expr()
+            self.eat(":")
+            b = self.expr()
+            return "%sConditional(%s, %s, %s)" % (_B, c, a, b)
+        return c
+
+    def binary(self, lvl):
+        if lvl >= len(self.LEVELS):
+            return self.unary()
+        ops = self.LEVELS[lvl]
+        lhs = self.binary(lvl + 1)
+        while self.peek()[0] == "op" and self.peek()[1] in ops:
+            op = self.eat()[1]
+            rhs = self.binary(lvl) if op == "??" else self.binary(lvl + 1)
+            lhs = self.combine(op, lhs, rhs)
+            if lvl == 2:
+                break
+        return lhs
+
+    def combine(self, op, l, r):
+        if op == "||":
+            return "%sDisjunction(lhs: %s, rhs: %s)" % (_B, l, r)
+        if op == "&&":
+            return "%sConjunction(lhs: %s, rhs: %s)" % (_B, l, r)
+        if op in _P_CMP:
+            return "%s%s(lhs: %s, rhs: %s)" % (_B, _P_CMP[op], l, r)
+        if op in _P_REL:
+            return "%sComparison(lhs: %s, rhs: %s, op: .%s)" % (_B, l, r, _P_REL[op])
+        if op == "??":
+            return "%sNilCoalesce(lhs: %s, rhs: %s)" % (_B, l, r)
+        if op == "...":
+            return "%sClosedRange(lower: %s, upper: %s)" % (_B, l, r)
+        if op == "..<":
+            return "%sRange(lower: %s, upper: %s)" % (_B, l, r)
+        if op in ("+", "-", "*"):
+            return "%sArithmetic(lhs: %s, rhs: %s, op: .%s)" % (_B, l, r, {"+": "add", "-": "subtract", "*": "multiply"}[op])
+        if op == "/":
+            return "%sDivision(lhs: %s, rhs: %s)" % (_B, l, r)
+        if op == "%":
+            return "%sRemainder(lhs: %s, rhs: %s)" % (_B, l, r)
+        raise _Unsupported(op)
+
+    def unary(self):
+        k, v = self.peek()
+        if k == "op" and v == "!":
+            self.eat()
+            return "%sNegation(%s)" % (_B, self.unary())
+        if k == "op" and v == "-" and self.peek(1)[0] == "num":
+            self.eat()
+            return "%sArg(-%s)" % (_B, self.eat()[1])
+        return self.postfix()
+
+    def primary(self):
+        k, v = self.peek()
+        if k in ("str", "num"):
+            self.eat()
+            return "%sArg(%s)" % (_B, v)
+        if k == "id":
+            self.eat()
+            if v == "nil":
+                return "%sNilLiteral()" % _B
+            if self.at("("):
+                raise _Unsupported("global function")
+            return "%sArg(%s)" % (_B, v)
+        if k == "op" and v == "(":
+            self.eat()
+            e = self.expr()
+            self.eat(")")
+            return e
+        raise _Unsupported("primary " + str(v))
+
+    def closure(self):
+        """Current token is `{`. Returns (params_text, body)."""
+        self.eat("{")
+        j, names = self.i, []
+        while j < len(self.t) and j - self.i < 8 and self.t[j][1] not in ("in", "}"):
+            names.append(self.t[j][1])
+            j += 1
+        text = ""
+        if j < len(self.t) and self.t[j][1] == "in":
+            text = " ".join(names) + " in"
+            self.i = j + 1
+        if self.at("return"):
+            self.eat()
+        body = self.expr()
+        self.eat("}")
+        return text, body
+
+    def postfix(self):
+        e = self.primary()
+        while True:
+            k, v = self.peek()
+            if k == "op" and v in (".", "?."):
+                self.eat()
+                nk, name = self.eat()
+                if nk != "id":
+                    raise _Unsupported("member")
+                if v == "?.":
+                    e = "%sflatMap(%s) { %s }" % (_B, e, self.chain_on_dollar(name))
+                else:
+                    e = self.member(e, name)
+                continue
+            if k == "op" and v == "!":
+                raise _Unsupported("force unwrap")
+            return e
+
+    def chain_on_dollar(self, first):
+        cur = "%sKeyPath(root: %sArg($0), keyPath: \\.%s)" % (_B, _B, first)
+        while True:
+            k, v = self.peek()
+            if k == "op" and v == ".":
+                self.eat()
+                cur = "%sKeyPath(root: %s, keyPath: \\.%s)" % (_B, cur, self.eat()[1])
+            elif k == "op" and v == "?.":
+                self.eat()
+                cur = "%sflatMap(%s) { %sKeyPath(root: %sArg($0), keyPath: \\.%s) }" % (_B, cur, _B, _B, self.eat()[1])
+            else:
+                return cur
+
+    def args(self):
+        out = []
+        self.eat("(")
+        while not self.at(")"):
+            label = None
+            if self.peek()[0] == "id" and self.peek(1)[1] == ":":
+                label = self.eat()[1]
+                self.eat(":")
+            out.append((label, self.expr()))
+            if self.at(","):
+                self.eat()
+        self.eat(")")
+        return out
+
+    def member(self, recv, name):
+        k, v = self.peek()
+        if k == "op" and v == "(":
+            a = self.args()
+            trailing = self.closure() if self.at("{") else None
+            return self.method(recv, name, a, trailing)
+        if k == "op" and v == "{":
+            return self.method(recv, name, [], self.closure())
+        return "%sKeyPath(root: %s, keyPath: \\.%s)" % (_B, recv, name)
+
+    def method(self, recv, name, a, trailing):
+        if trailing is not None and name in ("contains", "filter", "allSatisfy") and not a:
+            return "%s%s(%s) { %s\n%s\n}" % (_B, name, recv, trailing[0], trailing[1])
+        if name in ("contains", "localizedStandardContains") and len(a) == 1 and a[0][0] is None and trailing is None:
+            return "%s%s(%s, %s)" % (_B, name, recv, a[0][1])
+        if name == "starts" and len(a) == 1 and a[0][0] == "with" and trailing is None:
+            return "%sstarts(%s, with: %s)" % (_B, recv, a[0][1])
+        raise _Unsupported("method " + name)
+
+
+def expand_predicate(src):
+    if "#Predicate" not in src and "#Expression" not in src:
+        return None
+    clean = _blank_literals(src)
+    out, pos, changed = [], 0, False
+    for m in re.finditer(r'#(Predicate|Expression)\b', clean):
+        if m.start() < pos:
+            continue
+        i, generic = m.end(), ""
+        if i < len(clean) and clean[i] == "<":
+            depth, j = 0, i
+            while j < len(clean):
+                depth += (clean[j] == "<") - (clean[j] == ">")
+                if depth == 0:
+                    break
+                j += 1
+            generic, i = src[i:j + 1], j + 1
+        j = i
+        while j < len(clean) and clean[j] in " \t\n":
+            j += 1
+        paren = j < len(clean) and clean[j] == "("
+        if paren:
+            j += 1
+            while j < len(clean) and clean[j] in " \t\n":
+                j += 1
+        if j >= len(clean) or clean[j] != "{":
+            continue
+        close = _find_brace(clean, j)
+        if close < 0:
+            continue
+        end = close + 1
+        if paren:
+            k = end
+            while k < len(clean) and clean[k] in " \t\n":
+                k += 1
+            if k >= len(clean) or clean[k] != ")":
+                continue
+            end = k + 1
+        try:
+            p = _PredParser(_p_tokens(src[j:close + 1]))
+            text, body = p.closure()
+            if not p.done():
+                raise _Unsupported("trailing")
+        except _Unsupported:
+            continue
+        text = re.sub(r"\(\s*(\w+)\s*:\s*([^)]+?)\s*\)", r"(\1: PredicateExpressions.Variable<\2>)", text)
+        out.append(src[pos:m.start()])
+        out.append("Foundation.%s%s({ %s\n%s\n})" % (m.group(1), generic, text, body))
+        pos, changed = end, True
+    if not changed:
+        return None
+    out.append(src[pos:])
+    return "".join(out)
+
+
 def expand_source(src):
     """Returns the source with emulated macros expanded, or None when nothing changed."""
     changed = False
@@ -488,6 +763,9 @@ def expand_source(src):
     qry = expand_query(src)
     if qry is not None:
         src, changed = qry, True
+    prd = expand_predicate(src)
+    if prd is not None:
+        src, changed = prd, True
     if "#" not in src:
         return src if changed else None
     for name, fn in FREESTANDING.items():
