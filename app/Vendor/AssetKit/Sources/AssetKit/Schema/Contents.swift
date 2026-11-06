@@ -128,7 +128,7 @@ struct ColorSetContents: Codable, Sendable {
         var idiom: Idiom
         var appearances: [Appearance]?
         var displayGamut: Gamut?
-        var color: Color
+        var color: Color?   // absent for the default AccentColor ("use the system tint")
 
         enum CodingKeys: String, CodingKey {
             case idiom, appearances, color

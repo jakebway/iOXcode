@@ -4,10 +4,11 @@ enum ColorRenderer {
     static func renditions(for set: LoadedColorSet) throws -> [Rendition] {
         var out: [Rendition] = []
         for entry in set.contents.colors {
-            let (r, g, b, a) = try entry.color.components.asDoubles()
+            guard let color = entry.color else { continue }
+            let (r, g, b, a) = try color.components.asDoubles()
             let gamut: Gamut = {
                 if let declared = entry.displayGamut { return declared }
-                switch entry.color.colorSpace {
+                switch color.colorSpace {
                 case "display-p3": return .displayP3
                 default: return .sRGB
                 }
