@@ -51,6 +51,8 @@ jobs:
           xcrun assetutil --info work/actool/Assets.car > work/a.json 2> ci-out/assetutil-actool.err || true
           xcrun assetutil --info work/assetkit.car > work/b.json 2> ci-out/assetutil-assetkit.err || true
           ls -la work/*.json work/actool/Assets.car work/assetkit.car > ci-out/sizes.txt
+          python3 scripts/ci/bomdump.py work/actool/Assets.car > ci-out/bom-actool.txt 2>&1 || true
+          python3 scripts/ci/bomdump.py work/assetkit.car > ci-out/bom-assetkit.txt 2>&1 || true
           python3 scripts/ci/compare-cars.py work/a.json work/b.json > ci-out/compare.txt 2>&1 || true
           cat ci-out/compare.txt | head -120
           head -c 4000 ci-out/assetutil-assetkit.err || true
