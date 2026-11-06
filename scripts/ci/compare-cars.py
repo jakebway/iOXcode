@@ -23,3 +23,21 @@ for n in ["Phone", "Updates_Store", "Wallpaper_1", "UITableNext", "Camera", "Cat
     for label, d in (("actool", ia), ("assetkit", ib)):
         for x in d:
             if x.get("Name") == n: print(label, json.dumps(x, sort_keys=True))
+
+print("asset types actool:", collections.Counter(x.get("AssetType") for x in a if isinstance(x, dict)))
+print("asset types assetkit:", collections.Counter(x.get("AssetType") for x in b if isinstance(x, dict)))
+import glob, os
+cat = os.environ.get("CATALOG")
+if cat:
+    cause = collections.Counter(); examples = collections.defaultdict(list)
+    for n in sorted(names_a - names_b):
+        found = [d for d in glob.glob(cat + "/**/" + n + ".imageset", recursive=True)]
+        if not found: cause["no imageset dir"] += 1; continue
+        j = json.load(open(found[0] + "/Contents.json"))
+        ims = [i for i in j["images"] if "filename" in i]
+        idi = sorted({i.get("idiom", "?") for i in ims})
+        keys = sorted({k for i in ims for k in i if k not in ("filename", "idiom", "scale")} | set(j.get("properties", {}).keys()))
+        c = "idioms=%s extra=%s" % (idi, keys)
+        cause[c] += 1
+        if len(examples[c]) < 4: examples[c].append(n)
+    for c, v in cause.most_common(): print(v, c, examples.get(c))
