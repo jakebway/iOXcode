@@ -678,6 +678,14 @@ def resolve(request_path):
         p = packages[k]
         td = modules[mid]
         root, swift, cfiles, resources = target_sources(p["dir"], td)
+        try:
+            import ioxmacro
+            expanded = ioxmacro.expand_files(swift, os.path.join(work, "expanded", name))
+            if expanded != swift:
+                notes.append("%s: expanded emulated macros in %d file(s)" % (name, sum(1 for a, b in zip(swift, expanded) if a != b)))
+            swift = expanded
+        except Exception as e:
+            notes.append("macro emulation failed for %s: %s" % (name, e))
         deps = []
         for d in td["deps"]:
             if d["kind"] == "target" or (d["kind"] == "byName" and (k, d["name"]) in modules):
