@@ -22,3 +22,4 @@ llvm-ios: ok in 3438s
 cmark-ios: ok in 6s
 
 ## swift-ios (time left 16251s, disk: 36Gi free)
+swift-ios: FAILED rc=1 after 3813s
