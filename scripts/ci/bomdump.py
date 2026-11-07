@@ -105,3 +105,35 @@ if only is None or only == 'FACETKEYS':
     for label, fn in (('bytes', lambda s: s.encode()), ('lower', lambda s: s.lower()), ('casefold-bytes', lambda s: s.lower().encode()), ('plain str', lambda s: s)):
         bad = [i for i in range(1, len(names)) if fn(names[i-1]) > fn(names[i])]
         print(f'facet order {label}: {len(bad)} out of order; first {[(names[i-1], names[i]) for i in bad[:4]]}')
+
+if only is None:
+    kf = blk(vars_['KEYFORMAT']); na = struct.unpack('<I', kf[8:12])[0]
+    attrs = struct.unpack('<%dI' % na, kf[12:12+4*na])
+    # collect facets
+    b = blk(vars_['FACETKEYS']); child = struct.unpack('>I', b[8:12])[0]
+    il, c, f, bk, ents, ln = node(child)
+    while not il: il, c, f, bk, ents, ln = node(ents[0][0])
+    facets = {}; cur = ents; nxt = f
+    while True:
+        for (v, k) in cur:
+            val = blk(v); n = struct.unpack('<H', val[4:6])[0]
+            pairs = [struct.unpack('<HH', val[6+4*i: 10+4*i]) for i in range(n)]
+            facets[blk(k).decode('utf8', 'replace')] = pairs
+        if not nxt: break
+        il, c, f, bk, cur, ln = node(nxt); nxt = f
+    b = blk(vars_['RENDITIONS']); child = struct.unpack('>I', b[8:12])[0]
+    il, c, f, bk, ents, ln = node(child)
+    while not il: il, c, f, bk, ents, ln = node(ents[0][0])
+    rk = []; cur = ents; nxt = f
+    while True:
+        rk += [struct.unpack('<%dH' % na, blk(k)) for (v, k) in cur]
+        if not nxt: break
+        il, c, f, bk, cur, ln = node(nxt); nxt = f
+    print('RENDITION KEY attrs order', attrs)
+    for n in ['App Store', 'Albums_Photos', 'SpeakerMute', 'Calculator', 'Phone', 'Camera']:
+        if n not in facets: print('facet missing', n); continue
+        print('facet', n, facets[n])
+        ident = [v for (a, v) in facets[n] if a == 17]
+        for k in rk:
+            d = dict(zip(attrs, k))
+            if ident and d.get(17) == ident[0]: print('   rendition key', d)
