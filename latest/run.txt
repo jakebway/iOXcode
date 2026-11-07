@@ -1,0 +1,8 @@
+== zzanehip/The-OldOS-Project
+converted 4245 chars in 0.013486981391906738s -> 12699 chars
+== Ranchero-Software/NetNewsWire
+converted 4290 chars in 0.012819051742553711s -> 13055 chars
+== kiwix/kiwix-apple
+converted 10280 chars in 0.03027808666229248s -> 31797 chars
+== wikimedia/wikipedia-ios
+converted 8544 chars in 0.021420001983642578s -> 23937 chars

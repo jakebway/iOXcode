@@ -1,0 +1,103 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<style>:root{color-scheme:light dark;--fg:#1f2328;--muted:#59636e;--bg:#ffffff;--border:#d1d9e0;--soft:#f6f8fa;--link:#0969da;--quote:#59636e;--codebg:rgba(129,139,152,.12)}
+@media (prefers-color-scheme:dark){:root{--fg:#f0f6fc;--muted:#9198a1;--bg:#0d1117;--border:#3d444d;--soft:#151b23;--link:#4493f8;--quote:#9198a1;--codebg:rgba(101,108,118,.2)}}
+html,body{margin:0;padding:0;background:transparent}
+.markdown-body{box-sizing:border-box;padding:4px 2px 12px 30px;color:var(--fg);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;word-wrap:break-word;-webkit-text-size-adjust:100%}
+.markdown-body>*:first-child{margin-top:0!important}.markdown-body>*:last-child{margin-bottom:0!important}
+.markdown-body a{color:var(--link);text-decoration:none}.markdown-body a:hover{text-decoration:underline}
+.markdown-body h1,h2,h3,h4,h5,h6{margin-top:1.5rem;margin-bottom:1rem;font-weight:600;line-height:1.25}
+.markdown-body h1,h2,h3,h4,h5,h6{position:relative}
+.markdown-body .anchor{position:absolute;left:-28px;top:50%;transform:translateY(-50%);padding-right:4px;color:var(--fg);line-height:1}
+.markdown-body .anchor svg{display:block;vertical-align:middle}
+.markdown-body h1{font-size:2em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
+.markdown-body h2{font-size:1.5em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
+.markdown-body h3{font-size:1.25em}.markdown-body h4{font-size:1em}.markdown-body h5{font-size:.875em}
+.markdown-body h6{font-size:.85em;color:var(--muted)}
+.markdown-body p,blockquote,ul,ol,dl,table,pre,details{margin-top:0;margin-bottom:1rem}
+.markdown-body hr{height:.25em;padding:0;margin:1.5rem 0;background:var(--border);border:0}
+.markdown-body blockquote{padding:0 1em;color:var(--quote);border-left:.25em solid var(--border)}
+.markdown-body ul,.markdown-body ol{padding-left:2em}
+.markdown-body li+li{margin-top:.25em}
+.markdown-body li>p{margin-top:1rem}
+.markdown-body .contains-task-list{list-style:none;padding-left:1.5em}
+.markdown-body .task-list-item input{margin:0 .4em .25em -1.4em;vertical-align:middle}
+.markdown-body img{max-width:100%;height:auto;box-sizing:content-box;background:transparent}
+.markdown-body code,.markdown-body tt{padding:.2em .4em;margin:0;font-size:85%;background:var(--codebg);border-radius:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.markdown-body pre{padding:16px;overflow:auto;font-size:85%;line-height:1.45;background:var(--soft);border-radius:6px}
+.markdown-body pre code{padding:0;font-size:100%;background:transparent;white-space:pre;word-break:normal}
+.markdown-body .table-wrap{overflow-x:auto;margin-bottom:1rem}
+.markdown-body table{border-spacing:0;border-collapse:collapse;display:table;width:max-content;max-width:100%;margin-bottom:0}
+.markdown-body th,.markdown-body td{padding:6px 13px;border:1px solid var(--border)}
+.markdown-body th{font-weight:600}
+.markdown-body tr:nth-child(2n){background:var(--soft)}
+.markdown-body details summary{cursor:pointer}
+.markdown-body kbd{padding:3px 5px;font:11px ui-monospace,Menlo,monospace;background:var(--soft);border:1px solid var(--border);border-bottom-color:var(--border);border-radius:6px}
+.markdown-body [align=center]{text-align:center}.markdown-body [align=right]{text-align:right}</style></head>
+<body><article class="markdown-body"><p><img src=Technotes/Images/icon_1024.png height=128 width=128 style="display: block; margin: auto;"></p>
+<h1 id="netnewswire"><a class="anchor" href="#netnewswire" aria-label="Permalink"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"/></svg></a>NetNewsWire</h1>
+<p>NetNewsWire is a free and open-source feed reader for macOS and iOS.</p>
+<p>It supports <a href="https://cyber.harvard.edu/rss/rss.html">RSS</a>, <a href="https://datatracker.ietf.org/doc/html/rfc4287">Atom</a>, <a href="https://jsonfeed.org/">JSON Feed</a>, and <a href="https://github.com/scripting/Scripting-News/blob/master/rss-in-json/README.md">RSS-in-JSON</a> formats.</p>
+<p>More info: <a href="https://netnewswire.com/">https://netnewswire.com/</a></p>
+<p>You can <a href="https://github.com/Ranchero-Software/NetNewsWire/issues">report bugs and make feature requests</a> here on GitHub. You can also <a href="https://github.com/Ranchero-Software/NetNewsWire/releases/">read change notes</a> for current and previous releases.</p>
+<p>Here’s <a href="file:///Users/runner/work/iOXcode/iOXcode/work/Technotes/HowToSupportNetNewsWire.markdown">How to Support NetNewsWire</a>. Spoiler: don’t send money. :)</p>
+<p>(NetNewsWire’s Help menu has these links, so you don’t have to remember to come back to this page.)</p>
+<h4 id="community"><a class="anchor" href="#community" aria-label="Permalink"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"/></svg></a>Community</h4>
+<p><a href="https://discourse.netnewswire.com/">Join the forum</a> to talk with other NetNewsWire users — and to help out, if you’d like to, by testing, coding, writing, providing feedback, or just helping us think things through. Everybody is welcome and encouraged to join.</p>
+<p>Every community member is expected to abide by the <a href="file:///Users/runner/work/iOXcode/iOXcode/work/CONTRIBUTING.md#code-of-conduct">code of conduct</a> which is included in the <a href="file:///Users/runner/work/iOXcode/iOXcode/work/CONTRIBUTING.md">Contributing</a> page.</p>
+<h4 id="pull-requests"><a class="anchor" href="#pull-requests" aria-label="Permalink"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"/></svg></a>Pull Requests</h4>
+<p>See the <a href="file:///Users/runner/work/iOXcode/iOXcode/work/CONTRIBUTING.md">Contributing</a> page for our process. They key thing is to ask before doing a PR (before even starting work). The Contributing page goes into more detail as to why it’s important to ask first.</p>
+<h4 id="building"><a class="anchor" href="#building" aria-label="Permalink"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"/></svg></a>Building</h4>
+<p>You can build and test NetNewsWire without a paid developer account.</p>
+<pre><code class="language-bash">git clone https://github.com/Ranchero-Software/NetNewsWire.git</code></pre>
+<p>You can locally override the Xcode settings for code signing
+by creating a <code>DeveloperSettings.xcconfig</code> file locally at the appropriate path.
+This allows for a pristine project with code signing set up with the appropriate
+developer ID and certificates, and for developer to be able to have local settings
+without needing to check in anything into source control.</p>
+<p>You can do this in one of two ways: using the included <code>setup.sh</code> script or by creating the folder structure and file manually.</p>
+<h5 id="using-setupsh"><a class="anchor" href="#using-setupsh" aria-label="Permalink"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"/></svg></a>Using <code>setup.sh</code></h5>
+<ul>
+<li>Open Terminal and <code>cd</code> into the NetNewsWire directory.</li>
+<li>Run this command to ensure you have execution rights for the script: <code>chmod +x setup.sh</code></li>
+<li>Execute the script with the following command: <code>./setup.sh</code> and complete the answers.</li>
+</ul>
+<h5 id="manually"><a class="anchor" href="#manually" aria-label="Permalink"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"/></svg></a>Manually</h5>
+<p>Make a directory <code>SharedXcodeSettings</code> next to where you have this repository.</p>
+<p>The directory structure is:</p>
+<pre><code>directory/
+  SharedXcodeSettings/
+    DeveloperSettings.xcconfig
+  NetNewsWire/
+    NetNewsWire.xcodeproj</code></pre>
+<p>Example:</p>
+<p>If your NetNewsWire Xcode project file is at:
+<code>/Users/name/projects/NetNewsWire/NetNewsWire.xcodeproj</code></p>
+<p>Create your <code>DeveloperSettings.xcconfig</code> file at
+<code>/Users/name/projects/SharedXcodeSettings/DeveloperSettings.xcconfig</code></p>
+<p>Then create a plain text file in it: <code>SharedXcodeSettings/DeveloperSettings.xcconfig</code> and
+give it the contents:</p>
+<pre><code>CODE_SIGN_IDENTITY = Mac Developer
+DEVELOPMENT_TEAM = &lt;Your Team ID&gt;
+CODE_SIGN_STYLE = Automatic
+ORGANIZATION_IDENTIFIER = &lt;Your Domain Name Reversed&gt;
+DEVELOPER_ENTITLEMENTS = -dev
+PROVISIONING_PROFILE_SPECIFIER =</code></pre>
+<p>Set <code>DEVELOPMENT_TEAM</code> to your Apple supplied development team.  You can use Keychain
+Access to <a href="file:///Users/runner/work/iOXcode/iOXcode/work/Technotes/FindingYourDevelopmentTeamID.md">find your development team ID</a>.
+Set <code>ORGANIZATION_IDENTIFIER</code> to a reversed domain name that you control or have made up.
+Note that <code>PROVISIONING_PROFILE_SPECIFIER</code> should not have a value associated with it.</p>
+<p>You can now open the <code>NetNewsWire.xcodeproj</code> in Xcode.</p>
+<p>Now you should be able to build without code signing errors and without modifying
+the NetNewsWire Xcode project.  This is a special build of NetNewsWire with some
+functionality disabled.  This is because we have API keys that can't be stored in the
+repository or shared between developers.  Certain account types, like iCloud and Feedly, aren't
+enabled and the Reader View isn't enabled because of this.</p>
+<p>If you have any problems, we will help you out in the forum (<a href="file:///Users/runner/work/iOXcode/iOXcode/work/README.md#Community">see above</a>).</p>
+</article>
+<script>
+function send(){ try { window.webkit.messageHandlers.h.postMessage(document.body.scrollHeight); } catch(e) {} }
+window.addEventListener('load', send);
+if (window.ResizeObserver) { new ResizeObserver(send).observe(document.body); }
+</script></body></html>
