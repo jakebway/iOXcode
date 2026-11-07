@@ -1,11 +1,19 @@
 #import <Foundation/Foundation.h>
 #import <dlfcn.h>
 #import <CoreGraphics/CoreGraphics.h>
+@interface CUICatalog : NSObject
+- (instancetype)initWithURL:(NSURL *)url error:(NSError **)error;
+- (NSArray *)allImageNames;
+- (NSArray *)imagesWithName:(NSString *)name;
+- (id)imageWithName:(NSString *)name scaleFactor:(double)scale;
+- (id)imageWithName:(NSString *)name scaleFactor:(double)scale deviceIdiom:(long long)idiom;
+@end
+
 @interface CUINamedImage : NSObject
 - (CGImageRef)image;
 - (double)scale;
 @end
-static void alphaStats(id cat, NSString *n) {
+static void alphaStats(CUICatalog *cat, NSString *n) {
     id im = [cat imageWithName:n scaleFactor:2.0 deviceIdiom:1];
     if (!im) { printf("ALPHA %s: nil\n", n.UTF8String); return; }
     CGImageRef cg = [(CUINamedImage*)im image];
@@ -20,14 +28,6 @@ static void alphaStats(id cat, NSString *n) {
     printf("ALPHA %s: %zux%zu alphaInfo=%d clear=%zu partial=%zu opaqueBlack=%zu\n", n.UTF8String, w, h, (int)CGImageGetAlphaInfo(cg), clear, part, black);
     CGContextRelease(ctx); CGColorSpaceRelease(cs); free(buf);
 }
-
-@interface CUICatalog : NSObject
-- (instancetype)initWithURL:(NSURL *)url error:(NSError **)error;
-- (NSArray *)allImageNames;
-- (NSArray *)imagesWithName:(NSString *)name;
-- (id)imageWithName:(NSString *)name scaleFactor:(double)scale;
-- (id)imageWithName:(NSString *)name scaleFactor:(double)scale deviceIdiom:(long long)idiom;
-@end
 
 int main(int argc, char **argv) {
     @autoreleasepool {
