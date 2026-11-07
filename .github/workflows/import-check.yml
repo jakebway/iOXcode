@@ -1,0 +1,47 @@
+name: Import check - what iOXcode would build, vs what Xcode does
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: owner/name
+        default: Ranchero-Software/NetNewsWire
+      build:
+        description: also run xcodebuild for ground truth (yes/no)
+        default: "yes"
+permissions:
+  contents: write
+concurrency:
+  group: import-check
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clone and run the importer
+        run: |
+          mkdir -p ci-out work
+          git clone --depth 1 --recurse-submodules "https://github.com/${{ inputs.repo }}.git" work/repo 2> ci-out/clone.txt
+          swiftc -O app/iOXcode/Core/XcodeProject.swift app/iOXcode/Core/Project.swift scratch/ioxcheck/Stubs.swift scratch/ioxcheck/main.swift -o work/ioxcheck 2> ci-out/build.txt || { cat ci-out/build.txt; true; }
+          work/ioxcheck work/repo work/manifest.json > ci-out/importer.txt 2>&1 || true
+          cat ci-out/importer.txt
+          cp work/manifest.json ci-out/ 2>/dev/null || true
+      - name: Xcode ground truth
+        if: inputs.build == 'yes'
+        continue-on-error: true
+        run: |
+          ls /Applications | grep -i xcode > ci-out/xcodes.txt; xcodebuild -version >> ci-out/xcodes.txt; swift --version >> ci-out/xcodes.txt 2>&1
+          cd work/repo
+          xcodebuild -list 2> /dev/null > ../../ci-out/xcodebuild-list.txt || true
+          SCHEME=$(grep -io 'NetNewsWire-iOS$' ../../ci-out/xcodebuild-list.txt | head -1)
+          [ -z "$SCHEME" ] && SCHEME=$(awk '/Schemes:/{f=1;next} f&&NF{print $1;exit}' ../../ci-out/xcodebuild-list.txt)
+          echo "scheme: $SCHEME" >> ../../ci-out/xcodes.txt
+          (perl -e 'alarm 1500; exec @ARGV' xcodebuild -scheme "$SCHEME" -destination 'generic/platform=iOS' -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build > ../../ci-out/xcodebuild.txt 2>&1) || true
+          grep -E "error:|BUILD (SUCCEEDED|FAILED)" ../../ci-out/xcodebuild.txt | head -40 > ../../ci-out/xcodebuild-errors.txt
+          cat ../../ci-out/xcodebuild-errors.txt
+      - name: Publish logs to the ci-logs branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "import-check-${{ github.run_id }}"
