@@ -55,14 +55,6 @@ enum XcodeProjectReader {
             }
         }
 
-        // pick the first application target
-        let targets = objects.filter { ($0.value["isa"] as? String) == "PBXNativeTarget" }
-        let appTargets = targets.filter { ($0.value["productType"] as? String) == "com.apple.product-type.application" }
-        guard let target = (appTargets.sorted { ($0.value["name"] as? String ?? "") < ($1.value["name"] as? String ?? "") }.first) else { return nil }
-        let targetName = target.value["name"] as? String ?? "App"
-        if appTargets.count > 1 { warnings.append("This project has \(appTargets.count) app targets; building \(targetName).") }
-        if targets.count > appTargets.count { warnings.append("Extensions, widgets and other targets are not built yet.") }
-
         // build settings: project level, then target level (Release)
         func settings(forList id: String?) -> [String: Any] {
             guard let id = id, let list = objects[id], let cfgs = list["buildConfigurations"] as? [String] else { return [:] }
@@ -71,8 +63,36 @@ enum XcodeProjectReader {
             return (pick?["buildSettings"] as? [String: Any]) ?? [:]
         }
         let projectObj = objects.first { ($0.value["isa"] as? String) == "PBXProject" }?.value
-        var bs = settings(forList: projectObj?["buildConfigurationList"] as? String)
-        for (k, v) in settings(forList: target.value["buildConfigurationList"] as? String) { bs[k] = v }
+        func merged(_ target: [String: Any]) -> [String: Any] {
+            var m = settings(forList: projectObj?["buildConfigurationList"] as? String)
+            for (k, v) in settings(forList: target["buildConfigurationList"] as? String) { m[k] = v }
+            return m
+        }
+        // an iPhone app: the SDK is iOS (or only an iOS deployment target is set). Multi-platform projects
+        // such as NetNewsWire have a Mac app target too, and that one cannot be built here.
+        func isIOS(_ t: [String: Any]) -> Bool {
+            let m = merged(t)
+            let sdk = (m["SDKROOT"] as? String ?? "").lowercased()
+            let plats = (m["SUPPORTED_PLATFORMS"] as? String ?? "").lowercased()
+            if sdk == "iphoneos" || plats.contains("iphoneos") { return true }
+            if sdk == "macosx" || m["MACOSX_DEPLOYMENT_TARGET"] != nil { return false }
+            return m["IPHONEOS_DEPLOYMENT_TARGET"] != nil || sdk.isEmpty
+        }
+
+        // pick the first application target, iOS ones first
+        let targets = objects.filter { ($0.value["isa"] as? String) == "PBXNativeTarget" }
+        let appTargets = targets.filter { ($0.value["productType"] as? String) == "com.apple.product-type.application" }
+        let ordered = appTargets.sorted {
+            let a = isIOS($0.value), b = isIOS($1.value)
+            if a != b { return a }
+            return ($0.value["name"] as? String ?? "") < ($1.value["name"] as? String ?? "")
+        }
+        guard let target = ordered.first else { return nil }
+        let targetName = target.value["name"] as? String ?? "App"
+        if appTargets.count > 1 { warnings.append("This project has \(appTargets.count) app targets; building \(targetName).") }
+        if targets.count > appTargets.count { warnings.append("Extensions, widgets and other targets are not built yet.") }
+
+        let bs = merged(target.value)
 
         func str(_ key: String) -> String? {
             if let s = bs[key] as? String { return s }
