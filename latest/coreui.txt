@@ -1,14 +1,4 @@
 == work/actool/Assets.car
-names: 680
-imagesWithName non-empty: 680
-imageWithName scale 1/2/3: 613 613 613
-imageWithName idiom=phone scale 1/2/3: 677 677 677
-empty by name (first 40): 
-fail at phone 3x: 3 e.g. AppIcon, GKNavbarLandscape, UISegmentTexturedButtonSelectedRightCap
+/Users/runner/work/_temp/ba9a6a96-50ce-460c-88b4-c9584766afc8.sh: line 4: work/harness: No such file or directory
 == work/assetkit.car
-names: 674
-imagesWithName non-empty: 674
-imageWithName scale 1/2/3: 609 609 609
-imageWithName idiom=phone scale 1/2/3: 673 673 673
-empty by name (first 40): 
-fail at phone 3x: 1 e.g. GKNavbarLandscape
+/Users/runner/work/_temp/ba9a6a96-50ce-460c-88b4-c9584766afc8.sh: line 4: work/harness: No such file or directory

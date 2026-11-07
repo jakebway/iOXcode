@@ -1,0 +1,4 @@
+scratch/coreui/harness.m:9:18: error: no known instance method for selector 'imageWithName:scaleFactor:deviceIdiom:'
+    9 |     id im = [cat imageWithName:n scaleFactor:2.0 deviceIdiom:1];
+      |                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
