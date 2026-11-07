@@ -24,7 +24,18 @@ import Foundation
 /// rather than a correctness requirement: CoreUI accepts both layouts.
 enum MLECBody {
     static func encode(width: UInt32, height: UInt32, pixelsBGRA: [UInt8]) -> Data {
-        let bytesPerRow = Int(width) * 4
+        // The TVL "bytes per row" slot declares a stride aligned up to 16 bytes, and CoreUI reads rows at that stride,
+        // so every row has to be padded to it (118 px = 472 bytes -> 480). Unpadded rows come out sheared.
+        let packedRow = Int(width) * 4
+        let bytesPerRow = (packedRow + 15) & ~15
+        var padded = pixelsBGRA
+        if bytesPerRow != packedRow {
+            padded = [UInt8](repeating: 0, count: bytesPerRow * Int(height))
+            for row in 0..<Int(height) {
+                let src = row * packedRow
+                padded.replaceSubrange(row * bytesPerRow..<row * bytesPerRow + packedRow, with: pixelsBGRA[src..<src + packedRow])
+            }
+        }
         let canChunkInThree = height % 3 == 0
         let chunkCount: UInt32 = canChunkInThree ? 3 : 1
         let rowsPerChunk = height / chunkCount
@@ -33,7 +44,7 @@ enum MLECBody {
         for i in 0..<Int(chunkCount) {
             let start = i * Int(rowsPerChunk) * bytesPerRow
             let end = start + Int(rowsPerChunk) * bytesPerRow
-            let slice = Array(pixelsBGRA[start..<end])
+            let slice = Array(padded[start..<end])
             chunks.append((rows: rowsPerChunk, payload: LZFSE.encode(slice)))
         }
 
