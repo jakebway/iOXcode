@@ -364,6 +364,7 @@ class Shell:
         self.xtrace = False
         self.in_condition = 0
         self.script_name = "ioxsh"
+        self.cur_stdin = None           # what `read` consumes inside while/for/{ } fed by a pipe or redirect
 
     # ---- variables
     def getvar(self, name):
@@ -371,7 +372,7 @@ class Shell:
         if name == "#": return str(len(self.positional))
         if name in ("@", "*"): return " ".join(self.positional)
         if name == "$": return str(os.getpid())
-        if name == "0": return self.script_name
+        if name in ("0", "BASH_SOURCE"): return self.script_name
         if name.isdigit():
             k = int(name)
             return self.positional[k - 1] if 0 < k <= len(self.positional) else ""
@@ -424,6 +425,7 @@ class Shell:
         return out
 
     def param(self, body):
+        body = re.sub(r"^(BASH_SOURCE|BASH_ARGV)\[(?:0|@|\*)\]", r"\1", body)
         if body.startswith("#"):
             return str(len(self.getvar(body[1:])))
         m = re.match(r"([A-Za-z_][A-Za-z0-9_]*|[0-9]+|[?#@*])(.*)$", body, re.S)
@@ -610,6 +612,15 @@ class Shell:
         return self.with_redirects(node[-1], stdin, lambda s: self.run_compound(node, s))
 
     def run_compound(self, node, stdin):
+        prev = self.cur_stdin
+        if stdin is not None:
+            self.cur_stdin = io.StringIO(stdin)
+        try:
+            return self._run_compound(node, stdin)
+        finally:
+            self.cur_stdin = prev
+
+    def _run_compound(self, node, stdin):
         kind = node[0]
         if kind == "if":
             for cond, body in node[1]:
@@ -1350,6 +1361,7 @@ def _find(sh, a, i):
         roots.append(a[k]); k += 1
     roots = roots or ["."]
     conds, maxdepth, action, exec_cmd = [], None, "print", None
+    sep = "\n"
     neg = False
     while k < len(a):
         x = a[k]
@@ -1360,7 +1372,8 @@ def _find(sh, a, i):
         if x == "-maxdepth": maxdepth = _int(a[k + 1]); k += 2; continue
         if x == "-mindepth": k += 2; continue
         if x == "-delete": action = "delete"; k += 1; continue
-        if x == "-print" or x == "-print0": k += 1; continue
+        if x == "-print0": sep = "\0"; k += 1; continue
+        if x == "-print": k += 1; continue
         if x == "-exec":
             j = k + 1
             while j < len(a) and a[j] not in (";", "+"): j += 1
@@ -1400,7 +1413,7 @@ def _find(sh, a, i):
         elif action == "exec":
             sh.call([p if w == "{}" else w for w in exec_cmd], None)
         else:
-            sh.out.write(p + "\n")
+            sh.out.write(p + sep)
 
 @builtin("xargs")
 def _xargs(sh, a, i):
@@ -1454,12 +1467,46 @@ def _mktemp(sh, a, i):
 
 @builtin("read")
 def _read(sh, a, i):
-    _, names = _opts(a, "rsp")
-    line = (i or "").split("\n", 1)[0]
-    if not line and not i: return 1
-    parts = line.split(None, max(len(names) - 1, 0)) if names else []
-    for k, n in enumerate(names or ["REPLY"]):
-        sh.setvar(n, parts[k] if k < len(parts) else (line if not names else ""))
+    delim, names, k, raw = "\n", [], 0, False
+    while k < len(a):
+        w = a[k]
+        if w.startswith("-") and len(w) > 1:
+            if "r" in w: raw = True
+            if "d" in w:
+                k += 1
+                delim = (a[k][:1] if k < len(a) else "") or "\0"
+            if "p" in w: k += 1
+        else:
+            names.append(w)
+        k += 1
+    src = sh.cur_stdin if sh.cur_stdin is not None else io.StringIO(i or "")
+    chars, got = [], False
+    while True:
+        c = src.read(1)
+        if c == "":
+            break
+        got = True
+        if c == delim:
+            break
+        if c == "\\" and not raw:
+            nx = src.read(1)
+            if nx == "\n": continue
+            chars.append(nx); continue
+        chars.append(c)
+    line = "".join(chars)
+    if not got:
+        return 1
+    ifs = os.environ.get("IFS")
+    if names:
+        if ifs == "":
+            parts = [line] + [""] * (len(names) - 1)
+        else:
+            parts = line.split(None, len(names) - 1) if ifs is None else re.split("[" + re.escape(ifs) + "]", line, len(names) - 1)
+    for idx, n in enumerate(names or ["REPLY"]):
+        if not names:
+            sh.setvar(n, line)
+        else:
+            sh.setvar(n, parts[idx] if idx < len(parts) else "")
     return 0
 
 @builtin("python3", "python")

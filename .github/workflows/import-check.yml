@@ -34,6 +34,7 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_26.3.app
           ls /Applications | grep -i xcode > ci-out/xcodes.txt; xcodebuild -version >> ci-out/xcodes.txt; swift --version >> ci-out/xcodes.txt 2>&1
           cd work/repo
+          [ -x buildscripts/updateSecrets.sh ] && PROJECT_DIR="$PWD" ./buildscripts/updateSecrets.sh > ../../ci-out/secrets.txt 2>&1
           xcodebuild -list > ../../ci-out/xcodebuild-list.txt 2>&1 || true
           SCHEME=NetNewsWire-iOS
           echo "scheme: $SCHEME" >> ../../ci-out/xcodes.txt
