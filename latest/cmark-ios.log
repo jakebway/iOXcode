@@ -1,0 +1,86 @@
+[1/17] cd /Users/runner/work/iOXcode/iOXcode/.build-compiler && /opt/homebrew/bin/cmake -S /Users/runner/work/iOXcode/iOXcode/compiler/CMake/SourcePreparation -B /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a-0ae33a9587180d0c2b6ae5cfb657c46fc97a0d79fe4b007fda73a54774a3c607-4fea55fce5269425c73d10bff3be601a319bcd658293e439f45a5105cb34adca -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DTOOLCHAIN_REPOSITORY_ROOT=/Users/runner/work/iOXcode/iOXcode/compiler -DTOOLCHAIN_PATCH=/usr/bin/patch -DTOOLCHAIN_SOURCE_NAME=llvm-project -DTOOLCHAIN_SOURCE_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a-0ae33a9587180d0c2b6ae5cfb657c46fc97a0d79fe4b007fda73a54774a3c607-4fea55fce5269425c73d10bff3be601a319bcd658293e439f45a5105cb34adca -DTOOLCHAIN_SOURCE_URL=https://codeload.github.com/swiftlang/llvm-project/tar.gz/903b9faaae5c43ecc9b7e33f8db9c94c7429374a -DTOOLCHAIN_SOURCE_SHA256=b18a9af1b0a41d38b309d76b5e2fab5bc1b60a06aed95063c9256c5d6815ddf8 -DTOOLCHAIN_SOURCE_REVISION=903b9faaae5c43ecc9b7e33f8db9c94c7429374a -DTOOLCHAIN_DOWNLOAD_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads && /opt/homebrew/bin/cmake --build /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a-0ae33a9587180d0c2b6ae5cfb657c46fc97a0d79fe4b007fda73a54774a3c607-4fea55fce5269425c73d10bff3be601a319bcd658293e439f45a5105cb34adca --target prepare-source
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/llvm-project-903b9faaae5c43ecc9b7e33f8db9c94c7429374a-0ae33a9587180d0c2b6ae5cfb657c46fc97a0d79fe4b007fda73a54774a3c607-4fea55fce5269425c73d10bff3be601a319bcd658293e439f45a5105cb34adca
+ninja: no work to do.
+[2/17] Performing build step for 'host-tools'
+ninja: no work to do.
+[3/17] No install step for 'host-tools'
+[4/17] Completed 'host-tools'
+[5/17] Performing build step for 'llvm-ios'
+ninja: no work to do.
+[6/17] No install step for 'llvm-ios'
+[7/17] cd /Users/runner/work/iOXcode/iOXcode/.build-compiler && /opt/homebrew/bin/cmake -S /Users/runner/work/iOXcode/iOXcode/compiler/CMake/SourcePreparation -B /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6 -G Ninja -DCMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja -DTOOLCHAIN_REPOSITORY_ROOT=/Users/runner/work/iOXcode/iOXcode/compiler -DTOOLCHAIN_PATCH=/usr/bin/patch -DTOOLCHAIN_SOURCE_NAME=swift-cmark -DTOOLCHAIN_SOURCE_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6 -DTOOLCHAIN_SOURCE_URL=https://codeload.github.com/swiftlang/swift-cmark/tar.gz/924936d0427cb25a61169739a7660230bffa6ea6 -DTOOLCHAIN_SOURCE_SHA256=1c51659bd47c34df1c8976f893adc43ba039a98f6eac4fa95d53d1e08ba6072a -DTOOLCHAIN_SOURCE_REVISION=924936d0427cb25a61169739a7660230bffa6ea6 -DTOOLCHAIN_DOWNLOAD_DIRECTORY=/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/downloads && /opt/homebrew/bin/cmake --build /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6 --target prepare-source
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/source-projects/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6
+ninja: no work to do.
+[8/17] Completed 'llvm-ios'
+[9/17] Creating directories for 'cmark-ios'
+[10/17] No download step for 'cmark-ios'
+[11/17] No update step for 'cmark-ios'
+[12/17] No patch step for 'cmark-ios'
+[13/17] No configuration-inputs step for 'cmark-ios'
+[14/17] Performing configure step for 'cmark-ios'
+loading initial cache file /Users/runner/work/iOXcode/iOXcode/compiler/CMake/Profiles/CmarkIOS.cmake
+-- The C compiler identification is AppleClang 17.0.0.17000604
+-- The CXX compiler identification is AppleClang 17.0.0.17000604
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /Applications/Xcode_26.3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /Applications/Xcode_26.3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test HAVE_FLAG_ADDRESS_SANITIZER
+-- Performing Test HAVE_FLAG_ADDRESS_SANITIZER - Failed
+-- Performing Test HAVE_FLAG_SANITIZE_ADDRESS
+-- Performing Test HAVE_FLAG_SANITIZE_ADDRESS - Success
+-- Checking _FILE_OFFSET_BITS for large files
+-- Checking _FILE_OFFSET_BITS for large files - not needed
+-- Configuring done (0.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/build/55a329f9d685404d50d437ef9abfa9eadda9586d98dcd87f9c32f7ca782c847d/device/cmark-ios
+[15/17] Performing build step for 'cmark-ios'
+[1/28] Building C object src/CMakeFiles/libcmark-gfm.dir/arena.c.o
+[2/28] Building C object src/CMakeFiles/libcmark-gfm.dir/blocks.c.o
+[3/28] Building C object src/CMakeFiles/libcmark-gfm.dir/buffer.c.o
+[4/28] Building C object src/CMakeFiles/libcmark-gfm.dir/cmark_ctype.c.o
+[5/28] Building C object src/CMakeFiles/libcmark-gfm.dir/cmark.c.o
+[6/28] Building C object src/CMakeFiles/libcmark-gfm.dir/commonmark.c.o
+[7/28] Building C object src/CMakeFiles/libcmark-gfm.dir/footnotes.c.o
+[8/28] Building C object src/CMakeFiles/libcmark-gfm.dir/houdini_html_e.c.o
+[9/28] Building C object src/CMakeFiles/libcmark-gfm.dir/houdini_href_e.c.o
+[10/28] Building C object src/CMakeFiles/libcmark-gfm.dir/html.c.o
+[11/28] Building C object src/CMakeFiles/libcmark-gfm.dir/inlines.c.o
+[12/28] Building C object src/CMakeFiles/libcmark-gfm.dir/houdini_html_u.c.o
+[13/28] Building C object src/CMakeFiles/libcmark-gfm.dir/linked_list.c.o
+[14/28] Building C object src/CMakeFiles/libcmark-gfm.dir/iterator.c.o
+[15/28] Building C object src/CMakeFiles/libcmark-gfm.dir/latex.c.o
+[16/28] Building C object src/CMakeFiles/libcmark-gfm.dir/map.c.o
+[17/28] Building C object src/CMakeFiles/libcmark-gfm.dir/node.c.o
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6/src/node.c:29:36: warning: a function declaration without a prototype is deprecated in all versions of C [-Wstrict-prototypes]
+   29 | static bool S_safety_checks_enabled() {
+      |                                    ^
+      |                                     void
+1 warning generated.
+[18/28] Building C object src/CMakeFiles/libcmark-gfm.dir/man.c.o
+[19/28] Building C object src/CMakeFiles/libcmark-gfm.dir/plugin.c.o
+[20/28] Building C object src/CMakeFiles/libcmark-gfm.dir/references.c.o
+[21/28] Building C object src/CMakeFiles/libcmark-gfm.dir/plaintext.c.o
+[22/28] Building C object src/CMakeFiles/libcmark-gfm.dir/registry.c.o
+/Users/runner/work/iOXcode/iOXcode/.build-compiler/native/sources/swift-cmark-924936d0427cb25a61169739a7660230bffa6ea6/src/registry.c:16:30: warning: extra ';' outside of a function [-Wextra-semi]
+   16 | CMARK_DEFINE_LOCK(extensions);
+      |                              ^
+1 warning generated.
+[23/28] Building C object src/CMakeFiles/libcmark-gfm.dir/render.c.o
+[24/28] Building C object src/CMakeFiles/libcmark-gfm.dir/scanners.c.o
+[25/28] Building C object src/CMakeFiles/libcmark-gfm.dir/xml.c.o
+[26/28] Building C object src/CMakeFiles/libcmark-gfm.dir/syntax_extension.c.o
+[27/28] Building C object src/CMakeFiles/libcmark-gfm.dir/utf8.c.o
+[28/28] Linking C static library src/libcmark-gfm.a
+[16/17] No install step for 'cmark-ios'
+[17/17] Completed 'cmark-ios'
