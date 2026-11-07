@@ -1,0 +1,7 @@
+scratch/ioxcheck/main.swift:4:15: error: cannot find 'XcodeProject' in scope
+ 2 | // Runs the app's Xcode-project importer on a checkout and prints what iOXcode would build.
+ 3 | let dir = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
+ 4 | guard let r = XcodeProject.read(projectDir: dir) else { print("NO XCODE PROJECT FOUND"); exit(1) }
+   |               `- error: cannot find 'XcodeProject' in scope
+ 5 | let m = r.manifest
+ 6 | print("name: \(m.name)  bundle: \(m.bundleId)  minOS: \(m.minOS)  swift: \(m.swiftVersion)  family: \(m.deviceFamily.map { "\($0)" } ?? "default")")

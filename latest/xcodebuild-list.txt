@@ -1,0 +1,25 @@
+Command line invocation:
+    /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/xcodebuild -list
+
+Resolve Package Graph
+package 'rsdatabase' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'activitylog' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'errorlog' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'feedfinder' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'articles' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'htmlmetadata' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'cloudkitsync' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'rsparser' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'syncdatabase' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'newsblur' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'images' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'rstree' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'account' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'rsweb' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'secrets' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'rscore' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'articlesdatabase' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+
+Resolved source packages:
+  RSWeb: (null)
+  Secrets: (null)
+  ArticlesDatabase: (null)
+  CloudKitSync: (null)
+  HTMLMetadata: (null)
+  Articles: (null)
+  ErrorLog: (null)
+  RSParser: (null)
+  Account: (null)
+  RSDatabase: (null)
+  RSCore: (null)
+  ActivityLog: (null)
+  Images: (null)
+  SyncDatabase: (null)
+  RSTree: (null)
+  FeedFinder: (null)
+  NewsBlur: (null)
+
