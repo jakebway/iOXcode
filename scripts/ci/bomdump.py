@@ -183,9 +183,9 @@ if only is None:
             nm = inv.get(key.get(17))
             if nm in ('App Store', 'Wallpaper_1', 'SpeakerMute', 'Calculator', 'GKTabbarActiveTab', 'SBDockBG 2', 'Phone'):
                 flagsByName[nm].append((key.get(12), hex(fl), val[12:16].hex(), val[16:20].hex()))
-                if nm in ('App Store','SBDockBG 2','Wallpaper_1') and key.get(12)==2:
+                if nm in ('App Store','Calculator','Phone'):
                     tl=struct.unpack('<I',val[168:172])[0]
-                    print('CSIFULL', nm, 'hdr', val[:184].hex()); print('CSIFULL', nm, 'tvl', val[184:184+tl].hex()); print('CSIFULL', nm, 'body', val[184+tl:184+tl+64].hex())
+                    print('CSIFULL', nm, 'hdr', val[:184].hex()); print('CSIFULL', nm, 'tvl', val[184:184+tl].hex()); print('CSIFULL', nm, 'body', val[184+tl:184+tl+64].hex(), 'scale', key.get(12))
         if not nxt: break
         il, c, f, bk, cur, ln = node(nxt); nxt = f
     print('CSI flags histogram', dict(allflags))
