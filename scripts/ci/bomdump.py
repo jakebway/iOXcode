@@ -146,8 +146,8 @@ if only is None and 'BITMAPKEYS' in vars_:
     # which renditions each name has: (scale, idiom)
     have = collections.defaultdict(set)
     for k in rk:
-        d = dict(zip(attrs, k))
-        have[d.get(17)].add((d.get(12), d.get(15)))
+        dk = dict(zip(attrs, k))
+        have[dk.get(17)].add((dk.get(12), dk.get(15)))
     b = blk(vars_['BITMAPKEYS']); child = struct.unpack('>I', b[8:12])[0]
     il, c, f, bk, ents, ln = node(child)
     while not il: il, c, f, bk, ents, ln = node(ents[0][0])
