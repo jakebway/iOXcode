@@ -109,7 +109,7 @@ extension GitHubOrigin {
         if let cfg = try? String(contentsOf: project.appendingPathComponent(".git/config"), encoding: .utf8), let o = scan(cfg).first { return o }
 
         // 2. links in the README whose repo name matches the project
-        if let readme = ReadmeSection.find(in: project), let data = try? Data(contentsOf: readme),
+        if let readme = ReadmeCard.find(in: project), let data = try? Data(contentsOf: readme),
            let text = String(data: data, encoding: .utf8) {
             var seen: [GitHubOrigin: Int] = [:]
             for o in scan(text) where squash(o.repo) == squash(name) { seen[o, default: 0] += 1 }
@@ -130,5 +130,53 @@ extension GitHubOrigin {
             }
         }
         return nil
+    }
+}
+
+/// Public facts about a repository, for the cover page.
+struct RepoInfo: Decodable {
+    let description: String?
+    let stars: Int
+    let forks: Int
+    let issues: Int
+    let language: String?
+    let license: String?
+    let topics: [String]
+    let pushed: Date?
+    let homepage: String?
+    let url: URL?
+    let branch: String?
+
+    enum CodingKeys: String, CodingKey {
+        case description, language, topics, homepage, license
+        case stars = "stargazers_count", forks = "forks_count", issues = "open_issues_count"
+        case pushed = "pushed_at", url = "html_url", branch = "default_branch"
+    }
+    struct License: Decodable { let spdx_id: String?; let name: String? }
+
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        stars = (try? c.decode(Int.self, forKey: .stars)) ?? 0
+        forks = (try? c.decode(Int.self, forKey: .forks)) ?? 0
+        issues = (try? c.decode(Int.self, forKey: .issues)) ?? 0
+        language = try c.decodeIfPresent(String.self, forKey: .language)
+        let l = try? c.decodeIfPresent(License.self, forKey: .license)
+        license = (l?.spdx_id).flatMap { $0 == "NOASSERTION" ? nil : $0 } ?? l?.name
+        topics = (try? c.decode([String].self, forKey: .topics)) ?? []
+        pushed = try? c.decodeIfPresent(Date.self, forKey: .pushed)
+        homepage = try c.decodeIfPresent(String.self, forKey: .homepage)
+        url = try? c.decodeIfPresent(URL.self, forKey: .url)
+        branch = try c.decodeIfPresent(String.self, forKey: .branch)
+    }
+
+    static func fetch(_ o: GitHubOrigin) async -> RepoInfo? {
+        guard let url = URL(string: "https://api.github.com/repos/\(o.owner)/\(o.repo)") else { return nil }
+        var req = URLRequest(url: url)
+        req.setValue("iOXcode", forHTTPHeaderField: "User-Agent")
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        guard let (data, resp) = try? await URLSession.shared.data(for: req), (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
+        return try? dec.decode(RepoInfo.self, from: data)
     }
 }

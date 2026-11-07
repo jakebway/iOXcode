@@ -63,7 +63,7 @@ struct FileBrowserView: View {
                         .contextMenu { menu(item) }
                 }
             }
-            if query.isEmpty { ReadmeSection(folder: folder) }
+            if query.isEmpty, folder != projectRoot { ReadmeSection(folder: folder) }
         }
         .listStyle(.plain)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search files in \(title)")

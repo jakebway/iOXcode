@@ -32,7 +32,7 @@ struct ProjectsView: View {
                 }
                 ForEach(model.projects) { p in
                     VStack(alignment: .leading, spacing: 6) {
-                        NavigationLink(destination: FileBrowserView(folder: p.url, projectRoot: p.url, title: p.name)) {
+                        NavigationLink(destination: RepoHomeView(project: p)) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(p.name).font(.headline)
                                 Text(p.manifest.bundleId).font(.caption).foregroundColor(.secondary)

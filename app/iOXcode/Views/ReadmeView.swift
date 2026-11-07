@@ -1,9 +1,20 @@
 import SwiftUI
 import WebKit
 
-/// The README of a folder, drawn the way GitHub shows it under the file list.
+/// The README of a folder as a list section (used under the files of sub folders).
 struct ReadmeSection: View {
     let folder: URL
+    var body: some View {
+        if ReadmeCard.find(in: folder) != nil {
+            Section { ReadmeCard(folder: folder, framed: false) }
+        }
+    }
+}
+
+/// The README of a folder, drawn the way GitHub shows it: a bordered card headed by the file name.
+struct ReadmeCard: View {
+    let folder: URL
+    var framed = true
     @State private var file: URL?
     @State private var name = ""
     @State private var page: URL?
@@ -21,12 +32,21 @@ struct ReadmeSection: View {
     var body: some View {
         Group {
             if let page {
-                Section {
+                VStack(alignment: .leading, spacing: 0) {
+                    if framed {
+                        Label(name, systemImage: "book")
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Divider()
+                    }
                     ReadmeWebView(page: page, readAccess: Paths.root, height: $height)
                         .frame(height: max(height, 40))
-                } header: {
-                    Label(name, systemImage: "book")
+                        .padding(.horizontal, framed ? 14 : 0).padding(.vertical, framed ? 8 : 0)
                 }
+                .background(framed ? Color(.secondarySystemGroupedBackground) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: framed ? 12 : 0))
+                .overlay(RoundedRectangle(cornerRadius: framed ? 12 : 0).stroke(framed ? Color(.separator) : Color.clear, lineWidth: 0.5))
             }
         }
         .task(id: folder) { await load() }
