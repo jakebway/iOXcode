@@ -163,3 +163,27 @@ if only is None and 'BITMAPKEYS' in vars_:
         print(' ', len(ids), h)
         print('     have (scale,idiom) sets:', dict(combos.most_common(4)))
         print('     e.g.', [ident_name.get(i) for i in ids[:4]])
+
+if only is None:
+    b = blk(vars_['RENDITIONS']); child = struct.unpack('>I', b[8:12])[0]
+    il, c, f, bk, ents, ln = node(child)
+    while not il: il, c, f, bk, ents, ln = node(ents[0][0])
+    cur = ents; nxt = f; flagsByName = collections.defaultdict(list)
+    inv = {}
+    for n, pairs in facets.items():
+        for (a, v) in pairs:
+            if a == 17: inv[v] = n
+    allflags = collections.Counter()
+    while True:
+        for (v, k) in cur:
+            key = dict(zip(attrs, struct.unpack('<%dH' % na, blk(k))))
+            val = blk(v)
+            fl = struct.unpack('<I', val[8:12])[0]
+            allflags[hex(fl)] += 1
+            nm = inv.get(key.get(17))
+            if nm in ('App Store', 'Wallpaper_1', 'SpeakerMute', 'Calculator', 'GKTabbarActiveTab', 'SBDockBG 2', 'Phone'):
+                flagsByName[nm].append((key.get(12), hex(fl), val[12:16].hex(), val[16:20].hex()))
+        if not nxt: break
+        il, c, f, bk, cur, ln = node(nxt); nxt = f
+    print('CSI flags histogram', dict(allflags))
+    for nm, v in flagsByName.items(): print('CSI flags', nm, v)
