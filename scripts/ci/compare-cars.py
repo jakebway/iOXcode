@@ -19,7 +19,7 @@ print("scales actool:", collections.Counter(x.get("Scale") for x in ia))
 print("scales assetkit:", collections.Counter(x.get("Scale") for x in ib))
 print("idioms actool:", collections.Counter(x.get("Idiom") for x in ia))
 print("idioms assetkit:", collections.Counter(x.get("Idiom") for x in ib))
-for n in ["Phone", "Updates_Store", "Wallpaper_1", "UITableNext", "Camera", "Categories_StoreBKBest"]:
+for n in ["App Store", "Albums_Photos", "SpeakerMute", "MoreBright", "Back Button", "698f3a1f12dac1e6e8c7bda035018c5f", "Wallpaper_1"]:
     for label, d in (("actool", ia), ("assetkit", ib)):
         for x in d:
             if x.get("Name") == n: print(label, json.dumps(x, sort_keys=True))
