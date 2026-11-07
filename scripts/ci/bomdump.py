@@ -137,3 +137,29 @@ if only is None:
         for k in rk:
             d = dict(zip(attrs, k))
             if ident and d.get(17) == ident[0]: print('   rendition key', d)
+
+if only is None and 'BITMAPKEYS' in vars_:
+    ident_name = {}
+    for n, pairs in facets.items():
+        for (a, v) in pairs:
+            if a == 17: ident_name[v] = n
+    # which renditions each name has: (scale, idiom)
+    have = collections.defaultdict(set)
+    for k in rk:
+        d = dict(zip(attrs, k))
+        have[d.get(17)].add((d.get(12), d.get(15)))
+    b = blk(vars_['BITMAPKEYS']); child = struct.unpack('>I', b[8:12])[0]
+    il, c, f, bk, ents, ln = node(child)
+    while not il: il, c, f, bk, ents, ln = node(ents[0][0])
+    desc = collections.defaultdict(list); cur = ents; nxt = f
+    while True:
+        for (v, k) in cur:
+            desc[blk(v).hex()].append(k)
+        if not nxt: break
+        il, c, f, bk, cur, ln = node(nxt); nxt = f
+    print('BITMAPKEYS distinct descriptors', len(desc))
+    for h, ids in sorted(desc.items(), key=lambda x: -len(x[1])):
+        combos = collections.Counter(tuple(sorted(have.get(i, []))) for i in ids)
+        print(' ', len(ids), h)
+        print('     have (scale,idiom) sets:', dict(combos.most_common(4)))
+        print('     e.g.', [ident_name.get(i) for i in ids[:4]])
