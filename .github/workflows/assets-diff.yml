@@ -68,7 +68,7 @@ jobs:
           head -c 4000 ci-out/assetutil-assetkit.err || true
       - name: CoreUI lookup test (what iOS does at run time)
         run: |
-          clang -fobjc-arc -framework Foundation scratch/coreui/harness.m -o work/harness 2> ci-out/harness-build.txt || true
+          clang -fobjc-arc -framework Foundation -framework CoreGraphics scratch/coreui/harness.m -o work/harness 2> ci-out/harness-build.txt || true
           for C in work/actool/Assets.car work/assetkit.car; do
             echo "== $C" >> ci-out/coreui.txt
             work/harness "$C" >> ci-out/coreui.txt 2>&1 || true
