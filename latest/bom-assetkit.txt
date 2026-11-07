@@ -63,3 +63,10 @@ facet Phone [(1, 85), (2, 181), (17, 47321)]
    rendition key {7: 0, 13: 0, 12: 1, 15: 0, 16: 0, 9: 0, 17: 47321, 1: 85, 2: 181}
 facet Camera [(1, 85), (2, 181), (17, 60211)]
    rendition key {7: 0, 13: 0, 12: 1, 15: 0, 16: 0, 9: 0, 17: 60211, 1: 85, 2: 181}
+Traceback (most recent call last):
+  File "/Users/runner/work/iOXcode/iOXcode/scripts/ci/bomdump.py", line 151, in <module>
+    b = blk(vars_['BITMAPKEYS']); child = struct.unpack('>I', b[8:12])[0]
+  File "/Users/runner/work/iOXcode/iOXcode/scripts/ci/bomdump.py", line 8, in blk
+    o, l = blocks[i]; return d[o:o+l]
+                             ~^^^^^^^
+KeyError: slice(115684718, 115684747, None)
