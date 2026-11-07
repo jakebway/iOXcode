@@ -1,0 +1,22 @@
+name: List Xcode versions on runner images
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  list:
+    strategy:
+      matrix:
+        os: [macos-15, macos-26, macos-26-xlarge]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p ci-out
+          { echo "== ${{ matrix.os }}"; ls /Applications | grep -i xcode; for x in /Applications/Xcode_*.app; do echo "$x: $(DEVELOPER_DIR=$x/Contents/Developer xcrun swiftc --version 2>&1 | head -1) sdk: $(DEVELOPER_DIR=$x/Contents/Developer xcrun --sdk iphoneos --show-sdk-version 2>&1)"; done; } | tee ci-out/xcodes-${{ matrix.os }}.txt
+      - name: Publish
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "xcode-list-${{ matrix.os }}-${{ github.run_id }}"
