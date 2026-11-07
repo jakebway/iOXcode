@@ -1,7 +1,7 @@
 import Foundation
 // Runs the app's Xcode-project importer on a checkout and prints what iOXcode would build.
 let dir = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
-guard let r = XcodeProject.read(projectDir: dir) else { print("NO XCODE PROJECT FOUND"); exit(1) }
+guard let r = XcodeProjectReader.read(projectDir: dir) else { print("NO XCODE PROJECT FOUND"); exit(1) }
 let m = r.manifest
 print("name: \(m.name)  bundle: \(m.bundleId)  minOS: \(m.minOS)  swift: \(m.swiftVersion)  family: \(m.deviceFamily.map { "\($0)" } ?? "default")")
 print("infoPlistFile: \(m.infoPlistFile ?? "-")  bridging: \(m.bridgingHeader ?? "-")")
