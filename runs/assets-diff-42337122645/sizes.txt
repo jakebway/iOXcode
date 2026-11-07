@@ -1,0 +1,8 @@
+-rw-r--r--  1 runner  staff     585046 Nov  7 04:11 work/a.json
+-rw-r--r--  1 runner  staff   76813896 Nov  7 04:09 work/actool/Assets.car
+-rw-r--r--  1 runner  staff  115715556 Nov  7 04:11 work/assetkit.car
+-rw-r--r--  1 runner  staff     483806 Nov  7 04:11 work/b.json
+-rw-r--r--  1 runner  staff     483806 Nov  7 04:11 work/v-A.json
+-rw-r--r--  1 runner  staff     483806 Nov  7 04:11 work/v-AB.json
+-rw-r--r--  1 runner  staff     483806 Nov  7 04:11 work/v-B.json
+-rw-r--r--  1 runner  staff     450381 Nov  7 04:11 work/v-none.json

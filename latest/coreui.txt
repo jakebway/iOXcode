@@ -8,7 +8,7 @@ fail at phone 3x: 3 e.g. AppIcon, GKNavbarLandscape, UISegmentTexturedButtonSele
 == work/assetkit.car
 names: 674
 imagesWithName non-empty: 674
-imageWithName scale 1/2/3: 493 493 493
-imageWithName idiom=phone scale 1/2/3: 493 493 493
+imageWithName scale 1/2/3: 609 609 609
+imageWithName idiom=phone scale 1/2/3: 673 673 673
 empty by name (first 40): 
-fail at phone 3x: 181 e.g. 698f3a1f12dac1e6e8c7bda035018c5f, Albums_Photos, App Store, Back Button, Back Button_wp, Back Button_wp2, Blank, Bookmarks_Maps, Button2, Button3, Button_wp4, Button_wp5, Calculator, Calculator-Small, Calendar, Camera, Categories_Store, Categories_StoreBKBest, Categories_Store_BK, Clock, Clock-Small, Compass, Compass-Small, Contacts, Cydia, DefaultThumbnail, DirectionsSwap, Driving, Explicit, FaceTime
+fail at phone 3x: 1 e.g. GKNavbarLandscape

@@ -63,7 +63,22 @@ facet Phone [(1, 85), (2, 181), (17, 47321)]
    rendition key {7: 0, 13: 0, 12: 1, 15: 0, 16: 0, 9: 0, 17: 47321, 1: 85, 2: 181}
 facet Camera [(1, 85), (2, 181), (17, 60211)]
    rendition key {7: 0, 13: 0, 12: 1, 15: 0, 16: 0, 9: 0, 17: 60211, 1: 85, 2: 181}
-BITMAPKEYS distinct descriptors 1
-  674 01000000000000002800000009000000ffffffff0100000004000000010000000100000001000000ffffffffffffffffffffffff
-     have (scale,idiom) sets: {((2, 0),): 294, ((1, 0), (2, 0)): 181, ((1, 0),): 116, ((2, 1),): 64}
-     e.g. ['calc-logPressed', 'calc-multiplyPressed', 'More_iPod', 'kb-magnifier-ranged-mask']
+BITMAPKEYS distinct descriptors 6
+  294 01000000000000002800000009000000ffffffff0100000004000000010000000100000001000000ffffffffffffffffffffffff
+     have (scale,idiom) sets: {((2, 0),): 294}
+     e.g. ['More_iPod', 'UIButtonBarNextSlide', 'GKNavbarBackButtonNormal', 'VMOutOfOrderImage']
+  181 01000000000000002800000009000000ffffffff0100000006000000010000000100000001000000ffffffffffffffffffffffff
+     have (scale,idiom) sets: {((1, 0), (2, 0)): 181}
+     e.g. ['calc-logPressed', 'calc-multiplyPressed', 'kb-magnifier-ranged-mask', 'calc-tanPressed']
+  116 01000000000000002800000009000000ffffffff0100000002000000010000000100000001000000ffffffffffffffffffffffff
+     have (scale,idiom) sets: {((1, 0),): 116}
+     e.g. ['Mail', 'Settings-Location', 'kb-accented-right-grabber-composite', 'Folder']
+  64 01000000000000002800000009000000ffffffff0100000004000000020000000100000001000000ffffffffffffffffffffffff
+     have (scale,idiom) sets: {((2, 1),): 64}
+     e.g. ['Wallpaper_5', 'Wallpaper_19', 'SwitcherAirPlayNowPlayingButton', 'compose']
+  18 01000000000000002800000009000000ffffffff010000000e000000010000000100000001000000ffffffffffffffffffffffff
+     have (scale,idiom) sets: {((1, 0), (2, 0), (3, 0)): 18}
+     e.g. ['kb-accent-shell-r-w264-gxm12-gy44', 'kb-accent-shell-r-w104-gxm12', 'kb-accented-left-grabber', 'kb-accent-shell-r-w136-gxm12']
+  1 01000000000000002800000009000000ffffffff0100000002000000040000000100000001000000ffffffffffffffffffffffff
+     have (scale,idiom) sets: {((1, 2),): 1}
+     e.g. ['GKNavbarLandscape']
