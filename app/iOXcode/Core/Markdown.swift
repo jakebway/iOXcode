@@ -136,7 +136,7 @@ final class Markdown {
             // heading
             if let g = line.matches(Self.headingRx) {
                 let level = g[1].count
-                out += "<h\(level) id=\"\(slug(g[2]))\">\(inline(g[2]))</h\(level)>\n"
+                out += "<h\(level) id=\"\(slug(g[2]))\">\(Self.anchor(slug(g[2])))\(inline(g[2]))</h\(level)>\n"
                 i += 1
                 continue
             }
@@ -185,7 +185,7 @@ final class Markdown {
                 para.append(lines[i]); i += 1
             }
             let text = para.map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: "\n")
-            if heading > 0 { out += "<h\(heading) id=\"\(slug(text))\">\(inline(text))</h\(heading)>\n" }
+            if heading > 0 { out += "<h\(heading) id=\"\(slug(text))\">\(Self.anchor(slug(text)))\(inline(text))</h\(heading)>\n" }
             else if tight { out += inline(text) + "\n" }
             else { out += "<p>\(inline(text))</p>\n" }
         }
@@ -414,14 +414,22 @@ final class Markdown {
 
     // MARK: style (modelled on GitHub's light and dark themes)
 
+    /// The little chain-link GitHub puts beside every heading.
+    static func anchor(_ slug: String) -> String {
+        "<a class=\"anchor\" href=\"#\(slug)\" aria-label=\"Permalink\"><svg viewBox=\"0 0 16 16\" width=\"16\" height=\"16\" fill=\"currentColor\"><path d=\"m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z\"/></svg></a>"
+    }
+
     static let css = """
     :root{color-scheme:light dark;--fg:#1f2328;--muted:#59636e;--bg:#ffffff;--border:#d1d9e0;--soft:#f6f8fa;--link:#0969da;--quote:#59636e;--codebg:rgba(129,139,152,.12)}
     @media (prefers-color-scheme:dark){:root{--fg:#f0f6fc;--muted:#9198a1;--bg:#0d1117;--border:#3d444d;--soft:#151b23;--link:#4493f8;--quote:#9198a1;--codebg:rgba(101,108,118,.2)}}
     html,body{margin:0;padding:0;background:transparent}
-    .markdown-body{box-sizing:border-box;padding:4px 2px 12px;color:var(--fg);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;word-wrap:break-word;-webkit-text-size-adjust:100%}
+    .markdown-body{box-sizing:border-box;padding:4px 2px 12px 30px;color:var(--fg);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;word-wrap:break-word;-webkit-text-size-adjust:100%}
     .markdown-body>*:first-child{margin-top:0!important}.markdown-body>*:last-child{margin-bottom:0!important}
     .markdown-body a{color:var(--link);text-decoration:none}.markdown-body a:hover{text-decoration:underline}
     .markdown-body h1,h2,h3,h4,h5,h6{margin-top:1.5rem;margin-bottom:1rem;font-weight:600;line-height:1.25}
+    .markdown-body h1,h2,h3,h4,h5,h6{position:relative}
+    .markdown-body .anchor{position:absolute;left:-28px;top:50%;transform:translateY(-50%);padding-right:4px;color:var(--fg);line-height:1}
+    .markdown-body .anchor svg{display:block;vertical-align:middle}
     .markdown-body h1{font-size:2em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
     .markdown-body h2{font-size:1.5em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
     .markdown-body h3{font-size:1.25em}.markdown-body h4{font-size:1em}.markdown-body h5{font-size:.875em}

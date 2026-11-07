@@ -6,7 +6,7 @@ struct ReadmeSection: View {
     let folder: URL
     var body: some View {
         if ReadmeCard.find(in: folder) != nil {
-            Section { ReadmeCard(folder: folder, framed: false) }
+            Section { ReadmeCard(folder: folder).listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)).listRowBackground(Color.clear) }
         }
     }
 }
@@ -29,24 +29,34 @@ struct ReadmeCard: View {
         return nil
     }
 
+    @Environment(\.colorScheme) private var scheme
+    private var cardBG: Color { scheme == .dark ? Color(red: 0.051, green: 0.067, blue: 0.09) : .white }
+    private var border: Color { scheme == .dark ? Color(red: 0.239, green: 0.267, blue: 0.302) : Color(red: 0.82, green: 0.85, blue: 0.88) }
+
     var body: some View {
         Group {
             if let page {
                 VStack(alignment: .leading, spacing: 0) {
                     if framed {
-                        Label(name, systemImage: "book")
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 14).padding(.vertical, 10)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Divider()
+                        // GitHub's "README" tab: the title with an orange underline on a bar that has a hairline under it
+                        HStack(spacing: 0) {
+                            VStack(spacing: 0) {
+                                Text("README").font(.system(size: 14, weight: .semibold))
+                                    .padding(.horizontal, 16).padding(.vertical, 12)
+                                Rectangle().fill(Color(red: 0.99, green: 0.55, blue: 0.45)).frame(height: 2)
+                            }.fixedSize()
+                            Spacer()
+                            Text(name).font(.system(size: 12)).foregroundColor(.secondary).padding(.trailing, 16)
+                        }
+                        Rectangle().fill(border).frame(height: 1)
                     }
                     ReadmeWebView(page: page, readAccess: Paths.root, height: $height)
                         .frame(height: max(height, 40))
-                        .padding(.horizontal, framed ? 14 : 0).padding(.vertical, framed ? 8 : 0)
+                        .padding(.horizontal, framed ? 12 : 0).padding(.vertical, framed ? 16 : 0)
                 }
-                .background(framed ? Color(.secondarySystemGroupedBackground) : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: framed ? 12 : 0))
-                .overlay(RoundedRectangle(cornerRadius: framed ? 12 : 0).stroke(framed ? Color(.separator) : Color.clear, lineWidth: 0.5))
+                .background(framed ? cardBG : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: framed ? 6 : 0))
+                .overlay(RoundedRectangle(cornerRadius: framed ? 6 : 0).stroke(framed ? border : Color.clear, lineWidth: 1))
             }
         }
         .task(id: folder) { await load() }

@@ -473,7 +473,7 @@ final class BuildPipeline {
             "MinimumOSVersion": m.minOS,
             "DTPlatformName": "iphoneos", "DTPlatformVersion": "27.1", "DTSDKName": "iphoneos27.1",
             "CFBundleSupportedPlatforms": ["iPhoneOS"],
-            "UIDeviceFamily": [1, 2],
+            "UIDeviceFamily": m.deviceFamily ?? [1, 2],   // like Xcode: the project's TARGETED_DEVICE_FAMILY (iPhone-only apps run in a phone-sized window on a big screen)
             "LSRequiresIPhoneOS": true,
             "UILaunchScreen": [String: Any](),
             "UIRequiredDeviceCapabilities": ["arm64"],

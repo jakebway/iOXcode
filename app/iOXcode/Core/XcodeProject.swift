@@ -99,6 +99,10 @@ enum XcodeProjectReader {
         if let v = str("MARKETING_VERSION") { m.version = expand(v) }
         if let v = str("CURRENT_PROJECT_VERSION") { m.build = expand(v) }
         if let v = str("IPHONEOS_DEPLOYMENT_TARGET") { m.minOS = expand(v) }
+        if let f = str("TARGETED_DEVICE_FAMILY") {
+            let fam = expand(f).split(separator: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }.filter { $0 == 1 || $0 == 2 }
+            if !fam.isEmpty { m.deviceFamily = fam }
+        }
         if let v = str("SWIFT_VERSION") { m.swiftVersion = expand(v).replacingOccurrences(of: ".0", with: "") }
         if let h = str("SWIFT_OBJC_BRIDGING_HEADER") { m.bridgingHeader = expand(h).replacingOccurrences(of: "./", with: "") }
         switch str("SWIFT_OPTIMIZATION_LEVEL") ?? "" {

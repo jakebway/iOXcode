@@ -83,6 +83,7 @@ struct Manifest: Codable {
     var scripts: [BuildScript] = []            // run by ioxsh before/after compiling
     var packages: [PackageRef] = []            // Swift package dependencies
     var excludes: [String] = []                // folders/files under `sources` that are not compiled
+    var deviceFamily: [Int]?                   // TARGETED_DEVICE_FAMILY: 1 = iPhone, 2 = iPad (Xcode default: both)
     var sourceResources = false                // non-code files inside `sources` are copied too (XcodeGen does that)
 
     init() {}
@@ -98,11 +99,11 @@ struct Manifest: Codable {
         swiftFlags = get(.swiftFlags, []); linkerFlags = get(.linkerFlags, []); infoPlist = get(.infoPlist, [:])
         infoPlistFile = get(.infoPlistFile, nil as String?); swiftFiles = get(.swiftFiles, nil as [String]?)
         cFiles = get(.cFiles, nil as [String]?); cDefines = get(.cDefines, []); cFlags = get(.cFlags, []); headerDirs = get(.headerDirs, []); objcArc = get(.objcArc, true)
-        scripts = get(.scripts, []); packages = get(.packages, []); excludes = get(.excludes, []); sourceResources = get(.sourceResources, false)
+        scripts = get(.scripts, []); packages = get(.packages, []); excludes = get(.excludes, []); sourceResources = get(.sourceResources, false); deviceFamily = get(.deviceFamily, nil as [Int]?)
     }
     enum Keys: String, CodingKey {
         case name, displayName, bundleId, version, build, minOS, sources, bridgingHeader, optimization, swiftVersion
-        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles, cFiles, cDefines, cFlags, headerDirs, objcArc, scripts, excludes, sourceResources, packages
+        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles, cFiles, cDefines, cFlags, headerDirs, objcArc, scripts, excludes, sourceResources, packages, deviceFamily
     }
 
     static func load(from dir: URL) -> Manifest {
