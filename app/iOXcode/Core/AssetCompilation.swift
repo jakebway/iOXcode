@@ -136,17 +136,37 @@ enum AssetCompilation {
     /// Anything that does not come out gets a plain image file next to the car instead, so it still shows up.
     static func verify(catalog: URL, in dir: URL, label: String, log: LogSink) {
         let fm = FileManager.default
-        guard let bundle = Bundle(url: dir), let en = fm.enumerator(at: catalog, includingPropertiesForKeys: nil) else { return }
+        guard let en = fm.enumerator(at: catalog, includingPropertiesForKeys: nil) else { return }
         var names: [String] = []
         for case let u as URL in en where u.pathExtension == "imageset" { names.append(u.deletingPathExtension().lastPathComponent) }
+
+        // A scratch bundle with a fresh path, so a catalog the system loaded earlier (same path, older build) is not reused
+        let probe = fm.temporaryDirectory.appendingPathComponent("verify-\(UUID().uuidString).bundle", isDirectory: true)
+        defer { try? fm.removeItem(at: probe) }
+        do {
+            try fm.createDirectory(at: probe, withIntermediateDirectories: true)
+            try fm.copyItem(at: dir.appendingPathComponent("Assets.car"), to: probe.appendingPathComponent("Assets.car"))
+            let info: [String: Any] = ["CFBundleIdentifier": "com.ioxcode.verify.\(UUID().uuidString.prefix(8))", "CFBundleName": "verify", "CFBundlePackageType": "BNDL", "CFBundleVersion": "1"]
+            (info as NSDictionary).write(to: probe.appendingPathComponent("Info.plist"), atomically: true)
+        } catch { log.log("warning: could not verify Assets.car: \(error.localizedDescription)"); return }
+        guard let bundle = Bundle(url: probe) else { return }
+
+        var loaded: [String] = []
         var missing: Set<String> = []
         for n in names {
-            if let img = UIImage(named: n, in: bundle, compatibleWith: nil), img.size.width > 0, img.cgImage != nil { continue }
-            missing.insert(n)
+            if let img = UIImage(named: n, in: bundle, compatibleWith: nil), img.size.width > 0, img.cgImage != nil { loaded.append(n) }
+            else { missing.insert(n) }
         }
-        log.log("verified Assets.car (\(label)): \(names.count - missing.count) of \(names.count) images load")
+        log.log("verified Assets.car (\(label)): \(loaded.count) of \(names.count) images load")
         guard !missing.isEmpty else { return }
-        log.log("warning: \(missing.count) images did not load from Assets.car, e.g. \(missing.sorted().prefix(6).joined(separator: ", ")); adding them as plain files")
+        log.log("warning: \(missing.count) images did not load from Assets.car, e.g. \(missing.sorted().prefix(6).joined(separator: ", ")); loaded: \(loaded.prefix(6).joined(separator: ", "))")
+        // a few lookups with an explicit scale, to see whether only the scale fallback is missing
+        for s in [1, 2, 3] as [CGFloat] {
+            let tc = UITraitCollection(displayScale: s)
+            let ok = names.filter { UIImage(named: $0, in: bundle, compatibleWith: tc) != nil }.count
+            log.log("  at scale \(Int(s))x: \(ok) of \(names.count) load")
+        }
+        log.log("adding the missing ones as plain files")
         _ = Assets.extract(catalog: catalog, into: dir, log: log, only: missing)
     }
 
