@@ -48,7 +48,7 @@ enum MLECBody {
             chunks.append((rows: rowsPerChunk, payload: LZFSE.encode(slice)))
         }
 
-        // First word is the pixel kind CoreUI uses to decide whether the bitmap has alpha: actool writes 0 for bitmaps
+        // First word is the pixel kind CoreUI uses to decide whether the bitmap has alpha: actool writes 0 (deepmap) or, with LZFSE, 1 for bitmaps
         // with transparency and 2/3 for fully opaque ones. Always writing 3 made every image load as opaque
         // (transparent pixels rendered black).
         var hasAlpha = false
@@ -57,13 +57,13 @@ enum MLECBody {
 
         var w = ByteWriter()
         w.writeFourCC("MLEC")
-        var kind: UInt32 = hasAlpha ? 0 : 3
+        var kind: UInt32 = hasAlpha ? 1 : 3
         var comp: UInt32 = 4
         if hasAlpha, let v = ProcessInfo.processInfo.environment["ASSETKIT_KIND"] {
             let p = v.split(separator: ":").compactMap { UInt32($0) }
             if p.count == 2 { kind = p[0]; comp = p[1] }
         }
-        w.writeLE(kind)                         // pixel kind: 0 = has alpha, 3 = opaque
+        w.writeLE(kind)                         // pixel kind: 1 = has alpha (LZFSE), 3 = opaque
         w.writeLE(comp)                         // compression: 4 = LZFSE
         w.writeLE(chunkCount)
 
