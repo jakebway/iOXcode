@@ -135,8 +135,8 @@ if only is None:
         print('facet', n, facets[n])
         ident = [v for (a, v) in facets[n] if a == 17]
         for k in rk:
-            d = dict(zip(attrs, k))
-            if ident and d.get(17) == ident[0]: print('   rendition key', d)
+            dk = dict(zip(attrs, k))
+            if ident and dk.get(17) == ident[0]: print("   rendition key", dk)
 
 if only is None and 'BITMAPKEYS' in vars_:
     ident_name = {}
