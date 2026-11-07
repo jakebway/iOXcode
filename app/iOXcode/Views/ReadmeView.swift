@@ -19,6 +19,7 @@ struct ReadmeCard: View {
     @State private var name = ""
     @State private var page: URL?
     @State private var height: CGFloat = 80
+    @State private var status = "Loading README…"
 
     static func find(in folder: URL) -> URL? {
         let kids = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
@@ -57,6 +58,9 @@ struct ReadmeCard: View {
                 .background(framed ? cardBG : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: framed ? 6 : 0))
                 .overlay(RoundedRectangle(cornerRadius: framed ? 6 : 0).stroke(framed ? border : Color.clear, lineWidth: 1))
+            } else if Self.find(in: folder) != nil {
+                Text(status).font(.footnote).foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
             }
         }
         .task(id: folder) { await load() }
@@ -64,6 +68,7 @@ struct ReadmeCard: View {
 
     private func load() async {
         guard let f = Self.find(in: folder) else { page = nil; return }
+        status = "Loading \(f.lastPathComponent)…"
         name = f.lastPathComponent
         let folderCopy = folder
         let url: URL? = await Task.detached(priority: .userInitiated) { () -> URL? in
@@ -75,9 +80,10 @@ struct ReadmeCard: View {
             let dir = Paths.root.appendingPathComponent("ReadmeCache", isDirectory: true)
             Paths.ensure(dir)
             let out = dir.appendingPathComponent("readme-\(abs(folderCopy.path.hashValue)).html")
-            try? html.write(to: out, atomically: true, encoding: .utf8)
+            do { try html.write(to: out, atomically: true, encoding: .utf8) } catch { return nil }
             return out
         }.value
+        if url == nil { status = "Couldn't render \(f.lastPathComponent) (open it from Files)." }
         page = url
     }
 }
