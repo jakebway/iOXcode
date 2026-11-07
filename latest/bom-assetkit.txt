@@ -50,3 +50,16 @@ facet order bytes: 0 out of order; first []
 facet order lower: 30 out of order; first [('Categories_StoreBKBest', 'Categories_Store_BK'), ('GKToolbarBackground', 'Game Center'), ('LSedgeTopMarginThin-568h', 'LessBright'), ('MCPrev', 'Mail')]
 facet order casefold-bytes: 30 out of order; first [('Categories_StoreBKBest', 'Categories_Store_BK'), ('GKToolbarBackground', 'Game Center'), ('LSedgeTopMarginThin-568h', 'LessBright'), ('MCPrev', 'Mail')]
 facet order plain str: 0 out of order; first []
+RENDITION KEY attrs order (7, 13, 12, 15, 16, 9, 17, 1, 2)
+facet App Store [(1, 85), (2, 181), (17, 50953)]
+   rendition key {7: 0, 13: 0, 12: 1, 15: 0, 16: 0, 9: 0, 17: 50953, 1: 85, 2: 181}
+facet Albums_Photos [(1, 85), (2, 181), (17, 25490)]
+   rendition key {7: 0, 13: 0, 12: 2, 15: 1, 16: 0, 9: 0, 17: 25490, 1: 85, 2: 181}
+facet SpeakerMute [(1, 85), (2, 181), (17, 56760)]
+   rendition key {7: 0, 13: 0, 12: 2, 15: 0, 16: 0, 9: 0, 17: 56760, 1: 85, 2: 181}
+facet Calculator [(1, 85), (2, 181), (17, 37650)]
+   rendition key {7: 0, 13: 0, 12: 1, 15: 0, 16: 0, 9: 0, 17: 37650, 1: 85, 2: 181}
+facet Phone [(1, 85), (2, 181), (17, 47321)]
+   rendition key {7: 0, 13: 0, 12: 1, 15: 0, 16: 0, 9: 0, 17: 47321, 1: 85, 2: 181}
+facet Camera [(1, 85), (2, 181), (17, 60211)]
+   rendition key {7: 0, 13: 0, 12: 1, 15: 0, 16: 0, 9: 0, 17: 60211, 1: 85, 2: 181}

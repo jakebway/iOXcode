@@ -15,9 +15,9 @@
 </dict>
 </plist>
 total 150080
-drwxr-xr-x  6 runner  staff       192 Nov  7 03:50 .
-drwxr-xr-x  5 runner  staff       160 Nov  7 03:49 ..
--rw-r--r--  1 runner  staff      5948 Nov  7 03:49 AppIcon60x60@2x.png
--rw-r--r--  1 runner  staff      8352 Nov  7 03:49 AppIcon76x76@2x~ipad.png
--rw-r--r--  1 runner  staff  76813896 Nov  7 03:50 Assets.car
--rw-r--r--  1 runner  staff       713 Nov  7 03:50 partial.plist
+drwxr-xr-x  6 runner  staff       192 Nov  7 03:53 .
+drwxr-xr-x  5 runner  staff       160 Nov  7 03:52 ..
+-rw-r--r--  1 runner  staff      5948 Nov  7 03:52 AppIcon60x60@2x.png
+-rw-r--r--  1 runner  staff      8352 Nov  7 03:52 AppIcon76x76@2x~ipad.png
+-rw-r--r--  1 runner  staff  76813896 Nov  7 03:53 Assets.car
+-rw-r--r--  1 runner  staff       713 Nov  7 03:53 partial.plist
