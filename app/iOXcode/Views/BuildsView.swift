@@ -52,7 +52,7 @@ struct ReleasesView: View {
             else if releases?.isEmpty == true { Text("\(origin.repo) has no releases.").foregroundColor(.secondary) }
             ForEach(releases ?? []) { rel in
                 Section {
-                    if rel.assets.isEmpty { Text(rel.name.localizedCaseInsensitiveContains("ios") ? "No files attached. iOS builds like this are usually distributed through TestFlight or the App Store; build it from source with iOXcode." : "No files attached.").font(.footnote).foregroundColor(.secondary) }
+                    if rel.assets.isEmpty { Text((rel.name ?? rel.tag).localizedCaseInsensitiveContains("ios") ? "No files attached. iOS builds like this are usually distributed through TestFlight or the App Store; build it from source with iOXcode." : "No files attached.").font(.footnote).foregroundColor(.secondary) }
                     ForEach(rel.assets) { a in
                         Button {
                             busy = a.id
