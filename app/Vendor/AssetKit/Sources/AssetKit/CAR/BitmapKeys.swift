@@ -23,6 +23,11 @@ enum BitmapKeys {
         var kind: Kind
         /// Number of distinct (idiom, subtype) tuples this asset is keyed on.
         var idiomSubtypeCount: UInt32
+        /// Bit n set = the asset has a rendition at scale n (so 2 = 1x, 4 = 2x, 8 = 3x). CoreUI uses this to decide
+        /// which scales to look for: a descriptor that only says "2x" makes the 1x renditions unreachable.
+        var scaleMask: UInt32 = 4
+        /// Bit n set = the asset has a rendition for idiom n (1 = universal, 2 = phone, 4 = pad).
+        var idiomMask: UInt32 = 1
 
         enum Kind {
             case appIcon
@@ -52,7 +57,7 @@ enum BitmapKeys {
             w.writeLE(UInt32(9))
             w.writeLE(UInt32(0xFFFFFFFF))
             w.writeLE(UInt32(1))
-            w.writeLE(assetKindMarker)
+            w.writeLE(kind == .image ? scaleMask : assetKindMarker)
             // Variable section. Values come from the actool reference.
             //   AppIcon  : [u32=2, u16=1, u16=1, u32=7]
             //   Image    : [u32=1, u16=1, u16=0, u32=1]
@@ -61,7 +66,7 @@ enum BitmapKeys {
             // v1 we hardcode the templates per kind and pass through the
             // discovered (idiom, subtype) count. Field 7 in particular seems
             // to track that count.
-            w.writeLE(idiomSubtypeCount)
+            w.writeLE(kind == .image ? idiomMask : idiomSubtypeCount)
             switch kind {
             case .appIcon:
                 w.writeLE(UInt16(1))            // (u16, u16) tuple
@@ -118,7 +123,16 @@ enum BitmapKeys {
             return (idiom << 16) | subtype
         })
 
-        return Descriptor(kind: kind, idiomSubtypeCount: UInt32(idiomSubtypes.count))
+        var scaleMask: UInt32 = 0
+        var idiomMask: UInt32 = 0
+        for rendition in renditions {
+            scaleMask |= UInt32(1) << UInt32(min(Int(rendition.scale?.rawValueByte ?? 1), 31))
+            idiomMask |= UInt32(1) << UInt32(min(Int(rendition.idiom.rawValueByte), 31))
+        }
+        var d = Descriptor(kind: kind, idiomSubtypeCount: UInt32(idiomSubtypes.count))
+        if scaleMask != 0 { d.scaleMask = scaleMask }
+        if idiomMask != 0 { d.idiomMask = idiomMask }
+        return d
     }
 
     /// AppIcon takes precedence over Vector takes precedence over Image:
