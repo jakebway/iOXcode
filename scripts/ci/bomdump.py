@@ -89,3 +89,19 @@ if only is None or only == 'RENDITIONS':
         bad = [i for i in range(1, len(keys)) if fn(keys[i-1]) > fn(keys[i])]
         print(f'order check {label}: {len(keys)} keys, {len(bad)} out of order; first violations {bad[:5]}')
     print('first/last keys as u16:', u16(keys[0]), u16(keys[-1]))
+
+if only is None or only == 'FACETKEYS':
+    b = blk(vars_['FACETKEYS']); child = struct.unpack('>I', b[8:12])[0]
+    il, c, f, bk, ents, ln = node(child)
+    while not il:
+        il, c, f, bk, ents, ln = node(ents[0][0])
+    names = []
+    cur_ents = ents; nxt = f
+    while True:
+        names += [blk(k).decode('utf8', 'replace') for (v, k) in cur_ents]
+        if not nxt: break
+        il, c, f, bk, cur_ents, ln = node(nxt); nxt = f
+    print('FACET names', len(names), names[:12])
+    for label, fn in (('bytes', lambda s: s.encode()), ('lower', lambda s: s.lower()), ('casefold-bytes', lambda s: s.lower().encode()), ('plain str', lambda s: s)):
+        bad = [i for i in range(1, len(names)) if fn(names[i-1]) > fn(names[i])]
+        print(f'facet order {label}: {len(bad)} out of order; first {[(names[i-1], names[i]) for i in bad[:4]]}')
