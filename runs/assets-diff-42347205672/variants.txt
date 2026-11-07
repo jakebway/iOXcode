@@ -1,0 +1,35 @@
+== 1_4
+names: 674
+ALPHA App Store: 118x120 alphaInfo=1 clear=532 partial=1056 opaqueBlack=0
+ALPHA SBDockBG 2: 640x90 alphaInfo=1 clear=1556 partial=56044 opaqueBlack=0
+ALPHA Calculator: 118x120 alphaInfo=1 clear=532 partial=1056 opaqueBlack=0
+ALPHA Phone: 118x120 alphaInfo=1 clear=532 partial=1056 opaqueBlack=0
+ALPHA Wallpaper_1: 640x1136 alphaInfo=5 clear=0 partial=0 opaqueBlack=0
+== 2_4
+names: 674
+ALPHA App Store: 118x120 alphaInfo=5 clear=0 partial=0 opaqueBlack=14160
+ALPHA SBDockBG 2: 640x90 alphaInfo=5 clear=0 partial=0 opaqueBlack=57600
+ALPHA Calculator: 118x120 alphaInfo=5 clear=0 partial=0 opaqueBlack=14160
+ALPHA Phone: 118x120 alphaInfo=5 clear=0 partial=0 opaqueBlack=14160
+ALPHA Wallpaper_1: 640x1136 alphaInfo=5 clear=0 partial=0 opaqueBlack=0
+== 3_4
+names: 674
+ALPHA App Store: 118x120 alphaInfo=5 clear=0 partial=0 opaqueBlack=1440
+ALPHA SBDockBG 2: 640x90 alphaInfo=5 clear=0 partial=0 opaqueBlack=1556
+ALPHA Calculator: 118x120 alphaInfo=5 clear=0 partial=0 opaqueBlack=1440
+ALPHA Phone: 118x120 alphaInfo=5 clear=0 partial=0 opaqueBlack=1440
+ALPHA Wallpaper_1: 640x1136 alphaInfo=5 clear=0 partial=0 opaqueBlack=0
+== 0_3
+names: 674
+ALPHA App Store: 118x120 alphaInfo=1 clear=14160 partial=0 opaqueBlack=0
+ALPHA SBDockBG 2: 640x90 alphaInfo=1 clear=57600 partial=0 opaqueBlack=0
+ALPHA Calculator: 118x120 alphaInfo=1 clear=14160 partial=0 opaqueBlack=0
+ALPHA Phone: 118x120 alphaInfo=1 clear=14160 partial=0 opaqueBlack=0
+ALPHA Wallpaper_1: 640x1136 alphaInfo=5 clear=0 partial=0 opaqueBlack=0
+== 0_0
+names: 674
+ALPHA App Store: 118x120 alphaInfo=2 clear=522 partial=13564 opaqueBlack=0
+ALPHA SBDockBG 2: 640x90 alphaInfo=2 clear=3367 partial=54012 opaqueBlack=0
+ALPHA Calculator: 118x120 alphaInfo=2 clear=1291 partial=12824 opaqueBlack=2
+ALPHA Phone: 118x120 alphaInfo=2 clear=507 partial=13625 opaqueBlack=0
+ALPHA Wallpaper_1: 640x1136 alphaInfo=5 clear=0 partial=0 opaqueBlack=0
