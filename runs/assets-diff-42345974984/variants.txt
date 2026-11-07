@@ -1,4 +1,4 @@
 none entries 893 {None: 1, 'Image': 768, 'Unknown': 124} stderr lines 124
 A entries 893 {None: 1, 'Image': 892} stderr lines 0
-B entries 893 {None: 1, 'Image': 768, 'Unknown': 124} stderr lines 124
+B entries 893 {None: 1, 'Image': 892} stderr lines 0
 AB entries 893 {None: 1, 'Image': 892} stderr lines 0
