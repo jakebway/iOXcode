@@ -314,6 +314,10 @@ def load_manifest(pkg_dir):
             elif isinstance(s, Call) and s.name == "unsafeFlags":
                 fl = (s.positional() or [[]])[0]
                 td["flags"] += [x for x in fl if isinstance(x, str)]
+            elif isinstance(s, Call) and s.name in ("enableUpcomingFeature", "enableExperimentalFeature") and _setting_applies(s):
+                f = (s.positional() or [None])[0]
+                if isinstance(f, str):
+                    td.setdefault("features", []).append(("-enable-upcoming-feature" if s.name == "enableUpcomingFeature" else "-enable-experimental-feature", f))
         td["libs"], td["fws"] = [], []
         for s in as_list(t.get("linkerSettings")):
             if isinstance(s, Call) and _setting_applies(s):
@@ -844,6 +848,7 @@ def resolve(request_path):
                     "cdefines": [d[2:] for d in td["defines"] if d.startswith("C:")],
                     "libs": td.get("libs", []), "frameworks": td.get("fws", []),
                     "cflags": td.get("cflags", []),
+                    "features": [list(x) for x in td.get("features", [])],
                     "cStd": p["manifest"].get("cStd"), "cxxStd": p["manifest"].get("cxxStd"),
                     "headerSearch": [os.path.normpath(os.path.join(root, h)) for h in td.get("headerSearch", [])],
                     "includeDir": os.path.join(root, td.get("publicHeadersPath") or "include") if cfiles else None})

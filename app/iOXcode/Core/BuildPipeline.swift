@@ -412,6 +412,8 @@ final class BuildPipeline {
                       "-emit-module", "-emit-module-path", moduleDir.appendingPathComponent("\(name).swiftmodule").path,
                       "-I", moduleDir.path, "-o", o.path, "-O"]
             for d in (mod["defines"] as? [String]) ?? [] { fe += ["-D", d] }
+            // .enableUpcomingFeature("X") / .enableExperimentalFeature("X") from the manifest
+            for f in (mod["features"] as? [[String]]) ?? [] where f.count == 2 { fe += [f[0], f[1]] }
             fe += MacroPlugins.arguments(log: LogSink { _ in })
             fe += packageCArgs
             let res = CompilerHost.shared.frontend(fe)
