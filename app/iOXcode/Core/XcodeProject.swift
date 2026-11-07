@@ -179,7 +179,11 @@ enum XcodeProjectReader {
             let fam = expand(f).split(separator: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }.filter { $0 == 1 || $0 == 2 }
             if !fam.isEmpty { m.deviceFamily = fam }
         }
-        if let v = str("SWIFT_VERSION") { m.swiftVersion = expand(v).replacingOccurrences(of: ".0", with: "") }
+        if let v = str("SWIFT_VERSION") { do {
+                // -swift-version takes a language mode (4, 4.2, 5, 6); SWIFT_VERSION = 6.2 means mode 6
+                let ver = expand(v).trimmingCharacters(in: .whitespaces)
+                m.swiftVersion = ver == "4.2" ? "4.2" : String(ver.split(separator: ".").first ?? "5")
+            } }
         if let h = str("SWIFT_OBJC_BRIDGING_HEADER") { m.bridgingHeader = expand(h).replacingOccurrences(of: "./", with: "") }
         switch str("SWIFT_OPTIMIZATION_LEVEL") ?? "" {
         case "-O", "-Ounchecked": m.optimization = "speed"
@@ -295,6 +299,15 @@ enum XcodeProjectReader {
             let pkg = root.appendingPathComponent(rel).appendingPathComponent("Package.swift")
             if let t = try? String(contentsOf: pkg, encoding: .utf8) { localDirs[rel] = t }
         }
+        // Xcode picks up every package inside a folder-synced group (NetNewsWire keeps ~20 under Modules/)
+        for (id, o) in objects where (o["isa"] as? String) == "PBXFileSystemSynchronizedRootGroup" {
+            guard let gdir = resolve(id) else { continue }
+            let base = root.appendingPathComponent(gdir)
+            if let subs = try? FileManager.default.contentsOfDirectory(atPath: base.path) {
+                for sub in subs.sorted() where !sub.hasPrefix(".") { addLocal(gdir.isEmpty ? sub : gdir + "/" + sub) }
+            }
+            addLocal(gdir)
+        }
         for (id, o) in objects {
             if (o["isa"] as? String) == "XCLocalSwiftPackageReference", let rel = o["relativePath"] as? String { addLocal(rel) }
             else if (o["isa"] as? String) == "PBXFileReference", (o["lastKnownFileType"] as? String) == "wrapper", let rel = resolve(id) { addLocal(rel) }
@@ -305,7 +318,12 @@ enum XcodeProjectReader {
         for pid in (target.value["packageProductDependencies"] as? [String]) ?? [] {
             guard let dep = objects[pid], let pname = dep["productName"] as? String else { continue }
             if let pref = dep["package"] as? String { wanted[pref, default: []].append(pname) }
-            else if let rel = localDirs.first(where: { $0.value.contains("\"\(pname)\"") })?.key { wanted["local:" + rel, default: []].append(pname) }
+            else {
+                // the package that declares a library product of this name, else any package that mentions it
+                let declares = localDirs.filter { $0.value.range(of: "\\.library\\(\\s*name:\\s*\"\(pname)\"", options: .regularExpression) != nil }
+                let hit = declares.keys.sorted().first ?? localDirs.filter { $0.value.contains("\"\(pname)\"") }.keys.sorted().first
+                if let rel = hit { wanted["local:" + rel, default: []].append(pname) }
+            }
         }
         var packages: [PackageRef] = []
         for (id, products) in wanted {
