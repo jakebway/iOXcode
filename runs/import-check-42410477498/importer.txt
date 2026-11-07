@@ -1,0 +1,25 @@
+name: NetNewsWire  bundle: com.ranchero.NetNewsWire.iOS  minOS: 18.0  swift: 6  family: [1, 2]
+infoPlistFile: iOS/Resources/Info.plist  bridging: iOS/NetNewsWire-iOS-Bridging-Header.h
+swift files: 159  C files: 1  resources: 8  sources(synced): ["iOS", "Shared"]
+frameworks: []
+libraries: []  linkerFlags: []  swiftFlags: ["-DRELEASE"]
+warning: This project has 2 app targets; building NetNewsWire-iOS.
+warning: Extensions, widgets and other targets are not built yet.
+package RSWeb [local] products=["RSWeb"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSWeb
+package ErrorLog [local] products=["ErrorLog"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/ErrorLog
+package Zip [revision] products=["Zip"] url=https://github.com/marmelroy/Zip.git
+package ArticlesDatabase [local] products=["ArticlesDatabase"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/ArticlesDatabase
+package ActivityLog [local] products=["ActivityLog"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/ActivityLog
+package RSCore [local] products=["RSCore"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSCore
+package Secrets [local] products=["Secrets"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Secrets
+package Images [local] products=["Images"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Images
+package Account [local] products=["Account"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Account
+package RSParser [local] products=["RSParser"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSParser
+package Articles [local] products=["Articles"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Articles
+package RSDatabase [local] products=["RSDatabase"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSDatabase
+package SyncDatabase [local] products=["SyncDatabase"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/SyncDatabase
+package HTMLMetadata [local] products=["HTMLMetadata"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/HTMLMetadata
+package RSTree [local] products=["RSTree"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSTree
+script: Run Script: Verify No Build Settings afterCompile=true
+missing swift files on disk: 0
+files under Mac/: 0
