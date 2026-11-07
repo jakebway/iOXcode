@@ -56,11 +56,50 @@ enum XcodeProjectReader {
         }
 
         // build settings: project level, then target level (Release)
+        // .xcconfig files: `KEY = value`, `#include "other"` / `#include? "other"`, `$(inherited)`; conditional keys
+        // (`KEY[sdk=macosx*]`) are skipped.
+        func parseXcconfig(_ rel: String, into out: inout [String: Any], depth: Int = 0) {
+            guard depth < 8, let text = try? String(contentsOf: root.appendingPathComponent(rel), encoding: .utf8) else { return }
+            let dir = (rel as NSString).deletingLastPathComponent
+            func join(_ a: String, _ b: String) -> String {
+                let p = (a.isEmpty ? b : a + "/" + b)
+                return (p as NSString).standardizingPath
+            }
+            for raw in text.split(separator: "\n", omittingEmptySubsequences: true) {
+                var line = raw.trimmingCharacters(in: .whitespaces)
+                if let r = line.range(of: "//") , !line.hasPrefix("#include"), !line.contains("://") { line = String(line[..<r.lowerBound]).trimmingCharacters(in: .whitespaces) }
+                if line.isEmpty || line.hasPrefix("//") { continue }
+                if line.hasPrefix("#include") {
+                    let parts = line.split(separator: "\"")
+                    if parts.count >= 2 { parseXcconfig(join(dir, String(parts[1])), into: &out, depth: depth + 1) }
+                    continue
+                }
+                guard let eq = line.firstIndex(of: "=") else { continue }
+                let key = line[..<eq].trimmingCharacters(in: .whitespaces)
+                if key.contains("[") { continue }
+                var value = line[line.index(after: eq)...].trimmingCharacters(in: .whitespaces)
+                if value.contains("$(inherited)") || value.contains("${inherited}") {
+                    let prev = (out[key] as? String) ?? ""
+                    value = value.replacingOccurrences(of: "$(inherited)", with: prev).replacingOccurrences(of: "${inherited}", with: prev)
+                }
+                out[key] = value
+            }
+        }
         func settings(forList id: String?) -> [String: Any] {
             guard let id = id, let list = objects[id], let cfgs = list["buildConfigurations"] as? [String] else { return [:] }
             let all = cfgs.compactMap { objects[$0] }
             let pick = all.first { ($0["name"] as? String) == "Release" } ?? all.first
-            return (pick?["buildSettings"] as? [String: Any]) ?? [:]
+            var out: [String: Any] = [:]
+            if let pick {
+                if let ref = pick["baseConfigurationReference"] as? String, let rel = resolve(ref) {
+                    parseXcconfig(rel, into: &out)
+                } else if let anchor = pick["baseConfigurationReferenceAnchor"] as? String, let rel = pick["baseConfigurationReferenceRelativePath"] as? String,
+                          let dir = resolve(anchor) {
+                    parseXcconfig(dir.isEmpty ? rel : dir + "/" + rel, into: &out)
+                }
+            }
+            for (k, v) in (pick?["buildSettings"] as? [String: Any]) ?? [:] { out[k] = v }
+            return out
         }
         let projectObj = objects.first { ($0.value["isa"] as? String) == "PBXProject" }?.value
         func merged(_ target: [String: Any]) -> [String: Any] {
@@ -108,6 +147,22 @@ enum XcodeProjectReader {
             for (k, v) in vars {
                 out = out.replacingOccurrences(of: "$(\(k))", with: v).replacingOccurrences(of: "${\(k)}", with: v)
             }
+            // anything else that is itself a build setting (often from an .xcconfig): $(ORGANIZATION_IDENTIFIER) etc.
+            for _ in 0..<5 {
+                guard out.contains("$(") else { break }
+                var changed = false
+                let names: [String] = {
+                    guard let re = try? NSRegularExpression(pattern: "\\$\\(([A-Za-z0-9_]+)\\)") else { return [] }
+                    let ns = out as NSString
+                    return re.matches(in: out, range: NSRange(location: 0, length: ns.length)).map { ns.substring(with: $0.range(at: 1)) }
+                }()
+                for name in names {
+                    if let v = str(name), !v.contains("$(\(name))") {
+                        out = out.replacingOccurrences(of: "$(\(name))", with: v); changed = true
+                    }
+                }
+                if !changed { break }
+            }
             return out
         }
 
@@ -116,6 +171,7 @@ enum XcodeProjectReader {
         m.name = cleanName.isEmpty ? "App" : cleanName
         if let n = str("INFOPLIST_KEY_CFBundleDisplayName") { m.displayName = expand(n) }
         m.bundleId = expand(str("PRODUCT_BUNDLE_IDENTIFIER") ?? "com.example.\(m.name.lowercased())")
+        m.bundleId = m.bundleId.replacingOccurrences(of: "\\$\\([A-Za-z0-9_:]+\\)", with: "", options: .regularExpression)     // unset variables (e.g. a missing local override) are empty, as in Xcode
         if let v = str("MARKETING_VERSION") { m.version = expand(v) }
         if let v = str("CURRENT_PROJECT_VERSION") { m.build = expand(v) }
         if let v = str("IPHONEOS_DEPLOYMENT_TARGET") { m.minOS = expand(v) }
