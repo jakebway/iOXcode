@@ -177,7 +177,7 @@ final class BuildPipeline {
         if !cFiles.isEmpty {
             cObjects = try ccompiler.compile(cFiles, into: work.appendingPathComponent("c", isDirectory: true), options: copts, label: m.name)
         }
-        let strippedSources = PreviewStripper.prepare(files, root: project.root, work: work, log: log)
+        let strippedSources = PreviewStripper.prepare(files, root: project.root, work: work, log: log, sdk: layout.sdk)
         var sourcesForCompile = MacroEmulation.prepare(strippedSources, work: work, log: log)
         // Core Data models: generate the entity classes and (later) the compiled model, as Xcode's momc would
         var dataModels: [(bundle: URL, version: URL, entities: [DataModelCompiler.Entity])] = []
@@ -656,14 +656,53 @@ enum MacroEmulation {
 }
 
 enum PreviewStripper {
-    static func prepare(_ files: [URL], root: URL, work: URL, log: LogSink) -> [URL] {
+    /// The newest Swift compiler version whose APIs the imported SDK pack can have. Our compiler is newer than
+    /// Apple's newest Xcode, so `#if compiler(>=6.4)` is true here while the SDK is still the older one, and the
+    /// code inside such a block (new iOS 27 API, say) cannot compile. Xcode with that SDK would take the other branch.
+    static func sdkCompilerCeiling(_ sdk: URL) -> (Int, Int)? {
+        let settings = sdk.appendingPathComponent("SDKSettings.json")
+        guard let d = try? Data(contentsOf: settings), let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
+              let v = o["Version"] as? String, let major = Int(v.split(separator: ".").first ?? "") else { return nil }
+        return major >= 27 ? nil : (6, 3)
+    }
+
+    /// Rewrites `compiler(>=X)` / `compiler(<X)` conditions that are newer than the SDK can support.
+    static func gateCompilerChecks(_ text: String, ceiling: (Int, Int)) -> String {
+        guard text.contains("compiler("), let re = try? NSRegularExpression(pattern: "compiler\\(\\s*(>=|<)\\s*(\\d+)(?:\\.(\\d+))?[0-9.]*\\s*\\)") else { return text }
+        var out = ""
+        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+            var l = String(line)
+            let trimmed = l.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("#if") || trimmed.hasPrefix("#elseif") {
+                let ns = l as NSString
+                for m in re.matches(in: l, range: NSRange(location: 0, length: ns.length)).reversed() {
+                    let op = ns.substring(with: m.range(at: 1))
+                    let maj = Int(ns.substring(with: m.range(at: 2))) ?? 0
+                    let min = m.range(at: 3).location != NSNotFound ? Int(ns.substring(with: m.range(at: 3))) ?? 0 : 0
+                    let newer = (maj, min) > ceiling
+                    guard newer else { continue }
+                    l = (l as NSString).replacingCharacters(in: m.range, with: op == ">=" ? "false" : "true")
+                }
+            }
+            out += l + "\n"
+        }
+        if !text.hasSuffix("\n") { out.removeLast() }
+        return out
+    }
+
+    static func prepare(_ files: [URL], root: URL, work: URL, log: LogSink, sdk: URL? = nil) -> [URL] {
         let fm = FileManager.default
         let dir = work.appendingPathComponent("sources", isDirectory: true)
+        let ceiling = sdk.flatMap { sdkCompilerCeiling($0) }
         var out: [URL] = []
-        var changed = 0
+        var changed = 0, gated = 0
         for f in files {
-            guard let text = try? String(contentsOf: f, encoding: .utf8), text.contains("#Preview") else { out.append(f); continue }
-            let stripped = strip(text)
+            guard let text = try? String(contentsOf: f, encoding: .utf8), text.contains("#Preview") || (ceiling != nil && text.contains("compiler(")) else { out.append(f); continue }
+            var stripped = text.contains("#Preview") ? strip(text) : text
+            if let c = ceiling {
+                let g = gateCompilerChecks(stripped, ceiling: c)
+                if g != stripped { stripped = g; gated += 1 }
+            }
             if stripped == text { out.append(f); continue }
             var rel = f.standardizedFileURL.path
             let base = root.standardizedFileURL.path + "/"
@@ -673,7 +712,8 @@ enum PreviewStripper {
             do { try stripped.write(to: dst, atomically: true, encoding: .utf8); out.append(dst); changed += 1 }
             catch { out.append(f) }
         }
-        if changed > 0 { log.log("removed #Preview blocks from \(changed) file(s)") }
+        if changed > 0 { log.log("removed #Preview blocks / gated new-compiler code in \(changed) file(s)") }
+        if gated > 0, let c = ceiling { log.log("note: the SDK pack is older than iOXcode's compiler (Swift \(c.0).\(c.1) APIs): `#if compiler(>=\(c.0).\(c.1 + 1))` blocks in \(gated) file(s) were skipped, as Xcode with that SDK would. Import an iOS 27 SDK pack to build them.") }
         return out
     }
 
