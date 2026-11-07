@@ -57,8 +57,14 @@ enum MLECBody {
 
         var w = ByteWriter()
         w.writeFourCC("MLEC")
-        w.writeLE(UInt32(hasAlpha ? 0 : 3))     // pixel kind: 0 = has alpha, 3 = opaque
-        w.writeLE(UInt32(4))                    // bytesPerPixel (BGRA8 = 4)
+        var kind: UInt32 = hasAlpha ? 0 : 3
+        var comp: UInt32 = 4
+        if hasAlpha, let v = ProcessInfo.processInfo.environment["ASSETKIT_KIND"] {
+            let p = v.split(separator: ":").compactMap { UInt32($0) }
+            if p.count == 2 { kind = p[0]; comp = p[1] }
+        }
+        w.writeLE(kind)                         // pixel kind: 0 = has alpha, 3 = opaque
+        w.writeLE(comp)                         // compression: 4 = LZFSE
         w.writeLE(chunkCount)
 
         for chunk in chunks {
