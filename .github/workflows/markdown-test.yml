@@ -1,0 +1,32 @@
+name: Markdown - render real READMEs with the app's converter
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: markdown-test
+  cancel-in-progress: true
+jobs:
+  md:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run
+        run: |
+          mkdir -p ci-out work
+          swiftc -O app/iOXcode/Core/Markdown.swift scratch/mdtest/main.swift -o work/mdtest 2> ci-out/build.txt || true
+          for R in zzanehip/The-OldOS-Project Ranchero-Software/NetNewsWire kiwix/kiwix-apple wikimedia/wikipedia-ios; do
+            N=$(echo $R | tr '/' '_')
+            for B in main master develop; do
+              curl -fsSL "https://raw.githubusercontent.com/$R/$B/README.md" -o work/$N.md 2>/dev/null && break
+            done
+            echo "== $R" >> ci-out/run.txt
+            ( perl -e 'alarm 60; exec @ARGV' work/mdtest work/$N.md ci-out/$N.html "$PWD/work/" >> ci-out/run.txt 2>&1 ) || echo "FAILED or timed out ($?)" >> ci-out/run.txt
+            cp work/$N.md ci-out/ 2>/dev/null || true
+          done
+          cat ci-out/run.txt
+      - name: Publish logs to the ci-logs branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "markdown-${{ github.run_id }}"
