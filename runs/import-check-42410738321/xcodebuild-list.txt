@@ -1,0 +1,99 @@
+Command line invocation:
+    /Applications/Xcode_26.3.app/Contents/Developer/usr/bin/xcodebuild -list
+
+Resolve Package Graph
+
+Fetching from https://github.com/marmelroy/Zip.git
+
+Fetching from https://github.com/microsoft/plcrashreporter.git
+
+Fetching from https://github.com/brentsimmons/Tidemark
+
+Fetching from https://github.com/sparkle-project/Sparkle.git
+
+Creating working copy of package ‘plcrashreporter’
+
+Checking out 1.12.2 of package ‘plcrashreporter’
+
+Creating working copy of package ‘Tidemark’
+
+Checking out 1.0.1 of package ‘Tidemark’
+
+Creating working copy of package ‘Sparkle’
+
+Checking out 2.9.5 of package ‘Sparkle’
+
+Creating working copy of package ‘Zip’
+
+Checking out bca30f6d6c7d37cbc4aa8f6b0002e281dcc36195 of package ‘Zip’
+
+
+Resolved source packages:
+  Sparkle: https://github.com/sparkle-project/Sparkle.git @ 2.9.5
+  ArticlesDatabase: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/ArticlesDatabase
+  Secrets: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Secrets
+  Account: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Account
+  RSCore: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSCore
+  HTMLMetadata: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/HTMLMetadata
+  CloudKitSync: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/CloudKitSync
+  ErrorLog: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/ErrorLog
+  Tidemark: https://github.com/brentsimmons/Tidemark @ 1.0.1
+  ActivityLog: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/ActivityLog
+  PLCrashReporter: https://github.com/microsoft/plcrashreporter.git @ 1.12.2
+  Articles: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Articles
+  RSWeb: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSWeb
+  RSParser: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSParser
+  Zip: https://github.com/marmelroy/Zip.git @ bca30f6
+  SyncDatabase: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/SyncDatabase
+  RSDatabase: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSDatabase
+  RSTree: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSTree
+  Images: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Images
+  NewsBlur: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/NewsBlur
+  FeedFinder: /Users/runner/work/iOXcode/iOXcode/work/repo/Modules/FeedFinder
+
+Information about project "NetNewsWire":
+    Targets:
+        NetNewsWire
+        NetNewsWireTests
+        NetNewsWire-iOS
+        Subscribe to Feed
+        NetNewsWire iOS Share Extension
+        NetNewsWire iOS Widget Extension
+        NetNewsWire-iOSTests
+        NetNewsWire Share Extension
+
+    Build Configurations:
+        Debug
+        Release
+
+    If no build configuration is specified and -scheme is not passed then "Release" is used.
+
+    Schemes:
+        Account
+        AccountTests
+        ActivityLog
+        Articles
+        ArticlesDatabase
+        CloudKitSync
+        ErrorLog
+        FeedFinder
+        HTMLMetadata
+        Images
+        NetNewsWire
+        NetNewsWire iOS Share Extension
+        NetNewsWire iOS Widget Extension
+        NetNewsWire Share Extension
+        NetNewsWire-iOS
+        NewsBlur
+        RSCore
+        RSCoreObjC
+        RSCoreResources
+        RSDatabase
+        RSDatabaseObjC
+        RSParser
+        RSTree
+        RSWeb
+        RSWebTests
+        Secrets
+        SyncDatabase
+

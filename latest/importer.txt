@@ -6,20 +6,20 @@ libraries: []  linkerFlags: []  swiftFlags: ["-DRELEASE"]
 warning: This project has 2 app targets; building NetNewsWire-iOS.
 warning: Extensions, widgets and other targets are not built yet.
 package RSWeb [local] products=["RSWeb"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSWeb
-package Secrets [local] products=["Secrets"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Secrets
-package Zip [revision] products=["Zip"] url=https://github.com/marmelroy/Zip.git
 package RSDatabase [local] products=["RSDatabase"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSDatabase
-package RSCore [local] products=["RSCore"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSCore
-package RSParser [local] products=["RSParser"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSParser
-package ErrorLog [local] products=["ErrorLog"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/ErrorLog
 package Images [local] products=["Images"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Images
-package Account [local] products=["Account"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Account
+package Secrets [local] products=["Secrets"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Secrets
 package ActivityLog [local] products=["ActivityLog"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/ActivityLog
+package ErrorLog [local] products=["ErrorLog"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/ErrorLog
+package Account [local] products=["Account"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Account
 package SyncDatabase [local] products=["SyncDatabase"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/SyncDatabase
-package Articles [local] products=["Articles"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Articles
-package ArticlesDatabase [local] products=["ArticlesDatabase"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/ArticlesDatabase
-package RSTree [local] products=["RSTree"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSTree
 package HTMLMetadata [local] products=["HTMLMetadata"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/HTMLMetadata
+package RSCore [local] products=["RSCore"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSCore
+package ArticlesDatabase [local] products=["ArticlesDatabase"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/ArticlesDatabase
+package Articles [local] products=["Articles"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/Articles
+package Zip [revision] products=["Zip"] url=https://github.com/marmelroy/Zip.git
+package RSTree [local] products=["RSTree"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSTree
+package RSParser [local] products=["RSParser"] url=/Users/runner/work/iOXcode/iOXcode/work/repo/Modules/RSParser
 script: Run Script: Verify No Build Settings afterCompile=true
 missing swift files on disk: 0
 files under Mac/: 0

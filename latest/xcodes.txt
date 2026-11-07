@@ -18,8 +18,8 @@ Xcode_26.2.app
 Xcode_26.3.0.app
 Xcode_26.3.app
 Xcode.app
-Xcode 16.4
-Build version 16F6
-swift-driver version: 1.120.5 Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)
+Xcode 26.3
+Build version 17C529
+swift-driver version: 1.127.15 Apple Swift version 6.2.4 (swiftlang-6.2.4.1.4 clang-1700.6.4.2)
 Target: arm64-apple-macosx15.0
-scheme: 
+scheme: NetNewsWire-iOS
