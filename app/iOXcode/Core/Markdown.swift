@@ -301,14 +301,14 @@ final class Markdown {
 
     private static let bannedTags = rx("^</?(script|iframe|style|object|embed|link|meta|form|base)\\b", .caseInsensitive)
     private static let eventAttr = rx("\\son\\w+\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\\s>]+)", .caseInsensitive)
-    private static let urlAttr = rx("\\b(src|href|poster)\\s*=\\s*(\"([^\"]*)\"|'([^']*)')", .caseInsensitive)
+    private static let urlAttr = rx("\\b(src|href|poster)\\s*=\\s*(\"([^\"]*)\"|'([^']*)'|([^\\s\"'>]+))", .caseInsensitive)
 
     /// Raw HTML from a README: scripts, frames and event handlers are dropped, relative URLs are pointed at the project folder.
     private func cleanTag(_ tag: String) -> String {
         if tag.has(Self.bannedTags) { return esc(tag) }
         var t = tag.replacing(Self.eventAttr) { _ in "" }
         t = t.replacing(Self.urlAttr) { g in
-            let value = g[3].isEmpty ? g[4] : g[3]
+            let value = !g[3].isEmpty ? g[3] : (!g[4].isEmpty ? g[4] : g[5])
             if value.lowercased().hasPrefix("javascript:") { return "" }
             return "\(g[1])=\"\(attr(resolve(value)))\""
         }
@@ -379,7 +379,7 @@ final class Markdown {
             return hold("<img src=\"\(attr(resolve(url)))\" alt=\"\(attr(g[1]))\">")
         }
         // links: only the tags are held, so the text still gets emphasis and escaping
-        s = s.replacing(rx("\\[([^\\]]+)\\]\\(\\s*<?([^)\\s>]+)>?(?:\\s+\"([^\"]*)\")?\\s*\\)")) { g in
+        s = s.replacing(rx("\\[([^\\]]+)\\]\\(\\s*<?([^)\\s>]*)>?(?:\\s+\"([^\"]*)\")?\\s*\\)")) { g in
             let title = g[3].isEmpty ? "" : " title=\"\(attr(g[3]))\""
             return hold("<a href=\"\(attr(resolve(g[2])))\"\(title)>") + g[1] + hold("</a>")
         }
