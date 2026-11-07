@@ -173,7 +173,7 @@ if only is None:
     for n, pairs in facets.items():
         for (a, v) in pairs:
             if a == 17: inv[v] = n
-    allflags = collections.Counter()
+    allflags = collections.Counter(); hist = collections.Counter(); ex = collections.defaultdict(list)
     while True:
         for (v, k) in cur:
             key = dict(zip(attrs, struct.unpack('<%dH' % na, blk(k))))
@@ -181,6 +181,11 @@ if only is None:
             fl = struct.unpack('<I', val[8:12])[0]
             allflags[hex(fl)] += 1
             nm = inv.get(key.get(17))
+            tl0=struct.unpack('<I',val[168:172])[0]
+            bd=val[184+tl0:184+tl0+16]
+            sig=(val[24:28].decode('latin1'), struct.unpack('<I',val[28:32])[0], hex(fl), struct.unpack('<II',bd[4:12]) if bd[:4]==b'MLEC' else bd[:4], bd[16:16] if False else '')
+            hist[sig]+=1
+            if len(ex[sig])<3: ex[sig].append(nm)
             if nm in ('App Store', 'Wallpaper_1', 'SpeakerMute', 'Calculator', 'GKTabbarActiveTab', 'SBDockBG 2', 'Phone'):
                 flagsByName[nm].append((key.get(12), hex(fl), val[12:16].hex(), val[16:20].hex()))
                 if nm in ('App Store','Calculator','Phone'):
@@ -189,4 +194,5 @@ if only is None:
         if not nxt: break
         il, c, f, bk, cur, ln = node(nxt); nxt = f
     print('CSI flags histogram', dict(allflags))
+    for sg,c in hist.most_common(): print('SIG',c,sg,ex[sg])
     for nm, v in flagsByName.items(): print('CSI flags', nm, v)
