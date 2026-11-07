@@ -31,11 +31,11 @@ jobs:
         if: inputs.build == 'yes'
         continue-on-error: true
         run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app
           ls /Applications | grep -i xcode > ci-out/xcodes.txt; xcodebuild -version >> ci-out/xcodes.txt; swift --version >> ci-out/xcodes.txt 2>&1
           cd work/repo
-          xcodebuild -list 2> /dev/null > ../../ci-out/xcodebuild-list.txt || true
-          SCHEME=$(grep -io 'NetNewsWire-iOS$' ../../ci-out/xcodebuild-list.txt | head -1)
-          [ -z "$SCHEME" ] && SCHEME=$(awk '/Schemes:/{f=1;next} f&&NF{print $1;exit}' ../../ci-out/xcodebuild-list.txt)
+          xcodebuild -list > ../../ci-out/xcodebuild-list.txt 2>&1 || true
+          SCHEME=NetNewsWire-iOS
           echo "scheme: $SCHEME" >> ../../ci-out/xcodes.txt
           (perl -e 'alarm 1500; exec @ARGV' xcodebuild -scheme "$SCHEME" -destination 'generic/platform=iOS' -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build > ../../ci-out/xcodebuild.txt 2>&1) || true
           grep -E "error:|BUILD (SUCCEEDED|FAILED)" ../../ci-out/xcodebuild.txt | head -40 > ../../ci-out/xcodebuild-errors.txt
