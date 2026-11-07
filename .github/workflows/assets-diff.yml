@@ -66,6 +66,14 @@ jobs:
           python3 scripts/ci/compare-cars.py work/a.json work/b.json > ci-out/compare.txt 2>&1 || true
           cat ci-out/compare.txt | head -120
           head -c 4000 ci-out/assetutil-assetkit.err || true
+      - name: CoreUI lookup test (what iOS does at run time)
+        run: |
+          clang -fobjc-arc -framework Foundation scratch/coreui/harness.m -o work/harness 2> ci-out/harness-build.txt || true
+          for C in work/actool/Assets.car work/assetkit.car; do
+            echo "== $C" >> ci-out/coreui.txt
+            work/harness "$C" >> ci-out/coreui.txt 2>&1 || true
+          done
+          cat ci-out/coreui.txt | cut -c1-600
       - name: Publish logs to the ci-logs branch
         if: always()
         env:
