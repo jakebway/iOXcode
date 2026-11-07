@@ -1,0 +1,49 @@
+Command line invocation:
+    /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/xcodebuild -scheme  -destination generic/platform=iOS -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+    CODE_SIGNING_REQUIRED = NO
+
+Resolve Package Graph
+package 'rsparser' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'newsblur' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'activitylog' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'feedfinder' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'rstree' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'syncdatabase' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'cloudkitsync' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'account' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'articles' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'rscore' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'images' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'rsweb' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'articlesdatabase' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'errorlog' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'htmlmetadata' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'rsdatabase' is using Swift tools version 6.2.0 but the installed version is 6.1.0package 'secrets' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+
+Resolved source packages:
+  HTMLMetadata: (null)
+  RSParser: (null)
+  CloudKitSync: (null)
+  FeedFinder: (null)
+  Images: (null)
+  ActivityLog: (null)
+  Secrets: (null)
+  Account: (null)
+  RSWeb: (null)
+  RSTree: (null)
+  ErrorLog: (null)
+  RSDatabase: (null)
+  ArticlesDatabase: (null)
+  NewsBlur: (null)
+  RSCore: (null)
+  Articles: (null)
+  SyncDatabase: (null)
+
+2026-11-07 20:21:46.186 xcodebuild[6115:23315] Writing error result bundle to /var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/ResultBundle_2026-07-11_20-21-0046.xcresult
+xcodebuild: error: Could not resolve package dependencies:
+  package 'rsparser' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'newsblur' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'activitylog' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'feedfinder' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'rstree' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'syncdatabase' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'cloudkitsync' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'account' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'articles' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'rscore' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'images' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'rsweb' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'articlesdatabase' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'errorlog' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'htmlmetadata' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'rsdatabase' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+  package 'secrets' is using Swift tools version 6.2.0 but the installed version is 6.1.0
+
