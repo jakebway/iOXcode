@@ -1,1 +1,20 @@
-cannot parse work/repo/iOS/Settings/SettingsComboTableViewCell.xib
+build <tableViewCell> id=JCb-QB-CrO
+warning: connection comboImage unresolved (JCb-QB-CrO -> yiw-9t-gil)
+warning: connection comboNameLabel unresolved (JCb-QB-CrO -> TRx-RV-za8)
+*** Terminating app due to uncaught exception 'NSInternalInconsistencyException', reason: 'This should have been assigned in replacementObjectForObject:forKey:'
+*** First throw call stack:
+(
+	0   CoreFoundation                      0x00000001804c97d4 __exceptionPreprocess + 172
+	1   libobjc.A.dylib                     0x00000001800937cc objc_exception_throw + 72
+	2   Foundation                          0x0000000180e54db4 _userInfoForFileAndLine + 0
+	3   UIFoundation                        0x0000000184d680dc -[UINibEncoder encodeObject:forKey:] + 360
+	4   UIFoundation                        0x0000000184d67568 -[UINibEncoder serializeArray:] + 176
+	5   UIFoundation                        0x0000000184d680b8 -[UINibEncoder encodeObject:forKey:] + 324
+	6   ibc                                 0x000000010094f678 encodeNib + 232
+	7   ibc                                 0x000000010094bd08 compileXib + 3304
+	8   ibc                                 0x000000010094af84 main + 776
+	9   dyld                                0x0000000100c4d3d4 start_sim + 20
+	10  ???                                 0x0000000100b22b98 0x0 + 4306643864
+)
+libc++abi: terminating due to uncaught exception of type NSException
+Child process terminated with signal 6: Abort trap

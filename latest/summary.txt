@@ -1,8 +1,8 @@
-IBC FAILED LaunchScreenPad.storyboard (see ibc-1-LaunchScreenPad.txt)
-IBC FAILED LaunchScreenPhone.storyboard (see ibc-2-LaunchScreenPhone.txt)
-IBC FAILED Main.storyboard (see ibc-3-Main.txt)
-IBC FAILED Inspector.storyboard (see ibc-4-Inspector.txt)
-IBC FAILED Settings.storyboard (see ibc-5-Settings.txt)
+DIFF  LaunchScreenPad.storyboard
+DIFF  LaunchScreenPhone.storyboard
+DIFF  Main.storyboard
+DIFF  Inspector.storyboard
+DIFF  Settings.storyboard
 IBC FAILED SettingsComboTableViewCell.xib (see ibc-6-SettingsComboTableViewCell.txt)
 IBC FAILED SettingsTableViewCell.xib (see ibc-7-SettingsTableViewCell.txt)
 IBC FAILED ShareFolderPickerAccountCell.xib (see ibc-8-ShareFolderPickerAccountCell.txt)
