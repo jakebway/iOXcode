@@ -1,0 +1,26 @@
+name: IB probe - UIKit nib classes in the simulator runtime
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app
+          mkdir -p ci-out work
+          xcrun --sdk iphonesimulator clang -fobjc-arc -framework Foundation -framework UIKit -target arm64-apple-ios17.0-simulator -isysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)" scratch/ibprobe/probe.m -o work/probe 2> ci-out/build.txt || cat ci-out/build.txt
+          xcrun simctl list devices available > ci-out/devices.txt
+          UDID=$(xcrun simctl list devices available | grep -m1 "iPhone" | grep -oE '[0-9A-F-]{36}')
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl spawn "$UDID" "$PWD/work/probe" > ci-out/probe.txt 2>&1 || true
+          head -100 ci-out/probe.txt
+      - name: Publish
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "ib-probe-${{ github.run_id }}"
