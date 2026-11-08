@@ -26,6 +26,9 @@ jobs:
           UDID=$(xcrun simctl list devices available | grep -m1 "iPhone" | grep -oE '[0-9A-F-]{36}')
           echo "UDID=$UDID" >> $GITHUB_ENV
           xcrun simctl boot "$UDID" || true
+      - name: Runtime dumps
+        run: |
+          IBC_DUMP=UILayoutGuide,UIViewController,UINavigationController,UISplitViewController,UIClassSwapper xcrun simctl spawn $UDID "$PWD/work/ibc" > ci-out/runtime-dump.txt 2>&1 || true
       - name: Compile with ibtool and ibc, then diff
         run: |
           git clone --depth 1 "https://github.com/${{ inputs.repo }}.git" work/repo 2> /dev/null

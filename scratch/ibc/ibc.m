@@ -174,9 +174,10 @@ static NSInteger enumValue(NSString *attr, NSString *v) {
 @property (strong) NSMutableDictionary *proxies;                 // placeholder id -> proxy
 @property (strong) NSString *moduleName;
 @property (strong) NSMutableSet *preMade;
+@property (strong) NSMapTable *guideKinds;
 @end
 @implementation Ctx
-- (instancetype)init { if ((self = [super init])) { _ids = [NSMutableDictionary new]; _nodes = [NSMutableDictionary new]; _objectsOrder = [NSMutableArray new]; _connections = [NSMutableArray new]; _namedColors = [NSMutableDictionary new]; _constraintJobs = [NSMutableArray new]; _proxies = [NSMutableDictionary new]; _preMade = [NSMutableSet new]; } return self; }
+- (instancetype)init { if ((self = [super init])) { _ids = [NSMutableDictionary new]; _nodes = [NSMutableDictionary new]; _objectsOrder = [NSMutableArray new]; _connections = [NSMutableArray new]; _namedColors = [NSMutableDictionary new]; _constraintJobs = [NSMutableArray new]; _proxies = [NSMutableDictionary new]; _preMade = [NSMutableSet new]; _guideKinds = [NSMapTable strongToStrongObjectsMapTable]; } return self; }
 @end
 
 static id msg0(id o, const char *sel) { return ((id (*)(id, SEL))objc_msgSend)(o, sel_registerName(sel)); }
@@ -446,13 +447,11 @@ static void applyViewChildren(UIView *v, N *n, Ctx *cx) {
         else if ([e isEqualToString:@"state"]) { /* handled by applyControlStates */ }
         else if ([e isEqualToString:@"viewLayoutGuide"]) {
             NSString *gid = c.a[@"id"];
-            UILayoutGuide *g = nil;
-            if ([key isEqualToString:@"safeArea"]) g = v.safeAreaLayoutGuide;
-            else if ([key isEqualToString:@"layoutMargins"]) g = v.layoutMarginsGuide;
-            else if ([key isEqualToString:@"readableContent"]) g = v.readableContentGuide;
-            else if ([key isEqualToString:@"contentLayoutGuide"]) g = [(UIScrollView *)v contentLayoutGuide];
-            else if ([key isEqualToString:@"frameLayoutGuide"]) g = [(UIScrollView *)v frameLayoutGuide];
-            if (g && gid) { cx.ids[gid] = g; cx.nodes[gid] = c; [cx.objectsOrder addObject:g]; }
+            UILayoutGuide *g = [UILayoutGuide new];
+            g.identifier = @"";
+            [cx.guideKinds setObject:key ?: @"" forKey:g];
+            [v addLayoutGuide:g];
+            if (gid) { cx.ids[gid] = g; cx.nodes[gid] = c; [cx.objectsOrder addObject:g]; }
         }
         else if ([e isEqualToString:@"userDefinedRuntimeAttributes"]) {
             for (N *ra in c.k) {
@@ -567,8 +566,8 @@ static id build(N *n, Ctx *cx, id parent) {
     }
     applyAttrs(obj, n);
     if ([e isEqualToString:@"tableViewCell"]) {
-        UIView *sep = [[NSClassFromString(@"_UITableViewCellSeparatorView") alloc] initWithFrame:CGRectMake(0, 43, 414, 1)];
-        if (sep) { sep.opaque = NO; [(UIView *)obj addSubview:sep]; }
+        UIView *sep = [[NSClassFromString(@"_UITableViewCellSeparatorView") alloc] initWithFrame:CGRectMake(8, 43, 398, 1)];
+        if (sep) { [(UIView *)obj addSubview:sep]; }
     }
     if ([obj isKindOfClass:[UIButton class]]) applyControlStates(obj, n);
     if ([obj isKindOfClass:[UIView class]]) applyViewChildren(obj, n, cx);
@@ -874,8 +873,21 @@ static BOOL compileStoryboard(N *doc, NSString *outDir) {
     return [pl writeToFile:[outDir stringByAppendingPathComponent:@"Info.plist"] atomically:YES];
 }
 
+static void dumpRuntime(const char *name) {
+    Class c = objc_getClass(name);
+    if (!c) { fprintf(stderr, "== %s: not found\n", name); return; }
+    fprintf(stderr, "== %s (super %s)\n", name, class_getSuperclass(c) ? class_getName(class_getSuperclass(c)) : "-");
+    unsigned n; Ivar *iv = class_copyIvarList(c, &n);
+    for (unsigned i = 0; i < n; i++) fprintf(stderr, "  ivar %s %s\n", ivar_getName(iv[i]), ivar_getTypeEncoding(iv[i]));
+    free(iv);
+    Method *ms = class_copyMethodList(c, &n);
+    for (unsigned i = 0; i < n; i++) fprintf(stderr, "  - %s %s\n", sel_getName(method_getName(ms[i])), method_getTypeEncoding(ms[i]));
+    free(ms);
+}
+
 int main(int argc, char **argv) {
     @autoreleasepool {
+        if (getenv("IBC_DUMP")) { for (NSString *c in [@(getenv("IBC_DUMP")) componentsSeparatedByString:@","]) dumpRuntime(c.UTF8String); return 0; }
         int i = 1;
         if (argc > 1 && !strcmp(argv[1], "-v")) { VERBOSE = YES; i++; }
         if (argc - i < 2) { fprintf(stderr, "usage: ibc [-v] in out\n"); return 2; }
