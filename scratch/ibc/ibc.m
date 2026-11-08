@@ -180,9 +180,11 @@ static NSInteger enumValue(NSString *attr, NSString *v) {
 @property (strong) NSString *moduleName;
 @property (strong) NSMutableSet *preMade;
 @property (strong) NSMapTable *guideKinds;
+@property (strong) id staticDS;
+@property (strong) NSMutableArray *kvPairs;
 @end
 @implementation Ctx
-- (instancetype)init { if ((self = [super init])) { _ids = [NSMutableDictionary new]; _nodes = [NSMutableDictionary new]; _objectsOrder = [NSMutableArray new]; _connections = [NSMutableArray new]; _namedColors = [NSMutableDictionary new]; _constraintJobs = [NSMutableArray new]; _proxies = [NSMutableDictionary new]; _preMade = [NSMutableSet new]; _guideKinds = [NSMapTable strongToStrongObjectsMapTable]; } return self; }
+- (instancetype)init { if ((self = [super init])) { _ids = [NSMutableDictionary new]; _nodes = [NSMutableDictionary new]; _objectsOrder = [NSMutableArray new]; _connections = [NSMutableArray new]; _namedColors = [NSMutableDictionary new]; _constraintJobs = [NSMutableArray new]; _proxies = [NSMutableDictionary new]; _preMade = [NSMutableSet new]; _guideKinds = [NSMapTable strongToStrongObjectsMapTable]; _kvPairs = [NSMutableArray new]; } return self; }
 @end
 
 static id msg0(id o, const char *sel) { return ((id (*)(id, SEL))objc_msgSend)(o, sel_registerName(sel)); }
@@ -363,6 +365,8 @@ static UIImage *imageNamedPlaceholder(NSString *name, BOOL system) {
 }
 
 static void applyViewChildren(UIView *v, N *n, Ctx *cx);
+static UINib *nestedNib(N *cell, Ctx *parent);
+static void addRuntimeAttributes(id obj, N *attrs, Ctx *cx);
 
 static UIBarButtonItem *buildBarButtonItem(N *n, Ctx *cx) {
     UIBarButtonItem *b;
@@ -458,17 +462,54 @@ static void applyViewChildren(UIView *v, N *n, Ctx *cx) {
             [v addLayoutGuide:g];
             if (gid) { cx.ids[gid] = g; cx.nodes[gid] = c; [cx.objectsOrder addObject:g]; }
         }
-        else if ([e isEqualToString:@"userDefinedRuntimeAttributes"]) {
-            for (N *ra in c.k) {
-                NSString *kp = ra.a[@"keyPath"], *t = ra.a[@"type"];
-                if (!kp) continue;
-                id val = nil;
-                if ([t isEqualToString:@"boolean"]) val = @(yes(ra.a[@"value"]));
-                else if ([t isEqualToString:@"number"]) val = @([ra.a[@"value"] doubleValue]);
-                else if ([t isEqualToString:@"string"]) val = ra.a[@"value"];
-                else { LOG("  (runtime attribute type %s unhandled)", t.UTF8String); continue; }
-                @try { [v setValue:val forKeyPath:kp]; } @catch (NSException *ex) { LOG("  (runtime attribute %s failed)", kp.UTF8String); }
+        else if ([e isEqualToString:@"userDefinedRuntimeAttributes"]) { addRuntimeAttributes(v, c, cx); }
+        else if ([e isEqualToString:@"prototypes"] || ([e isEqualToString:@"cells"] && [v isKindOfClass:[UICollectionView class]])) {
+            for (N *cell in c.k) {
+                NSString *rid = cell.a[@"reuseIdentifier"];
+                if (!rid) continue;
+                UINib *nib = nestedNib(cell, cx);
+                if ([v isKindOfClass:[UICollectionView class]]) {
+                    [[v valueForKey:@"_cellNibDict"] setObject:nib forKey:rid];
+                    [[v valueForKey:@"_cellNibExternalObjectsTables"] setObject:@{} forKey:rid];
+                } else {
+                    [[v valueForKey:@"_nibMap"] setObject:nib forKey:rid];
+                    [[v valueForKey:@"_nibExternalObjectsTables"] setObject:@{} forKey:rid];
+                }
             }
+        }
+        else if ([e isEqualToString:@"collectionReusableView"] && [v isKindOfClass:[UICollectionView class]]) {
+            NSString *kind = [key isEqualToString:@"sectionFooterView"] ? UICollectionElementKindSectionFooter : UICollectionElementKindSectionHeader;
+            NSString *rid = c.a[@"reuseIdentifier"] ?: @"";
+            NSString *k2 = [NSString stringWithFormat:@"%@/%@", kind, rid];
+            UINib *nib = nestedNib(c, cx);
+            [[v valueForKey:@"_supplementaryViewNibDict"] setObject:nib forKey:k2];
+            [[v valueForKey:@"_supplementaryViewNibExternalObjectsTables"] setObject:@{} forKey:k2];
+        }
+        else if ([e isEqualToString:@"sections"] && [v isKindOfClass:[UITableView class]]) {
+            NSMutableArray *secs = [NSMutableArray new];
+            for (N *sn in c.k) {
+                if (![sn.name isEqualToString:@"tableViewSection"]) continue;
+                id sec = [[NSClassFromString(@"UITableViewSection") alloc] init];
+                if (sn.a[@"headerTitle"]) ((void (*)(id, SEL, id))objc_msgSend)(sec, sel_registerName("setHeaderTitle:"), sn.a[@"headerTitle"]);
+                if (sn.a[@"footerTitle"]) ((void (*)(id, SEL, id))objc_msgSend)(sec, sel_registerName("setFooterTitle:"), sn.a[@"footerTitle"]);
+                NSMutableArray *rows = [NSMutableArray new];
+                for (N *cells in sn.k) {
+                    if (![cells.name isEqualToString:@"cells"]) continue;
+                    for (N *cn in cells.k) {
+                        id cell = build(cn, cx, v);
+                        id row = [[NSClassFromString(@"UITableViewRow") alloc] init];
+                        ((void (*)(id, SEL, id))objc_msgSend)(row, sel_registerName("setCell:"), cell);
+                        ((void (*)(id, SEL, double))objc_msgSend)(row, sel_registerName("setHeight:"), -1.0);
+                        [rows addObject:row];
+                    }
+                }
+                ((void (*)(id, SEL, id))objc_msgSend)(sec, sel_registerName("setRows:"), rows);
+                [secs addObject:sec];
+            }
+            id ds = [[NSClassFromString(@"UITableViewDataSource") alloc] init];
+            ((void (*)(id, SEL, id))objc_msgSend)(ds, sel_registerName("setSections:"), secs);
+            cx.staticDS = ds;
+            [cx.objectsOrder addObject:ds];
         }
     }
 }
@@ -580,6 +621,47 @@ static id build(N *n, Ctx *cx, id parent) {
     return obj;
 }
 
+
+static void addRuntimeAttributes(id obj, N *attrs, Ctx *cx) {
+    for (N *ra in attrs.k) {
+        NSString *kp = ra.a[@"keyPath"], *t = ra.a[@"type"];
+        if (!kp) continue;
+        id val = nil;
+        if ([t isEqualToString:@"boolean"]) val = @(yes(ra.a[@"value"]));
+        else if ([t isEqualToString:@"number"]) val = @([ra.a[@"value"] doubleValue]);
+        else if ([t isEqualToString:@"string"]) val = ra.a[@"value"] ?: @"";
+        else if ([t isEqualToString:@"color"]) { N *c = [ra first:@"color"]; val = c ? makeColor(c, cx, NULL) : nil; }
+        else if ([t isEqualToString:@"point"] || [t isEqualToString:@"size"] || [t isEqualToString:@"rect"]) {
+            N *pn = [ra first:t]; if (!pn) continue;
+            if ([t isEqualToString:@"point"]) val = [NSValue valueWithCGPoint:CGPointMake([pn.a[@"x"] doubleValue], [pn.a[@"y"] doubleValue])];
+            else if ([t isEqualToString:@"size"]) val = [NSValue valueWithCGSize:CGSizeMake([pn.a[@"width"] doubleValue], [pn.a[@"height"] doubleValue])];
+            else val = [NSValue valueWithCGRect:rectOf(pn)];
+        }
+        if (!val) { LOG("  (runtime attribute %s of type %s unhandled)", kp.UTF8String, t.UTF8String); continue; }
+        id kv = ((id (*)(id, SEL, id, id, id))objc_msgSend)([NSClassFromString(@"UINibKeyValuePair") alloc], sel_registerName("initWithObject:keyPath:value:"), obj, kp, val);
+        [cx.kvPairs addObject:kv];
+    }
+}
+
+static id proxyFor(Ctx *cx, NSString *ident);
+static id makeConnection(NSDictionary *d, Ctx *cx, id (^resolveObj)(NSString *));
+static NSData *encodeNib(NSArray *topLevel, NSArray *allObjects, NSArray *conns, NSArray *kvPairs);
+
+static UINib *nestedNib(N *cellNode, Ctx *parent) {
+    Ctx *nx = [Ctx new];
+    nx.namedColors = parent.namedColors;
+    id fo = proxyFor(nx, @"IBFilesOwner"), fr = proxyFor(nx, @"IBFirstResponder");
+    id cell = build(cellNode, nx, nil);
+    buildConstraints(nx);
+    NSMutableArray *conns = [NSMutableArray new];
+    for (NSDictionary *d in nx.connections) { id c = makeConnection(d, nx, ^id(NSString *x) { return nx.ids[x]; }); if (c) [conns addObject:c]; }
+    NSMutableArray *top = [NSMutableArray arrayWithObjects:fo, fr, cell, nil];
+    NSMutableArray *all = [NSMutableArray arrayWithObjects:fo, fr, nil];
+    [all addObjectsFromArray:nx.objectsOrder];
+    NSData *d = encodeNib(top, all, conns, nx.kvPairs);
+    return [[UINib alloc] initWithData:d bundle:nil];
+}
+
 #pragma mark - Document -> nib
 
 static id proxyFor(Ctx *cx, NSString *ident) {
@@ -594,7 +676,7 @@ static id proxyFor(Ctx *cx, NSString *ident) {
 static id makeConnection(NSDictionary *d, Ctx *cx, id (^resolveObj)(NSString *)) {
     NSString *kind = d[@"kind"];
     id src = resolveObj(d[@"source"]), dst = resolveObj(d[@"dest"]);
-    if (!src || !dst) { WARN("connection %s unresolved (%s -> %s)", [d[@"label"] ?: d[@"sel"] UTF8String], [d[@"source"] UTF8String], [d[@"dest"] UTF8String]); return nil; }
+    if (!src || !dst) { LOG("connection %s unresolved (%s -> %s)", [d[@"label"] ?: d[@"sel"] UTF8String], [d[@"source"] UTF8String], [d[@"dest"] UTF8String]); return nil; }
     Class c = NSClassFromString([kind isEqualToString:@"event"] ? @"UIRuntimeEventConnection" : [kind isEqualToString:@"collection"] ? @"UIRuntimeOutletCollectionConnection" : @"UIRuntimeOutletConnection");
     id conn = [[c alloc] init];
     ((void (*)(id, SEL, id))objc_msgSend)(conn, sel_registerName("setSource:"), src);
@@ -610,7 +692,7 @@ static id makeConnection(NSDictionary *d, Ctx *cx, id (^resolveObj)(NSString *))
     return conn;
 }
 
-static NSData *encodeNib(NSArray *topLevel, NSArray *allObjects, NSArray *conns) {
+static NSData *encodeNib(NSArray *topLevel, NSArray *allObjects, NSArray *conns, NSArray *kvPairs) {
     NSMutableData *data = [NSMutableData new];
     Class ec = makeEncoderClass();
     id enc = ((id (*)(id, SEL, id))objc_msgSend)([ec alloc], sel_registerName("initForWritingWithMutableData:"), data);
@@ -620,7 +702,7 @@ static NSData *encodeNib(NSArray *topLevel, NSArray *allObjects, NSArray *conns)
     [enc encodeObject:@[] forKey:@"UINibVisibleWindowsKey"];
     [enc encodeObject:@[] forKey:@"UINibAccessibilityConfigurationsKey"];
     [enc encodeObject:@[] forKey:@"UINibTraitStorageListsKey"];
-    [enc encodeObject:@[] forKey:@"UINibKeyValuePairsKey"];
+    [enc encodeObject:kvPairs ?: @[] forKey:@"UINibKeyValuePairsKey"];
     ((void (*)(id, SEL))objc_msgSend)(enc, sel_registerName("finishEncoding"));
     return data;
 }
@@ -665,7 +747,7 @@ static BOOL compileXib(N *doc, NSString *outPath) {
     NSMutableArray *all = [NSMutableArray new];
     for (id p in cx.proxies.allValues) [all addObject:p];
     [all addObjectsFromArray:cx.objectsOrder];
-    NSData *d = encodeNib(top, all, conns);
+    NSData *d = encodeNib(top, all, conns, cx.kvPairs);
     return [d writeToFile:outPath atomically:YES];
 }
 
@@ -837,6 +919,10 @@ static BOOL compileStoryboard(N *doc, NSString *outDir) {
                 dd[@"handled"] = @YES;
             }
         }
+        if (vx.staticDS) {
+            id sc = makeConnection(@{@"kind":@"outlet", @"source":@"__fo", @"dest":@"__ds", @"label":@"staticDataSource"}, vx, ^id(NSString *x) { return [x isEqualToString:@"__fo"] ? fo : [x isEqualToString:@"__ds"] ? vx.staticDS : vx.ids[x]; });
+            if (sc) [conns addObject:sc];
+        }
         id viewConn = makeConnection(@{@"kind":@"outlet", @"source":@"__fo", @"dest":i.viewNode.a[@"id"], @"label":@"view"}, vx, ^id(NSString *x) { return [x isEqualToString:@"__fo"] ? fo : vx.ids[x]; });
         if (viewConn) [conns addObject:viewConn];
         NSMutableArray *top = [NSMutableArray arrayWithObjects:fo, fr, nil];
@@ -848,7 +934,7 @@ static BOOL compileStoryboard(N *doc, NSString *outDir) {
         // the VC needs the upstream table when the view nib refers to it
         if (usesUp) @try { [i.vc setValue:@{@"UpstreamPlaceholder-1": i.vc} forKey:@"externalObjectsTableForViewLoading"]; } @catch (NSException *ex) { LOG("external table: %s", ex.reason.UTF8String); }
         else @try { [i.vc setValue:@{} forKey:@"externalObjectsTableForViewLoading"]; } @catch (NSException *ex) { LOG("external table: %s", ex.reason.UTF8String); }
-        NSData *d = encodeNib(top, all, conns);
+        NSData *d = encodeNib(top, all, conns, vx.kvPairs);
         [d writeToFile:[outDir stringByAppendingPathComponent:[i.viewNibName stringByAppendingString:@".nib"]] atomically:YES];
     }
     // VC nibs
@@ -877,7 +963,9 @@ static BOOL compileStoryboard(N *doc, NSString *outDir) {
         NSMutableArray *all = [NSMutableArray arrayWithObjects:sp, fo, fr, nil];
         for (VCInfo *v in vcs) [all addObjectsFromArray:v.objectsInVCNib];
         NSMutableArray *top = [NSMutableArray arrayWithObjects:sp, fo, fr, i.vc, nil];
-        NSData *d = encodeNib(top, all, conns);
+        NSMutableArray *kvs = [NSMutableArray new];
+        for (id kv in cx.kvPairs) { id o = [kv valueForKey:@"object"]; if ([all containsObject:o]) [kvs addObject:kv]; }
+        NSData *d = encodeNib(top, all, conns, kvs);
         [d writeToFile:[outDir stringByAppendingPathComponent:[i.ident stringByAppendingString:@".nib"]] atomically:YES];
     }
     NSMutableDictionary *info = [@{@"UIViewControllerIdentifiersToNibNames": idToNib, @"UIStoryboardVersion": @1} mutableCopy];
