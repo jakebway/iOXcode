@@ -17,7 +17,7 @@ jobs:
           xcrun simctl list devices available > ci-out/devices.txt
           UDID=$(xcrun simctl list devices available | grep -m1 "iPhone" | grep -oE '[0-9A-F-]{36}')
           xcrun simctl boot "$UDID" || true
-          xcrun simctl spawn "$UDID" "$PWD/work/probe" > ci-out/probe.txt 2>&1 || true
+          xcrun simctl spawn "$UDID" "$PWD/work/probe" UIViewController storyboard UIViewController External UIViewController nibName UIViewController child UIViewController parent UIViewController encode UIViewController _set UIView encode UIView _ibSet UINavigationController - UISplitViewController - UITableViewCell - UICollectionViewCell - UIBarButtonItem encode UINavigationItem encode UITableView encode UIRuntimeConnection - UIStoryboardSegueTemplate - > ci-out/probe.txt 2>&1 || true
           head -100 ci-out/probe.txt
       - name: Publish
         if: always()
