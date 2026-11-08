@@ -137,19 +137,21 @@ struct ColorSetContents: Codable, Sendable {
     }
 
     struct Color: Codable, Sendable {
-        var colorSpace: String
-        var components: Components
+        var colorSpace: String?
+        var components: Components?
+        var reference: String?      // a named system color, e.g. "systemBackgroundColor"
 
         enum CodingKeys: String, CodingKey {
             case colorSpace = "color-space"
-            case components
+            case components, reference
         }
 
         struct Components: Codable, Sendable {
-            var red: String
-            var green: String
-            var blue: String
-            var alpha: String
+            var red: String?
+            var green: String?
+            var blue: String?
+            var white: String?      // gray color spaces
+            var alpha: String?
 
             func asDoubles() throws -> (r: Double, g: Double, b: Double, a: Double) {
                 func parse(_ s: String) throws -> Double {
@@ -165,7 +167,9 @@ struct ColorSetContents: Codable, Sendable {
                     }
                     return n > 1 ? n / 255 : n
                 }
-                return (try parse(red), try parse(green), try parse(blue), try parse(alpha))
+                let a = try alpha.map(parse) ?? 1
+                if let w = white { let v = try parse(w); return (v, v, v, a) }
+                return (try parse(red ?? "0"), try parse(green ?? "0"), try parse(blue ?? "0"), a)
             }
         }
     }
