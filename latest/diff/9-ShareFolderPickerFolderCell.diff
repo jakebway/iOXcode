@@ -1,0 +1,6 @@
+1c1,3
+< INSTANTIATE FAILED: [<UITableViewCell 0x101505f80> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key icon.
+---
+> UITableViewCell frame={{0, 0}, {414, 44}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=1 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00 reuse=(null) acc=1 sel=3
+>   _UITableCellAccessoryButton frame={{395.66666666666669, 15}, {10.333333333333334, 14}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=0 mt=0 ui=0 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00 title='(null)' tcolor=1.000,1.000,1.000,1.00 type=0
+>     UIImageView frame={{0, 0}, {10.333333333333334, 14}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=1 opaque=0 mt=0 ui=0 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00

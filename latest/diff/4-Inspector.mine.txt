@@ -4,9 +4,9 @@
 	0   CoreFoundation                      0x00000001804c97d4 __exceptionPreprocess + 172
 	1   libobjc.A.dylib                     0x00000001800937cc objc_exception_throw + 72
 	2   UIKitCore                           0x0000000185e061f0 -[UIStoryboard name] + 0
-	3   ibcheck                             0x0000000100561220 main + 1768
-	4   dyld                                0x00000001006b13d4 start_sim + 20
-	5   ???                                 0x000000010092ab98 0x0 + 4304579480
+	3   ibcheck                             0x0000000104269220 main + 1768
+	4   dyld                                0x00000001045713d4 start_sim + 20
+	5   ???                                 0x000000010430ab98 0x0 + 4365265816
 )
 libc++abi: terminating due to uncaught exception of type NSException
 Child process terminated with signal 6: Abort trap
