@@ -43,9 +43,9 @@ jobs:
             xcrun ibtool --errors --warnings --notices --target-device iphone --target-device ipad --minimum-deployment-target 17.0 --platform iphoneos --compilation-directory work/ibtool/$i --compile "work/ibtool/$i/$o" "$f" >> ci-out/ibtool-log.txt 2>&1 || echo "IBTOOL FAILED $f" >> ci-out/ibtool-log.txt
             xcrun simctl spawn $UDID "$PWD/work/ibc" -v "$PWD/$f" "$PWD/work/mine/$i/$o" > ci-out/ibc-$i-$b.txt 2>&1 || echo "IBC FAILED $n (see ibc-$i-$b.txt)" | tee -a ci-out/summary.txt
             if [ -e "work/ibtool/$i/$o" ] && [ -e "work/mine/$i/$o" ]; then
-              xcrun simctl spawn $UDID "$PWD/work/ibcheck" $m "$PWD/work/ibtool/$i/$o" > ci-out/diff/$i-$b.ibtool.txt 2>&1 || true
-              xcrun simctl spawn $UDID "$PWD/work/ibcheck" $m "$PWD/work/mine/$i/$o" > ci-out/diff/$i-$b.mine.txt 2>&1 || true
-              if diff -q ci-out/diff/$i-$b.ibtool.txt ci-out/diff/$i-$b.mine.txt > /dev/null; then echo "MATCH $n" | tee -a ci-out/summary.txt; else echo "DIFF  $n" | tee -a ci-out/summary.txt; diff ci-out/diff/$i-$b.ibtool.txt ci-out/diff/$i-$b.mine.txt | head -40 > ci-out/diff/$i-$b.diff; fi
+              xcrun simctl spawn $UDID "$PWD/work/ibcheck" $m "$PWD/work/ibtool/$i/$o" 2>&1 | grep -v "^20[0-9][0-9]-" | sed -E 's/0x[0-9a-f]+/0xADDR/g' > ci-out/diff/$i-$b.ibtool.txt || true
+              xcrun simctl spawn $UDID "$PWD/work/ibcheck" $m "$PWD/work/mine/$i/$o" 2>&1 | grep -v "^20[0-9][0-9]-" | sed -E 's/0x[0-9a-f]+/0xADDR/g' > ci-out/diff/$i-$b.mine.txt || true
+              if diff -q ci-out/diff/$i-$b.ibtool.txt ci-out/diff/$i-$b.mine.txt > /dev/null; then echo "MATCH $n" | tee -a ci-out/summary.txt; else echo "DIFF  $n ($(diff ci-out/diff/$i-$b.ibtool.txt ci-out/diff/$i-$b.mine.txt | grep -c "^[<>]") lines)" | tee -a ci-out/summary.txt; diff ci-out/diff/$i-$b.ibtool.txt ci-out/diff/$i-$b.mine.txt | head -200 > ci-out/diff/$i-$b.diff; fi
             fi
           done < ci-out/list.txt
           mkdir -p ci-out/ibtool-nibs ci-out/mine-nibs

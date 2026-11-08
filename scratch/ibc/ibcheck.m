@@ -15,9 +15,12 @@ static NSString *fontS(UIFont *f) { return f ? [NSString stringWithFormat:@"%@ %
 static void dumpView(UIView *v, int ind, NSMutableString *out);
 static void line(NSMutableString *out, int ind, NSString *s) { for (int i = 0; i < ind; i++) [out appendString:@"  "]; [out appendFormat:@"%@\n", s]; }
 
+static BOOL gRoot;
 static void dumpView(UIView *v, int ind, NSMutableString *out) {
+    BOOL skipFrame = gRoot || [NSStringFromClass([v class]) isEqualToString:@"UITableViewWrapperView"] || [NSStringFromClass([v class]) isEqualToString:@"_UIScrollViewScrollIndicator"] || [NSStringFromClass([v class]) hasPrefix:@"_UITableViewCellSeparator"];
+    gRoot = NO;
     NSMutableString *s = [NSMutableString stringWithFormat:@"%@ frame=%@ mask=%lu tamic=%d hidden=%d alpha=%.2f clips=%d opaque=%d mt=%d ui=%d tag=%ld cm=%ld bg=%@ tint=%@",
-        NSStringFromClass([v class]), NSStringFromCGRect(v.frame), (unsigned long)v.autoresizingMask, v.translatesAutoresizingMaskIntoConstraints, v.hidden, v.alpha, v.clipsToBounds, v.opaque, v.multipleTouchEnabled, v.userInteractionEnabled, (long)v.tag, (long)v.contentMode, col(v.backgroundColor), col(v.tintColor)];
+        NSStringFromClass([v class]), skipFrame ? @"-" : NSStringFromCGRect(v.frame), (unsigned long)v.autoresizingMask, v.translatesAutoresizingMaskIntoConstraints, v.hidden, v.alpha, v.clipsToBounds, v.opaque, v.multipleTouchEnabled, v.userInteractionEnabled, (long)v.tag, (long)v.contentMode, col(v.backgroundColor), col(v.tintColor)];
     if ([v isKindOfClass:[UILabel class]]) { UILabel *l = (UILabel *)v; [s appendFormat:@" text='%@' font=%@ color=%@ align=%ld lines=%ld lb=%ld adj=%d", l.text, fontS(l.font), col(l.textColor), (long)l.textAlignment, (long)l.numberOfLines, (long)l.lineBreakMode, l.adjustsFontSizeToFitWidth]; }
     if ([v isKindOfClass:[UIButton class]]) { UIButton *b = (UIButton *)v; [s appendFormat:@" title='%@' tcolor=%@ type=%ld", [b titleForState:UIControlStateNormal], col([b titleColorForState:UIControlStateNormal]), (long)b.buttonType]; }
     if ([v isKindOfClass:[UITableViewCell class]]) { UITableViewCell *c = (UITableViewCell *)v; [s appendFormat:@" reuse=%@ acc=%ld sel=%ld", c.reuseIdentifier, (long)c.accessoryType, (long)c.selectionStyle]; }
@@ -40,7 +43,7 @@ static void dumpVC(UIViewController *vc, int ind, NSMutableString *out) {
         line(out, ind + 1, [NSString stringWithFormat:@"split style=%ld display=%ld behavior=%ld primaryBG=%ld", (long)sp.style, (long)sp.preferredDisplayMode, (long)sp.preferredSplitBehavior, (long)sp.primaryBackgroundStyle]);
     }
     @try { [vc loadViewIfNeeded]; } @catch (NSException *e) { line(out, ind + 1, [@"view load failed: " stringByAppendingString:e.reason]); }
-    if (vc.isViewLoaded && ![vc isKindOfClass:[UINavigationController class]] && ![vc isKindOfClass:[UISplitViewController class]] && ![vc isKindOfClass:[UITabBarController class]]) dumpView(vc.view, ind + 1, out);
+    if (vc.isViewLoaded && ![vc isKindOfClass:[UINavigationController class]] && ![vc isKindOfClass:[UISplitViewController class]] && ![vc isKindOfClass:[UITabBarController class]]) { gRoot = YES; dumpView(vc.view, ind + 1, out); }
     for (UIViewController *c in vc.childViewControllers) dumpVC(c, ind + 1, out);
 }
 

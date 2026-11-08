@@ -147,7 +147,7 @@ static NSDictionary *enumFor(NSString *attr) {
             @"style": @{@"plain":@0, @"grouped":@1, @"insetGrouped":@2, @"bordered":@1, @"done":@2},
             @"largeTitleDisplayMode": @{@"automatic":@0, @"always":@1, @"never":@2},
             @"preferredDisplayMode": @{@"automatic":@0, @"secondaryOnly":@1, @"oneBesideSecondary":@2, @"beside":@2, @"oneOverSecondary":@3, @"twoBesideSecondary":@4, @"twoOverSecondary":@5, @"twoDisplaceSecondary":@6},
-            @"behavior": @{@"automatic":@0, @"tile":@1, @"overlay":@2, @"displace":@3},
+            @"preferredSplitBehavior": @{@"automatic":@0, @"tile":@1, @"overlay":@2, @"displace":@3},
             @"primaryBackgroundStyle": @{@"none":@0, @"sidebar":@1},
             @"modalPresentationStyle": @{@"fullScreen":@0, @"pageSheet":@1, @"formSheet":@2, @"currentContext":@3, @"custom":@4, @"overFullScreen":@5, @"overCurrentContext":@6, @"popover":@7, @"none":@-1, @"automatic":@-2},
             @"modalTransitionStyle": @{@"coverVertical":@0, @"flipHorizontal":@1, @"crossDissolve":@2, @"partialCurl":@3},
@@ -225,7 +225,7 @@ static NSSet *skipAttrs(void) {
             @"reuseIdentifier", @"style", @"textLabel", @"detailTextLabel", @"tableViewCell", @"buttonType", @"placeholderIdentifier", @"misplaced",
             @"horizontalHuggingPriority", @"verticalHuggingPriority", @"horizontalCompressionResistancePriority", @"verticalCompressionResistancePriority",
             @"title", @"useStoryboardIdentifierAsRestorationIdentifier", @"wantsLayer", @"wantsLayerBackedHint", @"preferredMaxLayoutWidth", @"image",
-            @"catalog", @"systemItem", @"selector", @"destination", @"eventType", @"prefetchingEnabled", @"opaque_"]];
+            @"catalog", @"automaticEstimatedItemSize", @"systemItem", @"selector", @"destination", @"eventType", @"prefetchingEnabled", @"opaque_"]];
     });
     return s;
 }
@@ -544,6 +544,7 @@ static id build(N *n, Ctx *cx, id parent) {
                     fl.sectionInset = UIEdgeInsetsMake([c.a[@"minY"] doubleValue], [c.a[@"minX"] doubleValue], [c.a[@"maxY"] doubleValue], [c.a[@"maxX"] doubleValue]);
                 }
             }
+            if (yes(lay.a[@"automaticEstimatedItemSize"])) fl.estimatedItemSize = UICollectionViewFlowLayoutAutomaticSize;
             applyAttrs(fl, lay);
             registerObject(cx, lay, fl);
         }
@@ -733,7 +734,8 @@ static VCInfo *buildVC(N *n, Ctx *cx, NSMutableDictionary<NSString *, VCInfo *> 
     for (NSString *k in n.a) {
         if ([skipAttrs() containsObject:k] || [k isEqualToString:@"title"]) continue;
         if ([k isEqualToString:@"extendedLayoutIncludesOpaqueBars"]) { vc.extendedLayoutIncludesOpaqueBars = yes(n.a[k]); continue; }
-        if (!setGeneric(vc, k, n.a[k])) LOG("  (vc attr %s unhandled)", k.UTF8String);
+        NSString *pk = [k isEqualToString:@"behavior"] ? @"preferredSplitBehavior" : k;
+        if (!setGeneric(vc, pk, n.a[k])) LOG("  (vc attr %s unhandled)", k.UTF8String);
     }
     for (N *c in n.k) {
         if ([c.name isEqualToString:@"navigationItem"]) buildNavigationItem(c, vc, cx, info);
@@ -809,8 +811,10 @@ static BOOL compileStoryboard(N *doc, NSString *outDir) {
         if ([vid isEqualToString:initial]) entry = i.ident;
     }
     // view nibs
+    NSMutableSet *viewNibObjects = [NSMutableSet new];
     for (VCInfo *i in order) {
         if (!i.viewNode) continue;
+        { __block void (^collectIds)(N *) = nil; collectIds = ^(N *x) { if (x.a[@"id"]) [viewNibObjects addObject:x.a[@"id"]]; for (N *c in x.k) collectIds(c); }; collectIds(i.viewNode); }
         Ctx *vx = [Ctx new];
         vx.namedColors = cx.namedColors;
         id fo = proxyFor(vx, @"IBFilesOwner"), fr = proxyFor(vx, @"IBFirstResponder");
@@ -862,7 +866,11 @@ static BOOL compileStoryboard(N *doc, NSString *outDir) {
         for (VCInfo *v in vcs) {
             id c = makeConnection(@{@"kind":@"outlet", @"source":v.node.a[@"id"], @"dest":@"__sp", @"label":@"storyboard"}, cx, ^id(NSString *x) { return [x isEqualToString:@"__sp"] ? sp : cx.ids[x]; });
             if (c) [conns addObject:c];
-            for (NSDictionary *d in v.vcConnections) { id cc = makeConnection(d, cx, res); if (cc) [conns addObject:cc]; }
+            for (NSDictionary *d in v.vcConnections) {
+                id dest = cx.ids[d[@"dest"]];
+                if (!dest || [viewNibObjects containsObject:d[@"dest"]]) continue;
+                id cc = makeConnection(d, cx, res); if (cc) [conns addObject:cc];
+            }
         }
         id sc = makeConnection(@{@"kind":@"outlet", @"source":@"__fo", @"dest":i.node.a[@"id"], @"label":@"sceneViewController"}, cx, ^id(NSString *x) { return [x isEqualToString:@"__fo"] ? fo : cx.ids[x]; });
         if (sc) [conns addObject:sc];
