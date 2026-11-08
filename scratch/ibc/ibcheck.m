@@ -33,7 +33,7 @@ static void dumpView(UIView *v, int ind, NSMutableString *out) {
 }
 
 static void dumpVC(UIViewController *vc, int ind, NSMutableString *out) {
-    line(out, ind, [NSString stringWithFormat:@"VC %@ title='%@' id=%@ nib=%@", NSStringFromClass([vc class]), vc.title, vc.storyboardIdentifier, vc.nibName]);
+    line(out, ind, [NSString stringWithFormat:@"VC %@ title='%@' id=%@ nib=%@", NSStringFromClass([vc class]), vc.title, [vc valueForKey:@"storyboardIdentifier"], vc.nibName]);
     if (vc.navigationItem.title.length || vc.navigationItem.rightBarButtonItems.count) line(out, ind + 1, [NSString stringWithFormat:@"navItem title='%@' right=%lu left=%lu", vc.navigationItem.title, (unsigned long)vc.navigationItem.rightBarButtonItems.count, (unsigned long)vc.navigationItem.leftBarButtonItems.count]);
     if ([vc isKindOfClass:[UISplitViewController class]]) {
         UISplitViewController *sp = (UISplitViewController *)vc;
