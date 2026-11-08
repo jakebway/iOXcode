@@ -1,0 +1,7 @@
+scratch/ibc/ibcheck.m:36:125: error: property 'storyboardIdentifier' not found on object of type 'UIViewController *'
+   36 |     line(out, ind, [NSString stringWithFormat:@"VC %@ title='%@' id=%@ nib=%@", NSStringFromClass([vc class]), vc.title, vc.storyboardIdentifier, vc.nibName]);
+      |                                                                                                                             ^
+scratch/ibc/ibcheck.m:36:122: warning: format specifies type 'id' but the argument has type '<dependent type>' [-Wformat]
+   36 |     line(out, ind, [NSString stringWithFormat:@"VC %@ title='%@' id=%@ nib=%@", NSStringFromClass([vc class]), vc.title, vc.storyboardIdentifier, vc.nibName]);
+      |                                                                     ~~                                                   ^~~~~~~~~~~~~~~~~~~~~~~
+1 warning and 1 error generated.
