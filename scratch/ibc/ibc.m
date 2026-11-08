@@ -173,9 +173,10 @@ static NSInteger enumValue(NSString *attr, NSString *v) {
 @property (strong) NSMutableArray *constraintJobs;
 @property (strong) NSMutableDictionary *proxies;                 // placeholder id -> proxy
 @property (strong) NSString *moduleName;
+@property (strong) NSMutableSet *preMade;
 @end
 @implementation Ctx
-- (instancetype)init { if ((self = [super init])) { _ids = [NSMutableDictionary new]; _nodes = [NSMutableDictionary new]; _objectsOrder = [NSMutableArray new]; _connections = [NSMutableArray new]; _namedColors = [NSMutableDictionary new]; _constraintJobs = [NSMutableArray new]; _proxies = [NSMutableDictionary new]; } return self; }
+- (instancetype)init { if ((self = [super init])) { _ids = [NSMutableDictionary new]; _nodes = [NSMutableDictionary new]; _objectsOrder = [NSMutableArray new]; _connections = [NSMutableArray new]; _namedColors = [NSMutableDictionary new]; _constraintJobs = [NSMutableArray new]; _proxies = [NSMutableDictionary new]; _preMade = [NSMutableSet new]; } return self; }
 @end
 
 static id msg0(id o, const char *sel) { return ((id (*)(id, SEL))objc_msgSend)(o, sel_registerName(sel)); }
@@ -510,8 +511,8 @@ static id build(N *n, Ctx *cx, id parent) {
         else if ([st isEqualToString:@"IBUITableViewCellStyleSubtitle"]) style = UITableViewCellStyleSubtitle;
         UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:style reuseIdentifier:n.a[@"reuseIdentifier"]];
         obj = cell;
-        if (n.a[@"textLabel"]) { cx.ids[n.a[@"textLabel"]] = cell.textLabel; cx.nodes[n.a[@"textLabel"]] = [N new]; }
-        if (n.a[@"detailTextLabel"]) { cx.ids[n.a[@"detailTextLabel"]] = cell.detailTextLabel; }
+        if (n.a[@"textLabel"]) { cx.ids[n.a[@"textLabel"]] = cell.textLabel; [cx.preMade addObject:cell.textLabel]; }
+        if (n.a[@"detailTextLabel"]) { cx.ids[n.a[@"detailTextLabel"]] = cell.detailTextLabel; [cx.preMade addObject:cell.detailTextLabel]; }
     } else if ([e isEqualToString:@"tableViewCellContentView"] || [e isEqualToString:@"collectionViewCellContentView"]) {
         UIView *cv = [(id)parent contentView];
         obj = cv;
@@ -519,6 +520,7 @@ static id build(N *n, Ctx *cx, id parent) {
         // textLabel/detailTextLabel of a cell are pre-created
         id pre = n.a[@"id"] ? cx.ids[n.a[@"id"]] : nil;
         obj = pre ?: [UILabel new];
+        if (pre) { [pre setUserInteractionEnabled:YES]; [pre setBackgroundColor:nil]; }
     } else if ([e isEqualToString:@"button"]) {
         NSDictionary *bt = @{@"custom":@0, @"roundedRect":@1, @"detailDisclosure":@2, @"infoLight":@3, @"infoDark":@4, @"contactAdd":@5, @"system":@1};
         obj = [UIButton buttonWithType:(UIButtonType)[bt[n.a[@"buttonType"] ?: @"custom"] integerValue]];
@@ -558,7 +560,16 @@ static id build(N *n, Ctx *cx, id parent) {
     }
     registerObject(cx, n, obj);
     applyCustomClass(n, obj);
+    if ([obj isKindOfClass:[UIView class]] && ![e isEqualToString:@"tableViewCellContentView"] && ![e isEqualToString:@"collectionViewCellContentView"] && !(n.a[@"id"] && [cx.preMade containsObject:obj])) {
+        // Interface Builder's defaults differ from programmatic ones: interaction on, no background colour unless given.
+        [(UIView *)obj setUserInteractionEnabled:YES];
+        [(UIView *)obj setBackgroundColor:nil];
+    }
     applyAttrs(obj, n);
+    if ([e isEqualToString:@"tableViewCell"]) {
+        UIView *sep = [[NSClassFromString(@"_UITableViewCellSeparatorView") alloc] initWithFrame:CGRectMake(0, 43, 414, 1)];
+        if (sep) { sep.opaque = NO; [(UIView *)obj addSubview:sep]; }
+    }
     if ([obj isKindOfClass:[UIButton class]]) applyControlStates(obj, n);
     if ([obj isKindOfClass:[UIView class]]) applyViewChildren(obj, n, cx);
     return obj;
@@ -653,6 +664,216 @@ static BOOL compileXib(N *doc, NSString *outPath) {
     return [d writeToFile:outPath atomically:YES];
 }
 
+
+#pragma mark - Storyboards
+
+@interface VCInfo : NSObject
+@property (strong) N *node; @property (strong) UIViewController *vc; @property (strong) N *viewNode;
+@property (strong) NSString *ident;       // storyboard identifier (or generated)
+@property (strong) NSString *nibName;     // name of the VC's own nib (nil if embedded only)
+@property (strong) NSString *viewNibName;
+@property (strong) NSMutableArray<VCInfo *> *children;
+@property (assign) BOOL hasOwnNib;
+@property (strong) NSMutableArray *vcConnections;  // dictionaries (kind/source/dest/label...)
+@property (strong) NSMutableArray *objectsInVCNib; // objects with ids that live in the VC nib
+@end
+@implementation VCInfo
+- (instancetype)init { if ((self = [super init])) { _children = [NSMutableArray new]; _vcConnections = [NSMutableArray new]; _objectsInVCNib = [NSMutableArray new]; } return self; }
+@end
+
+static NSString *baseClassName(NSString *e) { Class c = classForElement(e); return c ? NSStringFromClass(c) : @"UIViewController"; }
+
+static void buildNavigationItem(N *ni, UIViewController *vc, Ctx *cx, VCInfo *info) {
+    UINavigationItem *item = vc.navigationItem;
+    registerObject(cx, ni, item);
+    [info.objectsInVCNib addObject:item];
+    if (ni.a[@"title"]) item.title = ni.a[@"title"];
+    if (ni.a[@"largeTitleDisplayMode"]) item.largeTitleDisplayMode = (UINavigationItemLargeTitleDisplayMode)enumValue(@"largeTitleDisplayMode", ni.a[@"largeTitleDisplayMode"]);
+    for (N *c in ni.k) {
+        NSString *key = c.a[@"key"];
+        if ([c.name isEqualToString:@"barButtonItem"]) {
+            UIBarButtonItem *b = buildBarButtonItem(c, cx);
+            [info.objectsInVCNib addObject:b];
+            if ([key isEqualToString:@"rightBarButtonItem"]) item.rightBarButtonItem = b;
+            else if ([key isEqualToString:@"leftBarButtonItem"]) item.leftBarButtonItem = b;
+            else if ([key isEqualToString:@"backBarButtonItem"]) item.backBarButtonItem = b;
+        } else if ([c.name isEqualToString:@"rightBarButtonItems"] || [c.name isEqualToString:@"leftBarButtonItems"]) {
+            NSMutableArray *items = [NSMutableArray new];
+            for (N *bn in c.k) if ([bn.name isEqualToString:@"barButtonItem"]) { UIBarButtonItem *b = buildBarButtonItem(bn, cx); [info.objectsInVCNib addObject:b]; [items addObject:b]; }
+            if ([c.name hasPrefix:@"right"]) item.rightBarButtonItems = items; else item.leftBarButtonItems = items;
+        }
+    }
+}
+
+static VCInfo *buildVC(N *n, Ctx *cx, NSMutableDictionary<NSString *, VCInfo *> *infos) {
+    NSString *e = n.name;
+    Class cls = classForElement(e);
+    UIViewController *vc;
+    if ([e isEqualToString:@"splitViewController"]) {
+        BOOL triple = NO;
+        for (N *c in [[n first:@"connections"] k]) if ([c.a[@"relationship"] isEqualToString:@"supplementaryViewController"]) triple = YES;
+        vc = [[UISplitViewController alloc] initWithStyle:triple ? UISplitViewControllerStyleTripleColumn : UISplitViewControllerStyleDoubleColumn];
+    } else if ([e isEqualToString:@"navigationController"]) {
+        vc = [[UINavigationController alloc] init];
+    } else vc = [[cls alloc] init];
+    VCInfo *info = [VCInfo new];
+    info.node = n; info.vc = vc;
+    registerObject(cx, n, vc);
+    applyCustomClass(n, vc);
+    [info.objectsInVCNib addObject:vc];
+    infos[n.a[@"id"]] = info;
+    NSString *sid = n.a[@"storyboardIdentifier"];
+    if (sid.length) { vc.restorationIdentifier = nil; ((void (*)(id, SEL, id))objc_msgSend)(vc, sel_registerName("setStoryboardIdentifier:"), sid); }
+    if (yes(n.a[@"useStoryboardIdentifierAsRestorationIdentifier"])) vc.restorationIdentifier = sid;
+    if (n.a[@"title"]) vc.title = n.a[@"title"];
+    for (NSString *k in n.a) {
+        if ([skipAttrs() containsObject:k] || [k isEqualToString:@"title"]) continue;
+        if ([k isEqualToString:@"extendedLayoutIncludesOpaqueBars"]) { vc.extendedLayoutIncludesOpaqueBars = yes(n.a[k]); continue; }
+        if (!setGeneric(vc, k, n.a[k])) LOG("  (vc attr %s unhandled)", k.UTF8String);
+    }
+    for (N *c in n.k) {
+        if ([c.name isEqualToString:@"navigationItem"]) buildNavigationItem(c, vc, cx, info);
+        else if ([c.name isEqualToString:@"view"] || [c.a[@"key"] isEqualToString:@"view"]) info.viewNode = c;
+        else if ([c.name isEqualToString:@"navigationBar"] && [vc isKindOfClass:[UINavigationController class]]) {
+            UINavigationBar *bar = [(UINavigationController *)vc navigationBar];
+            registerObject(cx, c, bar);
+            [info.objectsInVCNib addObject:bar];
+            for (N *r in c.k) if ([r.name isEqualToString:@"rect"]) bar.frame = rectOf(r);
+        }
+        else if ([c.name isEqualToString:@"connections"]) {
+            for (N *cc in c.k) {
+                if ([cc.name isEqualToString:@"outlet"]) [info.vcConnections addObject:@{@"kind":@"outlet", @"source":n.a[@"id"], @"dest":cc.a[@"destination"] ?: @"", @"label":cc.a[@"property"] ?: @""}];
+                else if ([cc.name isEqualToString:@"outletCollection"]) [info.vcConnections addObject:@{@"kind":@"collection", @"source":n.a[@"id"], @"dest":cc.a[@"destination"] ?: @"", @"label":cc.a[@"property"] ?: @"", @"coll":cc.a[@"collectionClass"] ?: @"NSArray"}];
+            }
+        }
+    }
+    return info;
+}
+
+static void linkRelationships(VCInfo *info, NSMutableDictionary<NSString *, VCInfo *> *infos, Ctx *cx) {
+    UIViewController *vc = info.vc;
+    NSMutableArray *tabs = [NSMutableArray new];
+    for (N *c in [[info.node first:@"connections"] k]) {
+        if (![c.name isEqualToString:@"segue"]) continue;
+        NSString *kind = c.a[@"kind"], *rel = c.a[@"relationship"];
+        VCInfo *child = infos[c.a[@"destination"]];
+        if (![kind isEqualToString:@"relationship"] || !child) continue;
+        [info.children addObject:child];
+        if ([vc isKindOfClass:[UINavigationController class]] && [rel isEqualToString:@"rootViewController"]) [(UINavigationController *)vc setViewControllers:@[child.vc]];
+        else if ([vc isKindOfClass:[UITabBarController class]]) [tabs addObject:child.vc];
+        else if ([vc isKindOfClass:[UISplitViewController class]]) {
+            UISplitViewController *sp = (UISplitViewController *)vc;
+            if ([rel isEqualToString:@"masterViewController"]) [sp setViewController:child.vc forColumn:UISplitViewControllerColumnPrimary];
+            else if ([rel isEqualToString:@"supplementaryViewController"]) [sp setViewController:child.vc forColumn:UISplitViewControllerColumnSupplementary];
+            else if ([rel isEqualToString:@"detailViewController"]) [sp setViewController:child.vc forColumn:UISplitViewControllerColumnSecondary];
+        }
+    }
+    if (tabs.count) [(UITabBarController *)vc setViewControllers:tabs];
+}
+
+static BOOL compileStoryboard(N *doc, NSString *outDir) {
+    Ctx *cx = [Ctx new];
+    collectResources(doc, cx);
+    NSMutableDictionary<NSString *, VCInfo *> *infos = [NSMutableDictionary new];
+    NSMutableArray<VCInfo *> *order = [NSMutableArray new];
+    for (N *scene in [[doc first:@"scenes"] k]) {
+        for (N *o in [[scene first:@"objects"] k]) {
+            if (isViewControllerElement(o.name)) { VCInfo *i = buildVC(o, cx, infos); [order addObject:i]; }
+        }
+    }
+    NSString *initial = doc.a[@"initialViewController"];
+    // relationships
+    NSMutableSet *childIds = [NSMutableSet new];
+    for (VCInfo *i in order) linkRelationships(i, infos, cx);
+    for (VCInfo *i in order) for (VCInfo *c in i.children) [childIds addObject:c.node.a[@"id"]];
+    // segue destinations (non-relationship) also get their own nib
+    NSMutableSet *segueDest = [NSMutableSet new];
+    for (VCInfo *i in order) for (N *c in [[i.node first:@"connections"] k])
+        if ([c.name isEqualToString:@"segue"] && ![c.a[@"kind"] isEqualToString:@"relationship"] && c.a[@"destination"]) [segueDest addObject:c.a[@"destination"]];
+    NSFileManager *fm = [NSFileManager defaultManager];
+    [fm removeItemAtPath:outDir error:nil];
+    [fm createDirectoryAtPath:outDir withIntermediateDirectories:YES attributes:nil error:nil];
+    NSMutableDictionary *idToNib = [NSMutableDictionary new];
+    NSString *entry = nil;
+    for (VCInfo *i in order) {
+        NSString *vid = i.node.a[@"id"], *sid = i.node.a[@"storyboardIdentifier"];
+        i.ident = sid.length ? sid : [NSString stringWithFormat:@"%@-%@", baseClassName(i.node.name), vid];
+        i.hasOwnNib = sid.length || [vid isEqualToString:initial] || [segueDest containsObject:vid] || ![childIds containsObject:vid];
+        if (i.viewNode) i.viewNibName = [NSString stringWithFormat:@"%@-view-%@", vid, i.viewNode.a[@"id"]];
+        if (i.viewNibName) ((void (*)(id, SEL, id))objc_msgSend)(i.vc, sel_registerName("setNibName:"), i.viewNibName);
+        if (i.hasOwnNib) idToNib[i.ident] = i.ident;
+        if ([vid isEqualToString:initial]) entry = i.ident;
+    }
+    // view nibs
+    for (VCInfo *i in order) {
+        if (!i.viewNode) continue;
+        Ctx *vx = [Ctx new];
+        vx.namedColors = cx.namedColors;
+        id fo = proxyFor(vx, @"IBFilesOwner"), fr = proxyFor(vx, @"IBFirstResponder");
+        id up = proxyFor(vx, @"UpstreamPlaceholder-1");
+        gAlias = gAlias; // unchanged
+        UIView *view = build(i.viewNode, vx, nil);
+        buildConstraints(vx);
+        NSMutableArray *conns = [NSMutableArray new];
+        BOOL usesUp = NO;
+        id (^res)(NSString *) = ^id(NSString *x) { return vx.ids[x]; };
+        // connections from the view subtree: destinations equal to the VC id become the upstream placeholder
+        NSString *vcid = i.node.a[@"id"];
+        vx.ids[vcid] = up;
+        for (NSDictionary *d in vx.connections) { id c = makeConnection(d, vx, res); if (c) { [conns addObject:c]; if ([d[@"dest"] isEqualToString:vcid] || [d[@"source"] isEqualToString:vcid]) usesUp = YES; } }
+        // outlets of the VC that point at objects living in this view nib
+        for (NSDictionary *d in i.vcConnections) {
+            if (vx.ids[d[@"dest"]] && vx.ids[d[@"dest"]] != up) {
+                NSMutableDictionary *dd = [d mutableCopy]; dd[@"source"] = vcid;
+                id c = makeConnection(dd, vx, res); if (c) { [conns addObject:c]; usesUp = YES; }
+                dd[@"handled"] = @YES;
+            }
+        }
+        id viewConn = makeConnection(@{@"kind":@"outlet", @"source":@"__fo", @"dest":i.viewNode.a[@"id"], @"label":@"view"}, vx, ^id(NSString *x) { return [x isEqualToString:@"__fo"] ? fo : vx.ids[x]; });
+        if (viewConn) [conns addObject:viewConn];
+        NSMutableArray *top = [NSMutableArray arrayWithObjects:fo, fr, nil];
+        if (usesUp) [top addObject:up];
+        if (view) [top addObject:view];
+        NSMutableArray *all = [NSMutableArray arrayWithObjects:fo, fr, nil];
+        if (usesUp) [all addObject:up];
+        [all addObjectsFromArray:vx.objectsOrder];
+        // the VC needs the upstream table when the view nib refers to it
+        if (usesUp) @try { [i.vc setValue:@{@"UpstreamPlaceholder-1": i.vc} forKey:@"externalObjectsTableForViewLoading"]; } @catch (NSException *ex) { LOG("external table: %s", ex.reason.UTF8String); }
+        else @try { [i.vc setValue:@{} forKey:@"externalObjectsTableForViewLoading"]; } @catch (NSException *ex) { LOG("external table: %s", ex.reason.UTF8String); }
+        NSData *d = encodeNib(top, all, conns);
+        [d writeToFile:[outDir stringByAppendingPathComponent:[i.viewNibName stringByAppendingString:@".nib"]] atomically:YES];
+    }
+    // VC nibs
+    for (VCInfo *i in order) {
+        if (!i.hasOwnNib) continue;
+        id fo = proxyFor(cx, @"IBFilesOwner"), fr = proxyFor(cx, @"IBFirstResponder"), sp = proxyFor(cx, @"UIStoryboardPlaceholder");
+        NSMutableArray *conns = [NSMutableArray new];
+        NSMutableArray *vcs = [NSMutableArray new];
+        void (^collect)(VCInfo *, void (^)(VCInfo *)) = ^(VCInfo *v, void (^rec)(VCInfo *)) {};
+        __block void (^walk)(VCInfo *) = nil;
+        walk = ^(VCInfo *v) { [vcs addObject:v]; for (VCInfo *c in v.children) walk(c); };
+        walk(i);
+        (void)collect;
+        id (^res)(NSString *) = ^id(NSString *x) { return cx.ids[x]; };
+        for (VCInfo *v in vcs) {
+            id c = makeConnection(@{@"kind":@"outlet", @"source":v.node.a[@"id"], @"dest":@"__sp", @"label":@"storyboard"}, cx, ^id(NSString *x) { return [x isEqualToString:@"__sp"] ? sp : cx.ids[x]; });
+            if (c) [conns addObject:c];
+            for (NSDictionary *d in v.vcConnections) { id cc = makeConnection(d, cx, res); if (cc) [conns addObject:cc]; }
+        }
+        id sc = makeConnection(@{@"kind":@"outlet", @"source":@"__fo", @"dest":i.node.a[@"id"], @"label":@"sceneViewController"}, cx, ^id(NSString *x) { return [x isEqualToString:@"__fo"] ? fo : cx.ids[x]; });
+        if (sc) [conns addObject:sc];
+        NSMutableArray *all = [NSMutableArray arrayWithObjects:sp, fo, fr, nil];
+        for (VCInfo *v in vcs) [all addObjectsFromArray:v.objectsInVCNib];
+        NSMutableArray *top = [NSMutableArray arrayWithObjects:sp, fo, fr, i.vc, nil];
+        NSData *d = encodeNib(top, all, conns);
+        [d writeToFile:[outDir stringByAppendingPathComponent:[i.ident stringByAppendingString:@".nib"]] atomically:YES];
+    }
+    NSMutableDictionary *info = [@{@"UIViewControllerIdentifiersToNibNames": idToNib, @"UIStoryboardVersion": @1} mutableCopy];
+    if (entry) info[@"UIStoryboardDesignatedEntryPointIdentifier"] = entry;
+    NSData *pl = [NSPropertyListSerialization dataWithPropertyList:info format:NSPropertyListBinaryFormat_v1_0 options:0 error:nil];
+    return [pl writeToFile:[outDir stringByAppendingPathComponent:@"Info.plist"] atomically:YES];
+}
+
 int main(int argc, char **argv) {
     @autoreleasepool {
         int i = 1;
@@ -668,7 +889,7 @@ int main(int argc, char **argv) {
         NSXMLParser *xp = [[NSXMLParser alloc] initWithData:xml];
         Parser *ps = [Parser new]; xp.delegate = ps; [xp parse];
         if (!ps.root) { fprintf(stderr, "cannot parse %s\n", argv[i]); return 1; }
-        BOOL ok = compileXib(ps.root, out);
+        BOOL ok = [ps.root.a[@"type"] containsString:@"Storyboard"] ? compileStoryboard(ps.root, out) : compileXib(ps.root, out);
         return ok ? 0 : 1;
     }
 }
