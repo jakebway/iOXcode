@@ -28,7 +28,7 @@ jobs:
           xcrun simctl boot "$UDID" || true
       - name: Runtime dumps
         run: |
-          SIMCTL_CHILD_IBC_DUMP=UILayoutGuide,UIViewController,UINavigationController,UISplitViewController,UIClassSwapper xcrun simctl spawn $UDID "$PWD/work/ibc" > ci-out/runtime-dump.txt 2>&1 || true
+          SIMCTL_CHILD_IBC_DUMP=UICollectionView,UITableView,UITableViewRow,UITableViewSection,UITableViewDataSource,UINib,UIStoryboardSegueTemplate,UINibKeyValuePair,UIStoryboardPlaceholder,UITableViewCell,UICollectionReusableView,UIScrollView,UINavigationItem,UIBarButtonItem,UIBarItem,UIStoryboard,UIViewController,UISplitViewController xcrun simctl spawn $UDID "$PWD/work/ibc" > ci-out/runtime-dump.txt 2>&1 || true
       - name: Compile with ibtool and ibc, then diff
         run: |
           git clone --depth 1 "https://github.com/${{ inputs.repo }}.git" work/repo 2> /dev/null
