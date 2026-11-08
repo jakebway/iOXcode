@@ -1,0 +1,40 @@
+1,34c1,12
+< 2026-11-08 20:08:22.415 ibcheck[8293:28964] Failed to set (accEnabled) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104d0b7a0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accEnabled.
+< 2026-11-08 20:08:22.416 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104d0b7a0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.416 ibcheck[8293:28964] Failed to set (accEnabled) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104c05870> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accEnabled.
+< 2026-11-08 20:08:22.416 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104c05870> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.416 ibcheck[8293:28964] Failed to set (accEnabled) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104c08b00> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accEnabled.
+< 2026-11-08 20:08:22.417 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104c08b00> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.417 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104c09c90> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.417 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104c0aca0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.417 ibcheck[8293:28964] Failed to set (accEnabled) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a095a0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accEnabled.
+< 2026-11-08 20:08:22.417 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a095a0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.495 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104c10eb0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.500 ibcheck[8293:28964] Could not load the "markAllAsRead" image referenced from a nib in the bundle with identifier "(null)"
+< 2026-11-08 20:08:22.508 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a14d40> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.508 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a14ed0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.509 ibcheck[8293:28964] Failed to set (accEnabled) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a151f0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accEnabled.
+< 2026-11-08 20:08:22.509 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a151f0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.509 ibcheck[8293:28964] Failed to set (accEnabled) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a15510> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accEnabled.
+< 2026-11-08 20:08:22.510 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a15510> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.510 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a13960> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.510 ibcheck[8293:28964] Failed to set (accEnabled) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a14a20> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accEnabled.
+< 2026-11-08 20:08:22.510 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a14a20> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.511 ibcheck[8293:28964] Failed to set (accEnabled) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a14bb0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accEnabled.
+< 2026-11-08 20:08:22.511 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a14bb0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< 2026-11-08 20:08:22.511 ibcheck[8293:28964] Failed to set (accLabelText) user defined inspected property on (UIBarButtonItem): [<UIBarButtonItem 0x104a11de0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key accLabelText.
+< entry=RootSplitViewController
+< == ArticleViewController FAILED: [<UIViewController 0x104d05430> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key actionBarButtonItem.
+< == ContextMenuPreviewViewController
+<   VC UIViewController title='(null)' id=ContextMenuPreviewViewController nib=CoM-D3-PNS-view-eH6-Fa-Tfi
+<     view load failed: [<UIViewController 0x104a0bf50> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key articleTitleLabel.
+< == ImageViewController
+<   VC UIViewController title='(null)' id=ImageViewController nib=vO9-a3-Dnu-view-w6Q-vH-063
+<     view load failed: [<UIViewController 0x104c0e7e0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageScrollView.
+< == MainFeedCollectionViewController FAILED: [<UICollectionViewController 0x104c10ac0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key addNewItemButton.
+< == RootSplitViewController FAILED: [<UIViewController 0x104a14430> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key actionBarButtonItem.
+---
+> *** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: 'There doesn't seem to be a valid compiled storyboard at path '/Users/runner/work/iOXcode/iOXcode/work/mine/3/Main.storyboardc''
+> *** First throw call stack:
+> (
+> 	0   CoreFoundation                      0x00000001804c97d4 __exceptionPreprocess + 172

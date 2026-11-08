@@ -1,4 +1,13 @@
 build <tableView> id=Wxa-ac-xiE
 build <collectionView> id=a3y-1d-Jtk
   (attr automaticEstimatedItemSize on collectionViewFlowLayout unhandled)
-Child process terminated with signal 11: Segmentation fault
+CRASH signal 11
+0   ibc                                 0x0000000100f87a8c onCrash + 52
+1   libsystem_platform.dylib            0x000000010101f6a0 _sigtramp + 52
+2   libobjc.A.dylib                     0x0000000180086ef4 objc_registerClassPair + 48
+3   ibc                                 0x0000000100f99c60 makeEncoderClass + 400
+4   ibc                                 0x0000000100f9267c encodeNib + 124
+5   ibc                                 0x0000000100f8a9cc compileStoryboard + 11500
+6   ibc                                 0x0000000100f878dc main + 1448
+7   dyld                                0x00000001010f53d4 start_sim + 20
+8   ???                                 0x0000000101292b98 0x0 + 4314442648
