@@ -1,0 +1,13 @@
+scratch/ibc/ibc.m:899:146: warning: capturing 'collectIds' strongly in this block is likely to lead to a retain cycle [-Warc-retain-cycles]
+  899 |         { __block void (^collectIds)(N *) = nil; collectIds = ^(N *x) { if (x.a[@"id"]) [viewNibObjects addObject:x.a[@"id"]]; for (N *c in x.k) collectIds(c); }; collectIds(i.viewNode); }
+      |                                                                                                                                                  ^~~~~~~~~~
+scratch/ibc/ibc.m:899:50: note: block will be retained by the captured object
+  899 |         { __block void (^collectIds)(N *) = nil; collectIds = ^(N *x) { if (x.a[@"id"]) [viewNibObjects addObject:x.a[@"id"]]; for (N *c in x.k) collectIds(c); }; collectIds(i.viewNode); }
+      |                                                  ^~~~~~~~~~
+scratch/ibc/ibc.m:948:80: warning: capturing 'walk' strongly in this block is likely to lead to a retain cycle [-Warc-retain-cycles]
+  948 |         walk = ^(VCInfo *v) { [vcs addObject:v]; for (VCInfo *c in v.children) walk(c); };
+      |                                                                                ^~~~
+scratch/ibc/ibc.m:948:9: note: block will be retained by the captured object
+  948 |         walk = ^(VCInfo *v) { [vcs addObject:v]; for (VCInfo *c in v.children) walk(c); };
+      |         ^~~~
+2 warnings generated.

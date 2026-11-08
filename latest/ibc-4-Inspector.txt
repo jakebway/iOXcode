@@ -1,0 +1,41 @@
+build <tableView> id=xcc-i3-tPS
+build <tableViewCell> id=4Ue-UW-e0l
+build <tableViewCellContentView> id=9E1-ww-kYn
+build <stackView> id=mQa-0W-eVS
+build <textField> id=LUW-uv-piz
+build <tableViewCell> id=zQY-gY-BOY
+build <tableViewCellContentView> id=dBp-J5-ZsY
+build <label> id=zf0-Gm-p4F
+build <switch> id=6YV-K0-yPS
+build <tableViewCell> id=FsT-vH-rTo
+build <tableViewCellContentView> id=rJW-6J-9DM
+build <button> id=TYD-py-8IF
+build <tableViewCell> id=lgY-im-vCo
+build <tableViewCellContentView> id=fIH-xP-nza
+build <button> id=obv-a5-Pl6
+  (runtime attribute backgroundHighlightColor of type color unhandled)
+build <tableViewCell> id=syncContent-cell-id
+build <tableViewCellContentView> id=syncContent-content-id
+build <label> id=syncContent-label-id
+build <switch> id=syncContent-switch-id
+build <tableView> id=26V-ZC-Q2R
+build <tableViewCell> id=FPJ-5s-QTm
+build <tableViewCellContentView> id=S7f-Et-p8x
+build <textField> id=ZdA-rl-9eP
+build <tableViewCell> id=6Yy-4a-kYM
+build <tableViewCellContentView> id=FfV-P4-TNg
+build <label> id=YV2-gG-lMP
+build <switch> id=g39-wK-xUs
+build <tableViewCell> id=glX-68-wCa
+build <tableViewCellContentView> id=FQk-5f-EtL
+build <label> id=Bf4-3X-Rfr
+build <switch> id=fUd-JB-UMK
+build <tableViewCell> id=0zc-o6-Sjh
+build <tableViewCellContentView> id=vJs-XK-ebf
+build <label> id=HUP-Cu-FGT
+build <imageView> id=p82-kn-lfh
+  (runtime attribute imageNormal of type image unhandled)
+  (runtime attribute imageSelected of type image unhandled)
+build <tableViewCell> id=fKD-Vi-B8O
+build <tableViewCellContentView> id=2G0-9f-qwN
+build <label> id=rOV-XS-bNW

@@ -1,0 +1,8 @@
+12c12
+<       view load failed: [<UITableViewController 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key feedURLLabel.
+---
+>       view load failed: [<UITableViewCell 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key icon.
+15c15
+<     view load failed: [<UITableViewController 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key feedURLLabel.
+---
+>     view load failed: [<UITableViewCell 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key icon.

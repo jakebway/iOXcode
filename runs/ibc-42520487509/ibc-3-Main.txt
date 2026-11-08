@@ -1,0 +1,36 @@
+  (vc attr allowDoubleColumnStyle unhandled)
+build <view> id=svH-Pt-448
+build <view> id=h1Q-FS-jlg
+build <view> id=NY8-Yd-8Av
+build <collectionView> id=YPO-ig-3vA
+build <collectionView> id=7gd-ro-2Jf
+build <collectionViewCell> id=5DS-WK-qAz
+warning: unsupported element <collectionViewCellContentView>
+connection faviconView unresolved (5DS-WK-qAz -> Ea0-VT-Gvl)
+connection faviconWidthConstraint unresolved (5DS-WK-qAz -> WjF-Bc-GuF)
+connection feedTitle unresolved (5DS-WK-qAz -> fHH-rW-0hD)
+connection feedTitleLeadingConstraint unresolved (5DS-WK-qAz -> EbG-Wk-EDk)
+connection unreadCountLabel unresolved (5DS-WK-qAz -> oRt-Cv-vvU)
+build <collectionViewCell> id=wZG-XA-czw
+warning: unsupported element <collectionViewCellContentView>
+connection disclosureButton unresolved (wZG-XA-czw -> noV-fz-88z)
+connection faviconView unresolved (wZG-XA-czw -> AAi-mv-o14)
+connection faviconWidthConstraint unresolved (wZG-XA-czw -> ygW-tD-t1U)
+connection folderTitle unresolved (wZG-XA-czw -> qoe-rn-pwE)
+connection folderTitleLeadingConstraint unresolved (wZG-XA-czw -> 9Wl-bG-a7f)
+connection unreadCountLabel unresolved (wZG-XA-czw -> LVW-Zu-z90)
+build <collectionReusableView> id=Rza-3g-Ty5
+build <imageView> id=Edf-Sz-AqQ
+build <label> id=p16-Uj-CBX
+build <label> id=TBA-io-5jo
+build <view> id=w6Q-vH-063
+build <scrollView> id=msG-pz-EKk
+build <visualEffectView> id=bHh-pW-oTS
+build <label> id=eMj-1g-3xm
+build <view> id=eH6-Fa-Tfi
+build <label> id=YsT-Lt-Zry
+build <label> id=7GV-PV-YVq
+build <label> id=iFp-rn-HhQ
+build <label> id=0Hz-Dv-MhU
+build <view> id=9Ms-dt-2M8
+build <view> id=0ko-zB-cnS
