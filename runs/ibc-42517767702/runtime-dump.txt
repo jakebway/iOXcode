@@ -1,0 +1,1 @@
+usage: ibc [-v] in out

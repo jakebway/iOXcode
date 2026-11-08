@@ -1,0 +1,35 @@
+1,21c1,12
+< 2026-11-08 20:03:21.727 ibcheck[8323:29402] Failed to set (backgroundHighlightColor) user defined inspected property on (UIButton): [<UIButton 0x104d0c240> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key backgroundHighlightColor.
+< 2026-11-08 20:03:21.733 ibcheck[8323:29402] Failed to set (backgroundHighlightColor) user defined inspected property on (UIButton): [<UIButton 0x104d1a3e0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key backgroundHighlightColor.
+< 2026-11-08 20:03:21.762 ibcheck[8323:29402] Failed to set (imageNormal) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104c214b0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageNormal.
+< 2026-11-08 20:03:21.762 ibcheck[8323:29402] Failed to set (imageSelected) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104c214b0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageSelected.
+< 2026-11-08 20:03:21.768 ibcheck[8323:29402] Failed to set (imageNormal) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104b1f200> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageNormal.
+< 2026-11-08 20:03:21.768 ibcheck[8323:29402] Failed to set (imageSelected) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104b1f200> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageSelected.
+< entry=(null)
+< == AccountInspectorNavigationViewController
+<   VC UINavigationController title='(null)' id=AccountInspectorNavigationViewController nib=(null)
+<     VC UITableViewController title='(null)' id=AccountInspectorViewController nib=1m3-fZ-n7g-view-xcc-i3-tPS
+<       view load failed: [<UITableViewController 0x10580ea00> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key activeSwitch.
+< == AccountInspectorViewController
+<   VC UITableViewController title='(null)' id=AccountInspectorViewController nib=1m3-fZ-n7g-view-xcc-i3-tPS
+<     view load failed: [<UITableViewController 0x10601f400> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key activeSwitch.
+< == FeedInspectorNavigationViewController
+<   VC UINavigationController title='(null)' id=FeedInspectorNavigationViewController nib=(null)
+<     VC UITableViewController title='(null)' id=FeedInspectorViewControllelr nib=lEH-bG-pQW-view-26V-ZC-Q2R
+<       view load failed: [<UITableViewController 0x10500ca00> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key feedURLLabel.
+< == FeedInspectorViewControllelr
+<   VC UITableViewController title='(null)' id=FeedInspectorViewControllelr nib=lEH-bG-pQW-view-26V-ZC-Q2R
+<     view load failed: [<UITableViewController 0x10502c800> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key feedURLLabel.
+---
+> *** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: 'There doesn't seem to be a valid compiled storyboard at path '/Users/runner/work/iOXcode/iOXcode/work/mine/4/Inspector.storyboardc''
+> *** First throw call stack:
+> (
+> 	0   CoreFoundation                      0x00000001804c97d4 __exceptionPreprocess + 172
+> 	1   libobjc.A.dylib                     0x00000001800937cc objc_exception_throw + 72
+> 	2   UIKitCore                           0x0000000185e061f0 -[UIStoryboard name] + 0
+> 	3   ibcheck                             0x0000000100fed220 main + 1768
+> 	4   dyld                                0x000000010113d3d4 start_sim + 20
+> 	5   ???                                 0x000000010127ab98 0x0 + 4314344344
+> )
+> libc++abi: terminating due to uncaught exception of type NSException
+> Child process terminated with signal 6: Abort trap

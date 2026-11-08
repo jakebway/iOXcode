@@ -9,6 +9,6 @@ DIFF  Inspector.storyboard
 IBC FAILED Settings.storyboard (see ibc-5-Settings.txt)
 DIFF  Settings.storyboard
 DIFF  SettingsComboTableViewCell.xib
-DIFF  SettingsTableViewCell.xib
+MATCH SettingsTableViewCell.xib
 DIFF  ShareFolderPickerAccountCell.xib
 DIFF  ShareFolderPickerFolderCell.xib

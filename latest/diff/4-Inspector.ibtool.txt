@@ -1,21 +1,21 @@
-2026-11-08 19:57:57.063 ibcheck[5580:20238] Failed to set (backgroundHighlightColor) user defined inspected property on (UIButton): [<UIButton 0x104e10d80> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key backgroundHighlightColor.
-2026-11-08 19:57:57.087 ibcheck[5580:20238] Failed to set (backgroundHighlightColor) user defined inspected property on (UIButton): [<UIButton 0x104f10f20> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key backgroundHighlightColor.
-2026-11-08 19:57:57.140 ibcheck[5580:20238] Failed to set (imageNormal) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104e275a0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageNormal.
-2026-11-08 19:57:57.140 ibcheck[5580:20238] Failed to set (imageSelected) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104e275a0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageSelected.
-2026-11-08 19:57:57.153 ibcheck[5580:20238] Failed to set (imageNormal) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104e38660> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageNormal.
-2026-11-08 19:57:57.153 ibcheck[5580:20238] Failed to set (imageSelected) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104e38660> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageSelected.
+2026-11-08 20:03:21.727 ibcheck[8323:29402] Failed to set (backgroundHighlightColor) user defined inspected property on (UIButton): [<UIButton 0x104d0c240> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key backgroundHighlightColor.
+2026-11-08 20:03:21.733 ibcheck[8323:29402] Failed to set (backgroundHighlightColor) user defined inspected property on (UIButton): [<UIButton 0x104d1a3e0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key backgroundHighlightColor.
+2026-11-08 20:03:21.762 ibcheck[8323:29402] Failed to set (imageNormal) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104c214b0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageNormal.
+2026-11-08 20:03:21.762 ibcheck[8323:29402] Failed to set (imageSelected) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104c214b0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageSelected.
+2026-11-08 20:03:21.768 ibcheck[8323:29402] Failed to set (imageNormal) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104b1f200> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageNormal.
+2026-11-08 20:03:21.768 ibcheck[8323:29402] Failed to set (imageSelected) user defined inspected property on (UITableViewCell): [<UITableViewCell 0x104b1f200> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageSelected.
 entry=(null)
 == AccountInspectorNavigationViewController
   VC UINavigationController title='(null)' id=AccountInspectorNavigationViewController nib=(null)
     VC UITableViewController title='(null)' id=AccountInspectorViewController nib=1m3-fZ-n7g-view-xcc-i3-tPS
-      view load failed: [<UITableViewController 0x105016800> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key activeSwitch.
+      view load failed: [<UITableViewController 0x10580ea00> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key activeSwitch.
 == AccountInspectorViewController
   VC UITableViewController title='(null)' id=AccountInspectorViewController nib=1m3-fZ-n7g-view-xcc-i3-tPS
-    view load failed: [<UITableViewController 0x105814c00> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key activeSwitch.
+    view load failed: [<UITableViewController 0x10601f400> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key activeSwitch.
 == FeedInspectorNavigationViewController
   VC UINavigationController title='(null)' id=FeedInspectorNavigationViewController nib=(null)
     VC UITableViewController title='(null)' id=FeedInspectorViewControllelr nib=lEH-bG-pQW-view-26V-ZC-Q2R
-      view load failed: [<UITableViewController 0x105835a00> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key feedURLLabel.
+      view load failed: [<UITableViewController 0x10500ca00> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key feedURLLabel.
 == FeedInspectorViewControllelr
   VC UITableViewController title='(null)' id=FeedInspectorViewControllelr nib=lEH-bG-pQW-view-26V-ZC-Q2R
-    view load failed: [<UITableViewController 0x10503d200> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key feedURLLabel.
+    view load failed: [<UITableViewController 0x10502c800> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key feedURLLabel.

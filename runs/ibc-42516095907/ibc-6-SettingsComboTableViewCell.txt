@@ -1,3 +1,0 @@
-build <tableViewCell> id=JCb-QB-CrO
-warning: connection comboImage unresolved (JCb-QB-CrO -> yiw-9t-gil)
-warning: connection comboNameLabel unresolved (JCb-QB-CrO -> TRx-RV-za8)
