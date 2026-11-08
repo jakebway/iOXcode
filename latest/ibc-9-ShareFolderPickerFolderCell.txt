@@ -1,3 +1,0 @@
-build <tableViewCell> id=JCb-QB-CrO
-warning: connection icon unresolved (JCb-QB-CrO -> yiw-9t-gil)
-warning: connection label unresolved (JCb-QB-CrO -> TRx-RV-za8)
