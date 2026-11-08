@@ -1,1 +1,0 @@
-INSTANTIATE FAILED: [<UITableViewCell 0x104f06e40> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key icon.

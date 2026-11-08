@@ -1,9 +1,0 @@
-DIFF  LaunchScreenPad.storyboard
-DIFF  LaunchScreenPhone.storyboard
-DIFF  Main.storyboard
-DIFF  Inspector.storyboard
-DIFF  Settings.storyboard
-DIFF  SettingsComboTableViewCell.xib
-MATCH SettingsTableViewCell.xib
-DIFF  ShareFolderPickerAccountCell.xib
-DIFF  ShareFolderPickerFolderCell.xib
