@@ -94,6 +94,8 @@ static id resolve(id o, NSString *key) {
     return o;
 }
 static Class makeEncoderClass(void) {
+    static Class made;
+    if (made) return made;
     Class base = NSClassFromString(@"UINibEncoder");
     Class sub = objc_allocateClassPair(base, "IBEncoder", 0);
     SEL rs = sel_registerName("replacementObjectForObject:forKey:");
@@ -108,6 +110,7 @@ static Class makeEncoderClass(void) {
         return ((id (*)(id, SEL, id))origCN)(self, cn, obj);
     }), "@@:@");
     objc_registerClassPair(sub);
+    made = sub;
     return sub;
 }
 
