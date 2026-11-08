@@ -1,1 +1,1 @@
-INSTANTIATE FAILED: [<UITableViewCell 0x104a07cb0> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key icon.
+INSTANTIATE FAILED: [<UITableViewCell 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key icon.

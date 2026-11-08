@@ -1,3 +1,0 @@
-build <tableView> id=xcc-i3-tPS
-build <tableView> id=26V-ZC-Q2R
-Child process terminated with signal 11: Segmentation fault

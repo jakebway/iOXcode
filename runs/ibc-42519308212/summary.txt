@@ -1,0 +1,9 @@
+MATCH LaunchScreenPad.storyboard
+MATCH LaunchScreenPhone.storyboard
+DIFF  Main.storyboard (6 lines)
+DIFF  Inspector.storyboard (28 lines)
+DIFF  Settings.storyboard (14 lines)
+MATCH SettingsComboTableViewCell.xib
+MATCH SettingsTableViewCell.xib
+MATCH ShareFolderPickerAccountCell.xib
+MATCH ShareFolderPickerFolderCell.xib

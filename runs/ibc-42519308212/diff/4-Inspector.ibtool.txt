@@ -1,0 +1,15 @@
+entry=(null)
+== AccountInspectorNavigationViewController
+  VC UINavigationController title='(null)' id=AccountInspectorNavigationViewController nib=(null)
+    VC UITableViewController title='(null)' id=AccountInspectorViewController nib=1m3-fZ-n7g-view-xcc-i3-tPS
+      view load failed: [<UITableViewController 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key activeSwitch.
+== AccountInspectorViewController
+  VC UITableViewController title='(null)' id=AccountInspectorViewController nib=1m3-fZ-n7g-view-xcc-i3-tPS
+    view load failed: [<UITableViewController 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key activeSwitch.
+== FeedInspectorNavigationViewController
+  VC UINavigationController title='(null)' id=FeedInspectorNavigationViewController nib=(null)
+    VC UITableViewController title='(null)' id=FeedInspectorViewControllelr nib=lEH-bG-pQW-view-26V-ZC-Q2R
+      view load failed: [<UITableViewController 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key feedURLLabel.
+== FeedInspectorViewControllelr
+  VC UITableViewController title='(null)' id=FeedInspectorViewControllelr nib=lEH-bG-pQW-view-26V-ZC-Q2R
+    view load failed: [<UITableViewController 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key feedURLLabel.

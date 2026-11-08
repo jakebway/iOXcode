@@ -1,10 +1,10 @@
 entry=RootSplitViewController
-== ArticleViewController FAILED: [<UIViewController 0x104f04b80> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key nextArticleBarButtonItem.
+== ArticleViewController FAILED: [<UIViewController 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key nextArticleBarButtonItem.
 == ContextMenuPreviewViewController
   VC UIViewController title='(null)' id=ContextMenuPreviewViewController nib=CoM-D3-PNS-view-eH6-Fa-Tfi
-    view load failed: [<UIViewController 0x104f09180> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key articleTitleLabel.
+    view load failed: [<UIViewController 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key articleTitleLabel.
 == ImageViewController
   VC UIViewController title='(null)' id=ImageViewController nib=vO9-a3-Dnu-view-w6Q-vH-063
-    view load failed: [<UIViewController 0x104e0f420> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageScrollView.
-== MainFeedCollectionViewController FAILED: [<UICollectionViewController 0x104e11040> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key filterButton.
-== RootSplitViewController FAILED: [<UIViewController 0x104e12310> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key nextArticleBarButtonItem.
+    view load failed: [<UIViewController 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key imageScrollView.
+== MainFeedCollectionViewController FAILED: [<UICollectionViewController 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key filterButton.
+== RootSplitViewController FAILED: [<UIViewController 0xADDR> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key nextArticleBarButtonItem.

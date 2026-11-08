@@ -1,4 +1,0 @@
-1c1
-< INSTANTIATE FAILED: [<UITableViewCell 0x104907430> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key comboImage.
----
-> INSTANTIATE FAILED: [<UITableViewCell 0x105506170> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key comboImage.

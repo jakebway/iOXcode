@@ -1,4 +1,0 @@
-build <tableView> id=Wxa-ac-xiE
-build <collectionView> id=a3y-1d-Jtk
-  (attr automaticEstimatedItemSize on collectionViewFlowLayout unhandled)
-Child process terminated with signal 11: Segmentation fault
