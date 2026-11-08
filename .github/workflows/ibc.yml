@@ -1,0 +1,56 @@
+name: IB compiler - build ibc, compile the corpus, diff against ibtool in the simulator
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        default: Ranchero-Software/NetNewsWire
+      only:
+        description: "only this file name (optional)"
+        default: ""
+permissions:
+  contents: write
+jobs:
+  ibc:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build tools
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app
+          mkdir -p ci-out work/ibtool work/mine
+          SDK="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+          for t in ibc ibcheck; do
+            xcrun --sdk iphonesimulator clang -fobjc-arc -fmodules -framework Foundation -framework UIKit -target arm64-apple-ios17.0-simulator -isysroot "$SDK" scratch/ibc/$t.m -o work/$t 2> ci-out/build-$t.txt || { cat ci-out/build-$t.txt; exit 1; }
+          done
+          UDID=$(xcrun simctl list devices available | grep -m1 "iPhone" | grep -oE '[0-9A-F-]{36}')
+          echo "UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl boot "$UDID" || true
+      - name: Compile with ibtool and ibc, then diff
+        run: |
+          git clone --depth 1 "https://github.com/${{ inputs.repo }}.git" work/repo 2> /dev/null
+          find work/repo -name "*.storyboard" -o -name "*.xib" | grep -v "/Mac/\|macOS\|Tests" | sort > ci-out/list.txt
+          i=0
+          while read -r f; do
+            i=$((i+1)); n=$(basename "$f"); b="${n%.*}"; ext="${n##*.}"
+            if [ -n "${{ inputs.only }}" ] && [ "$n" != "${{ inputs.only }}" ]; then continue; fi
+            if grep -q "targetRuntime=\"MacOSX" "$f"; then continue; fi
+            mkdir -p work/ibtool/$i work/mine/$i ci-out/diff
+            if [ "$ext" = storyboard ]; then o="$b.storyboardc"; m=sb; else o="$b.nib"; m=xib; fi
+            xcrun ibtool --errors --warnings --notices --target-device iphone --target-device ipad --minimum-deployment-target 17.0 --platform iphoneos --compilation-directory work/ibtool/$i --compile "work/ibtool/$i/$o" "$f" >> ci-out/ibtool-log.txt 2>&1 || echo "IBTOOL FAILED $f" >> ci-out/ibtool-log.txt
+            xcrun simctl spawn $UDID "$PWD/work/ibc" -v "$f" "$PWD/work/mine/$i/$o" > ci-out/ibc-$i-$b.txt 2>&1 || echo "IBC FAILED $n (see ibc-$i-$b.txt)" | tee -a ci-out/summary.txt
+            if [ -e "work/ibtool/$i/$o" ] && [ -e "work/mine/$i/$o" ]; then
+              xcrun simctl spawn $UDID "$PWD/work/ibcheck" $m "$PWD/work/ibtool/$i/$o" > ci-out/diff/$i-$b.ibtool.txt 2>&1 || true
+              xcrun simctl spawn $UDID "$PWD/work/ibcheck" $m "$PWD/work/mine/$i/$o" > ci-out/diff/$i-$b.mine.txt 2>&1 || true
+              if diff -q ci-out/diff/$i-$b.ibtool.txt ci-out/diff/$i-$b.mine.txt > /dev/null; then echo "MATCH $n" | tee -a ci-out/summary.txt; else echo "DIFF  $n" | tee -a ci-out/summary.txt; diff ci-out/diff/$i-$b.ibtool.txt ci-out/diff/$i-$b.mine.txt | head -40 > ci-out/diff/$i-$b.diff; fi
+            fi
+          done < ci-out/list.txt
+          mkdir -p ci-out/ibtool-nibs ci-out/mine-nibs
+          cp -R work/ibtool/* ci-out/ibtool-nibs/ 2>/dev/null || true
+          cp -R work/mine/* ci-out/mine-nibs/ 2>/dev/null || true
+          cat ci-out/summary.txt
+      - name: Publish
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "ibc-${{ github.run_id }}"
