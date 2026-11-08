@@ -422,6 +422,7 @@ static void applyViewChildren(UIView *v, N *n, Ctx *cx) {
             UIFont *f = makeFont(c);
             if ([v respondsToSelector:@selector(setFont:)]) ((void (*)(id, SEL, id))objc_msgSend)(v, @selector(setFont:), f);
         }
+        else if ([e isEqualToString:@"tableViewCellContentView"] || [e isEqualToString:@"collectionViewCellContentView"]) { build(c, cx, v); }
         else if ([e isEqualToString:@"subviews"]) {
             for (N *sv in c.k) {
                 id sub = build(sv, cx, v);
