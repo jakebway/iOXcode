@@ -1,8 +1,0 @@
-  (vc attr behavior unhandled)
-  (vc attr allowDoubleColumnStyle unhandled)
-build <view> id=svH-Pt-448
-build <view> id=h1Q-FS-jlg
-build <view> id=NY8-Yd-8Av
-build <collectionView> id=YPO-ig-3vA
-  (attr automaticEstimatedItemSize on collectionViewFlowLayout unhandled)
-Child process terminated with signal 11: Segmentation fault

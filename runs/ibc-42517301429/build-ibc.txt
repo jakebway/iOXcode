@@ -1,7 +1,0 @@
-scratch/ibc/ibc.m:854:80: warning: capturing 'walk' strongly in this block is likely to lead to a retain cycle [-Warc-retain-cycles]
-  854 |         walk = ^(VCInfo *v) { [vcs addObject:v]; for (VCInfo *c in v.children) walk(c); };
-      |                                                                                ^~~~
-scratch/ibc/ibc.m:854:9: note: block will be retained by the captured object
-  854 |         walk = ^(VCInfo *v) { [vcs addObject:v]; for (VCInfo *c in v.children) walk(c); };
-      |         ^~~~
-1 warning generated.

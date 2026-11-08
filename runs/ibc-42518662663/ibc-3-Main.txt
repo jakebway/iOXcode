@@ -1,0 +1,44 @@
+  (vc attr behavior unhandled)
+  (vc attr allowDoubleColumnStyle unhandled)
+build <view> id=svH-Pt-448
+build <view> id=h1Q-FS-jlg
+build <view> id=NY8-Yd-8Av
+build <collectionView> id=YPO-ig-3vA
+  (attr automaticEstimatedItemSize on collectionViewFlowLayout unhandled)
+build <collectionView> id=7gd-ro-2Jf
+  (attr automaticEstimatedItemSize on collectionViewFlowLayout unhandled)
+build <view> id=w6Q-vH-063
+build <scrollView> id=msG-pz-EKk
+build <visualEffectView> id=bHh-pW-oTS
+build <label> id=eMj-1g-3xm
+build <view> id=eH6-Fa-Tfi
+build <label> id=YsT-Lt-Zry
+build <label> id=7GV-PV-YVq
+build <label> id=iFp-rn-HhQ
+build <label> id=0Hz-Dv-MhU
+build <view> id=9Ms-dt-2M8
+build <view> id=0ko-zB-cnS
+warning: connection actionBarButtonItem unresolved (JEX-9P-axG -> 9Ut-5B-JKP)
+warning: connection nextUnreadBarButtonItem unresolved (JEX-9P-axG -> 2w5-e9-C2V)
+warning: connection readBarButtonItem unresolved (JEX-9P-axG -> hy0-LS-MzE)
+warning: connection searchBar unresolved (JEX-9P-axG -> h1Q-FS-jlg)
+warning: connection searchBarBottomConstraint unresolved (JEX-9P-axG -> XyH-A7-Trj)
+warning: connection starBarButtonItem unresolved (JEX-9P-axG -> wU4-eH-wC9)
+warning: connection actionBarButtonItem unresolved (JEX-9P-axG -> 9Ut-5B-JKP)
+warning: connection nextUnreadBarButtonItem unresolved (JEX-9P-axG -> 2w5-e9-C2V)
+warning: connection readBarButtonItem unresolved (JEX-9P-axG -> hy0-LS-MzE)
+warning: connection searchBar unresolved (JEX-9P-axG -> h1Q-FS-jlg)
+warning: connection searchBarBottomConstraint unresolved (JEX-9P-axG -> XyH-A7-Trj)
+warning: connection starBarButtonItem unresolved (JEX-9P-axG -> wU4-eH-wC9)
+warning: connection addNewItemButton unresolved (6Bn-mF-MPS -> iTI-PO-3e6)
+warning: connection collectionView unresolved (QJM-al-rDe -> YPO-ig-3vA)
+warning: connection markAllAsReadButton unresolved (QJM-al-rDe -> jGC-TX-BdL)
+warning: connection addNewItemButton unresolved (6Bn-mF-MPS -> iTI-PO-3e6)
+warning: connection imageScrollView unresolved (vO9-a3-Dnu -> msG-pz-EKk)
+warning: connection titleBackground unresolved (vO9-a3-Dnu -> bHh-pW-oTS)
+warning: connection titleLabel unresolved (vO9-a3-Dnu -> eMj-1g-3xm)
+warning: connection titleLeading unresolved (vO9-a3-Dnu -> Xni-Dn-I3Z)
+warning: connection articleTitleLabel unresolved (CoM-D3-PNS -> iFp-rn-HhQ)
+warning: connection blogAuthorLabel unresolved (CoM-D3-PNS -> 7GV-PV-YVq)
+warning: connection blogNameLabel unresolved (CoM-D3-PNS -> YsT-Lt-Zry)
+warning: connection dateTimeLabel unresolved (CoM-D3-PNS -> 0Hz-Dv-MhU)

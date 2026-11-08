@@ -1,0 +1,30 @@
+5,7c5,7
+<     UITableView frame={{0, 0}, {402, 874}} mask=18 tamic=1 hidden=0 alpha=1.00 clips=1 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=0.949,0.949,0.969,1.00 tint=0.000,0.478,1.000,1.00
+<       UITableViewWrapperView frame={{0, 0}, {402, 874}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=1 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+<       _UIScrollViewScrollIndicator frame={{404, 868}, {7, 3}} mask=8 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+---
+>     UITableView frame={{0, 0}, {414, 746}} mask=18 tamic=1 hidden=0 alpha=1.00 clips=1 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=0.949,0.949,0.969,1.00 tint=0.000,0.478,1.000,1.00
+>       UITableViewWrapperView frame={{8, 0}, {398, 746}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=1 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+>       _UIScrollViewScrollIndicator frame={{404, 740}, {7, 3}} mask=8 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+9c9
+<       _UIScrollViewScrollIndicator frame={{396, 886}, {3, 7}} mask=1 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+---
+>       _UIScrollViewScrollIndicator frame={{408, 736}, {3, 7}} mask=1 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+15c15,20
+<       view load failed: [<UITableViewController 0x10381ec00> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key articleThemeDetailLabel.
+---
+>       UITableView frame={{0, 0}, {414, 896}} mask=18 tamic=1 hidden=0 alpha=1.00 clips=1 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+>         UITableViewWrapperView frame={{8, 0}, {398, 896}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=1 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+>         _UIScrollViewScrollIndicator frame={{404, 890}, {7, 3}} mask=8 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+>           UIView frame={{0, 0}, {0, 0}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=0.000,0.000,0.000,0.35 tint=0.000,0.478,1.000,1.00
+>         _UIScrollViewScrollIndicator frame={{408, 886}, {3, 7}} mask=1 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+>           UIView frame={{0, 0}, {0, 0}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=0.000,0.000,0.000,0.35 tint=0.000,0.478,1.000,1.00
+19c24,29
+<     view load failed: [<UITableViewController 0x10382e600> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key articleThemeDetailLabel.
+---
+>     UITableView frame={{0, 0}, {414, 896}} mask=18 tamic=1 hidden=0 alpha=1.00 clips=1 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+>       UITableViewWrapperView frame={{8, 0}, {398, 896}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=1 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+>       _UIScrollViewScrollIndicator frame={{404, 890}, {7, 3}} mask=8 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+>         UIView frame={{0, 0}, {0, 0}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=0.000,0.000,0.000,0.35 tint=0.000,0.478,1.000,1.00
+>       _UIScrollViewScrollIndicator frame={{408, 886}, {3, 7}} mask=1 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+>         UIView frame={{0, 0}, {0, 0}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=0.000,0.000,0.000,0.35 tint=0.000,0.478,1.000,1.00

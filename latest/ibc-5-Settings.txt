@@ -1,13 +1,34 @@
 build <tableView> id=Wxa-ac-xiE
 build <collectionView> id=a3y-1d-Jtk
   (attr automaticEstimatedItemSize on collectionViewFlowLayout unhandled)
-CRASH signal 11
-0   ibc                                 0x0000000100f87a8c onCrash + 52
-1   libsystem_platform.dylib            0x000000010101f6a0 _sigtramp + 52
-2   libobjc.A.dylib                     0x0000000180086ef4 objc_registerClassPair + 48
-3   ibc                                 0x0000000100f99c60 makeEncoderClass + 400
-4   ibc                                 0x0000000100f9267c encodeNib + 124
-5   ibc                                 0x0000000100f8a9cc compileStoryboard + 11500
-6   ibc                                 0x0000000100f878dc main + 1448
-7   dyld                                0x00000001010f53d4 start_sim + 20
-8   ???                                 0x0000000101292b98 0x0 + 4314442648
+build <tableView> id=I8p-P9-C8h
+warning: connection articleThemeDetailLabel unresolved (a0p-rk-skQ -> DUf-DZ-3Nm)
+warning: connection colorPaletteCell unresolved (a0p-rk-skQ -> EvG-yE-gDF)
+warning: connection confirmMarkAllAsReadSwitch unresolved (a0p-rk-skQ -> UOo-9z-IuL)
+warning: connection showPreviewInTimelineContextMenuSwitch unresolved (a0p-rk-skQ -> pTc-Mp-c04)
+warning: connection enableJavaScriptSwitch unresolved (a0p-rk-skQ -> Djo-HE-LWS)
+warning: connection groupByFeedSwitch unresolved (a0p-rk-skQ -> JNi-Wz-RbU)
+warning: connection openLinksInNetNewsWire unresolved (a0p-rk-skQ -> dhR-L2-PX3)
+warning: connection refreshClearsReadArticlesSwitch unresolved (a0p-rk-skQ -> duV-CN-JmH)
+warning: connection showFullscreenArticlesSwitch unresolved (a0p-rk-skQ -> 2Md-2E-7Z4)
+warning: connection showStarredFeedSwitch unresolved (a0p-rk-skQ -> lSd-Rw-EZx)
+warning: connection showTodayFeedSwitch unresolved (a0p-rk-skQ -> L79-sq-qjg)
+warning: connection showUnreadFeedSwitch unresolved (a0p-rk-skQ -> 0HY-pc-41T)
+warning: connection sidebarShowsIconsSwitch unresolved (a0p-rk-skQ -> ty7-nO-vmW)
+warning: connection timelineSortOrderSwitch unresolved (a0p-rk-skQ -> Keq-Np-l9O)
+warning: connection unreadCountDisplayCell unresolved (a0p-rk-skQ -> Ucd-a1-Cel)
+warning: connection articleThemeDetailLabel unresolved (a0p-rk-skQ -> DUf-DZ-3Nm)
+warning: connection colorPaletteCell unresolved (a0p-rk-skQ -> EvG-yE-gDF)
+warning: connection confirmMarkAllAsReadSwitch unresolved (a0p-rk-skQ -> UOo-9z-IuL)
+warning: connection showPreviewInTimelineContextMenuSwitch unresolved (a0p-rk-skQ -> pTc-Mp-c04)
+warning: connection enableJavaScriptSwitch unresolved (a0p-rk-skQ -> Djo-HE-LWS)
+warning: connection groupByFeedSwitch unresolved (a0p-rk-skQ -> JNi-Wz-RbU)
+warning: connection openLinksInNetNewsWire unresolved (a0p-rk-skQ -> dhR-L2-PX3)
+warning: connection refreshClearsReadArticlesSwitch unresolved (a0p-rk-skQ -> duV-CN-JmH)
+warning: connection showFullscreenArticlesSwitch unresolved (a0p-rk-skQ -> 2Md-2E-7Z4)
+warning: connection showStarredFeedSwitch unresolved (a0p-rk-skQ -> lSd-Rw-EZx)
+warning: connection showTodayFeedSwitch unresolved (a0p-rk-skQ -> L79-sq-qjg)
+warning: connection showUnreadFeedSwitch unresolved (a0p-rk-skQ -> 0HY-pc-41T)
+warning: connection sidebarShowsIconsSwitch unresolved (a0p-rk-skQ -> ty7-nO-vmW)
+warning: connection timelineSortOrderSwitch unresolved (a0p-rk-skQ -> Keq-Np-l9O)
+warning: connection unreadCountDisplayCell unresolved (a0p-rk-skQ -> Ucd-a1-Cel)
