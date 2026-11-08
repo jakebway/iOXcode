@@ -1,0 +1,35 @@
+name: Interface Builder corpus - compile storyboards/xibs with Apple's ibtool
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        default: Ranchero-Software/NetNewsWire
+permissions:
+  contents: write
+jobs:
+  corpus:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile with ibtool
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app
+          mkdir -p ci-out/src ci-out/compiled work
+          git clone --depth 1 "https://github.com/${{ inputs.repo }}.git" work/repo 2> /dev/null
+          xcrun ibtool --version > ci-out/ibtool-version.txt 2>&1 || true
+          find work/repo -name "*.storyboard" -o -name "*.xib" | grep -v "/Mac/\|macOS\|Tests" > ci-out/list.txt
+          i=0
+          while read -r f; do
+            i=$((i+1)); n=$(basename "$f"); b="${n%.*}"; ext="${n##*.}"
+            mkdir -p "ci-out/src/$i"; cp "$f" "ci-out/src/$i/$n"
+            if [ "$ext" = storyboard ]; then out="ci-out/compiled/$i/$b.storyboardc"; else out="ci-out/compiled/$i/$b.nib"; fi
+            mkdir -p "ci-out/compiled/$i"
+            xcrun ibtool --errors --warnings --notices --target-device iphone --target-device ipad --minimum-deployment-target 17.0 --platform iphoneos --compilation-directory ci-out/compiled/$i --compile "$out" "$f" >> ci-out/ibtool-log.txt 2>&1 || echo "FAILED $f" >> ci-out/ibtool-log.txt
+          done < ci-out/list.txt
+          find ci-out/compiled | head -80
+      - name: Publish
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "ib-corpus-${{ github.run_id }}"
