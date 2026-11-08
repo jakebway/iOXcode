@@ -4,6 +4,8 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
+#include <execinfo.h>
+#include <signal.h>
 
 static BOOL VERBOSE = NO;
 #define LOG(...) do { if (VERBOSE) fprintf(stderr, __VA_ARGS__), fprintf(stderr, "\n"); } while (0)
@@ -885,7 +887,10 @@ static void dumpRuntime(const char *name) {
     free(ms);
 }
 
+static void onCrash(int sig) { void *bt[40]; int n = backtrace(bt, 40); fprintf(stderr, "CRASH signal %d\n", sig); backtrace_symbols_fd(bt, n, 2); _exit(139); }
+
 int main(int argc, char **argv) {
+    signal(SIGSEGV, onCrash); signal(SIGBUS, onCrash);
     @autoreleasepool {
         if (getenv("IBC_DUMP")) { for (NSString *c in [@(getenv("IBC_DUMP")) componentsSeparatedByString:@","]) dumpRuntime(c.UTF8String); return 0; }
         int i = 1;
