@@ -97,8 +97,7 @@ static Class makeEncoderClass(void) {
     SEL rs = sel_registerName("replacementObjectForObject:forKey:");
     IMP orig = class_getMethodImplementation(base, rs);
     class_addMethod(sub, rs, imp_implementationWithBlock(^id(id self, id obj, id key) {
-        id r = ((id (*)(id, SEL, id, id))orig)(self, rs, obj, key);
-        return resolve(r ?: obj, key);
+        return ((id (*)(id, SEL, id, id))orig)(self, rs, resolve(obj, key), key);
     }), "@@:@@");
     SEL cn = sel_registerName("encodedClassNameForObject:");
     IMP origCN = class_getMethodImplementation(base, cn);
