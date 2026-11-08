@@ -659,7 +659,7 @@ static UINib *nestedNib(N *cellNode, Ctx *parent) {
     NSMutableArray *all = [NSMutableArray arrayWithObjects:fo, fr, nil];
     [all addObjectsFromArray:nx.objectsOrder];
     NSData *d = encodeNib(top, all, conns, nx.kvPairs);
-    return [[UINib alloc] initWithData:d bundle:nil];
+    return ((id (*)(id, SEL, id, id))objc_msgSend)([UINib alloc], sel_registerName("initWithData:bundle:"), d, nil);
 }
 
 #pragma mark - Document -> nib
