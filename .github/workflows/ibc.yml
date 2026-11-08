@@ -38,7 +38,7 @@ jobs:
             mkdir -p work/ibtool/$i work/mine/$i ci-out/diff
             if [ "$ext" = storyboard ]; then o="$b.storyboardc"; m=sb; else o="$b.nib"; m=xib; fi
             xcrun ibtool --errors --warnings --notices --target-device iphone --target-device ipad --minimum-deployment-target 17.0 --platform iphoneos --compilation-directory work/ibtool/$i --compile "work/ibtool/$i/$o" "$f" >> ci-out/ibtool-log.txt 2>&1 || echo "IBTOOL FAILED $f" >> ci-out/ibtool-log.txt
-            xcrun simctl spawn $UDID "$PWD/work/ibc" -v "$f" "$PWD/work/mine/$i/$o" > ci-out/ibc-$i-$b.txt 2>&1 || echo "IBC FAILED $n (see ibc-$i-$b.txt)" | tee -a ci-out/summary.txt
+            xcrun simctl spawn $UDID "$PWD/work/ibc" -v "$PWD/$f" "$PWD/work/mine/$i/$o" > ci-out/ibc-$i-$b.txt 2>&1 || echo "IBC FAILED $n (see ibc-$i-$b.txt)" | tee -a ci-out/summary.txt
             if [ -e "work/ibtool/$i/$o" ] && [ -e "work/mine/$i/$o" ]; then
               xcrun simctl spawn $UDID "$PWD/work/ibcheck" $m "$PWD/work/ibtool/$i/$o" > ci-out/diff/$i-$b.ibtool.txt 2>&1 || true
               xcrun simctl spawn $UDID "$PWD/work/ibcheck" $m "$PWD/work/mine/$i/$o" > ci-out/diff/$i-$b.mine.txt 2>&1 || true
