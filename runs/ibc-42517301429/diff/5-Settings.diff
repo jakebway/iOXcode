@@ -1,0 +1,40 @@
+1,27c1,12
+< entry=SettingsNavigationViewController
+< == ArticleThemesTableViewController
+<   VC UITableViewController title='Theme' id=ArticleThemesTableViewController nib=fO4-og-e41-view-I8p-P9-C8h
+<     navItem title='Theme' right=0 left=0
+<     UITableView frame={{0, 0}, {402, 874}} mask=18 tamic=1 hidden=0 alpha=1.00 clips=1 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=0.949,0.949,0.969,1.00 tint=0.000,0.478,1.000,1.00
+<       UITableViewWrapperView frame={{0, 0}, {402, 874}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=1 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+<       _UIScrollViewScrollIndicator frame={{404, 868}, {7, 3}} mask=8 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+<         UIView frame={{0, 0}, {0, 0}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=0.000,0.000,0.000,0.35 tint=0.000,0.478,1.000,1.00
+<       _UIScrollViewScrollIndicator frame={{396, 886}, {3, 7}} mask=1 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+<         UIView frame={{0, 0}, {0, 0}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=0.000,0.000,0.000,0.35 tint=0.000,0.478,1.000,1.00
+< == SettingsNavigationViewController
+<   VC UINavigationController title='(null)' id=SettingsNavigationViewController nib=(null)
+<     VC UITableViewController title='(null)' id=SettingsViewController nib=a0p-rk-skQ-view-Wxa-ac-xiE
+<       navItem title='Settings' right=1 left=0
+<       view load failed: [<UITableViewController 0x10201c800> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key articleThemeDetailLabel.
+< == SettingsViewController
+<   VC UITableViewController title='(null)' id=SettingsViewController nib=a0p-rk-skQ-view-Wxa-ac-xiE
+<     navItem title='Settings' right=1 left=0
+<     view load failed: [<UITableViewController 0x10181da00> setValue:forUndefinedKey:]: this class is not key value coding-compliant for the key articleThemeDetailLabel.
+< == TimelineCustomizerCollectionViewController
+<   VC UICollectionViewController title='(null)' id=TimelineCustomizerCollectionViewController nib=XEX-9Z-nVH-view-a3y-1d-Jtk
+<     UICollectionViewControllerWrapperView frame={{0, 0}, {0, 0}} mask=18 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+<       UICollectionView frame={{0, 0}, {0, 0}} mask=18 tamic=1 hidden=0 alpha=1.00 clips=1 opaque=1 mt=1 ui=1 tag=0 cm=0 bg=1.000,1.000,1.000,1.00 tint=0.000,0.478,1.000,1.00
+<         _UIScrollViewScrollIndicator frame={{404, -6}, {7, 3}} mask=8 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+<           UIView frame={{0, 0}, {0, 0}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=0.000,0.000,0.000,0.35 tint=0.000,0.478,1.000,1.00
+<         _UIScrollViewScrollIndicator frame={{-6, 886}, {3, 7}} mask=1 tamic=1 hidden=0 alpha=0.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=nil tint=0.000,0.478,1.000,1.00
+<           UIView frame={{0, 0}, {0, 0}} mask=0 tamic=1 hidden=0 alpha=1.00 clips=0 opaque=1 mt=0 ui=1 tag=0 cm=0 bg=0.000,0.000,0.000,0.35 tint=0.000,0.478,1.000,1.00
+---
+> *** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: 'There doesn't seem to be a valid compiled storyboard at path '/Users/runner/work/iOXcode/iOXcode/work/mine/5/Settings.storyboardc''
+> *** First throw call stack:
+> (
+> 	0   CoreFoundation                      0x00000001804c97d4 __exceptionPreprocess + 172
+> 	1   libobjc.A.dylib                     0x00000001800937cc objc_exception_throw + 72
+> 	2   UIKitCore                           0x0000000185e061f0 -[UIStoryboard name] + 0
+> 	3   ibcheck                             0x0000000100971220 main + 1768
+> 	4   dyld                                0x0000000100ac13d4 start_sim + 20
+> 	5   ???                                 0x0000000100d3eb98 0x0 + 4308855704
+> )
+> libc++abi: terminating due to uncaught exception of type NSException

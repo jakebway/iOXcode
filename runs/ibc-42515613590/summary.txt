@@ -1,9 +1,0 @@
-DIFF  LaunchScreenPad.storyboard
-DIFF  LaunchScreenPhone.storyboard
-DIFF  Main.storyboard
-DIFF  Inspector.storyboard
-DIFF  Settings.storyboard
-IBC FAILED SettingsComboTableViewCell.xib (see ibc-6-SettingsComboTableViewCell.txt)
-IBC FAILED SettingsTableViewCell.xib (see ibc-7-SettingsTableViewCell.txt)
-IBC FAILED ShareFolderPickerAccountCell.xib (see ibc-8-ShareFolderPickerAccountCell.txt)
-IBC FAILED ShareFolderPickerFolderCell.xib (see ibc-9-ShareFolderPickerFolderCell.txt)
