@@ -1,4 +1,0 @@
-build <tableViewCell> id=JCb-QB-CrO
-build <tableViewCellContentView> id=FzD-t2-JGy
-build <label> id=f73-v7-eum
-build <label> id=Cak-zN-D7k
