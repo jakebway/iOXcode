@@ -1,0 +1,38 @@
+name: Probe - why 'import WebKit' is not found
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Look
+        run: |
+          mkdir -p ci-out
+          exec > >(tee ci-out/webkit.txt) 2>&1
+          SEL=$(ls -d /Applications/Xcode*.app | grep -viE 'beta|rc|preview' | sort -V | tail -1)
+          SEL=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$SEL")
+          export DEVELOPER_DIR="$SEL/Contents/Developer"
+          echo "Xcode: $SEL"; swiftc --version
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path); echo "SDK $SDK"
+          TC=$DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr
+          echo "--- SDK WebKit"; find "$SDK/System/Library/Frameworks/WebKit.framework" -maxdepth 3 | grep -v Headers/ | head -40
+          echo "--- toolchain WebKit"; find $TC/lib/swift -name 'WebKit*' -o -name '_WebKit*' | head
+          echo "--- prebuilt-modules dirs"; ls $TC/lib/swift/iphoneos/prebuilt-modules 2>&1
+          # same shape as the pack: resource dir with iphoneos + shims
+          R=$RUNNER_TEMP/res; mkdir -p $R; for d in iphoneos shims; do ln -s $TC/lib/swift/$d $R/$d; done
+          mkdir t; cd t
+          printf 'import SwiftUI\nimport WebKit\nlet w = WKWebView()\n' > a.swift
+          echo "--- full toolchain"; swiftc -typecheck -sdk "$SDK" -target arm64-apple-ios17.0 a.swift 2>&1 | head -20
+          echo "--- pack-style resource dir"; swiftc -typecheck -sdk "$SDK" -target arm64-apple-ios17.0 -resource-dir $R -module-cache-path $RUNNER_TEMP/mc a.swift 2>&1 | head -20
+          echo "--- pack-style, only WebKit"; printf 'import WebKit\nlet w = WKWebView()\n' > b.swift; swiftc -typecheck -sdk "$SDK" -target arm64-apple-ios17.0 -resource-dir $R -module-cache-path $RUNNER_TEMP/mc2 b.swift 2>&1 | head -20
+      - name: Publish logs
+        if: always()
+        env: { GITHUB_TOKEN: "${{ github.token }}" }
+        run: scripts/ci/push-logs.sh ci-out "webkit-${{ github.run_id }}"
