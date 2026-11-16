@@ -78,6 +78,32 @@ jobs:
           cd "$RUNNER_TEMP/rust"
           find build/aarch64-apple-darwin -path '*aarch64-apple-ios*' \( -name 'librustc_driver*' -o -name 'rustc-main*' \) -maxdepth 7 -exec ls -lh {} \; 2>/dev/null | head -20 | tee "$GITHUB_WORKSPACE/ci-out/products.txt"
           tail -n 120 "$GITHUB_WORKSPACE/ci-out/build.log" > "$GITHUB_WORKSPACE/ci-out/build-tail.txt" || true
+      - name: Inspect and package
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd "$RUNNER_TEMP/rust"
+          D=$(find build/aarch64-apple-darwin -name librustc_driver.dylib -path '*aarch64-apple-ios/release*' | head -1)
+          echo "driver: $D" | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+          [ -n "$D" ] || exit 0
+          vtool -show-build "$D" 2>&1 | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+          file "$D" | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+          otool -L "$D" | head -30 | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+          nm -gU "$D" | grep -E "rustc_driver.*main|rustc_main|run_compiler" | head -20 | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+          S=build/host/stage2
+          ls "$S/lib" "$S/lib/rustlib" 2>&1 | head -20 | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+          ls "$S/lib/rustlib/aarch64-apple-ios/lib" 2>&1 | head -40 | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+          mkdir -p "$RUNNER_TEMP/out"
+          cp "$D" "$RUNNER_TEMP/out/librustc_driver.dylib"
+          strip -x "$RUNNER_TEMP/out/librustc_driver.dylib" || true
+          ls -l "$RUNNER_TEMP/out" | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+          [ -d "$S/lib/rustlib/aarch64-apple-ios" ] && tar -C "$S/lib/rustlib" -czf "$RUNNER_TEMP/out/rustlib-aarch64-apple-ios.tar.gz" aarch64-apple-ios
+          ls -l "$RUNNER_TEMP/out"
+          (cd "$RUNNER_TEMP/out" && zip -q librustc_driver.dylib.zip librustc_driver.dylib)
+          TAG="rustc-ios-${{ inputs.tag || '1.90.0' }}"
+          gh release create "$TAG" "$RUNNER_TEMP/out/librustc_driver.dylib.zip" "$RUNNER_TEMP/out/rustlib-aarch64-apple-ios.tar.gz" \
+            --repo "$GITHUB_REPOSITORY" --title "rustc for iPhone $TAG" --notes "rustc ${{ inputs.tag || '1.90.0' }} built to run on iOS (aarch64-apple-ios host)" || true
       - name: Publish logs to the ci-logs branch
         if: always()
         env:
