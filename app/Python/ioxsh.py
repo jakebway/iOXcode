@@ -849,8 +849,6 @@ MAC_ONLY = {
     "swiftlint": "is not available on iPhone",
     "swiftformat": "is not available on iPhone",
     "pod": "(CocoaPods) is not available on iPhone",
-    "cargo": "(Rust) is not available on iPhone",
-    "rustup": "(Rust) is not available on iPhone",
     "npm": "is not available on iPhone",
     "node": "is not available on iPhone",
     "gh": "is not available on iPhone",
@@ -1520,6 +1518,70 @@ def _python(sh, a, i):
         return ioxc_run.python_main(a, sh.err)
     finally:
         sys.stdout, sys.stderr, sys.stdin = saved
+
+@builtin("rustup")
+def _rustup(sh, a, i):
+    sh.err.write("note: rustup is not needed on iPhone (Rust libraries come prebuilt); skipping\n"); return 0
+
+def _native_key(root, crate):
+    """Same key the repo's own tools/native_key.py gives, so a CI-built library can be matched to these sources."""
+    import hashlib, runpy
+    kp = os.path.join(root, "tools", "native_key.py")
+    if os.path.isfile(kp):
+        buf = io.StringIO(); saved = sys.stdout, sys.argv
+        try:
+            sys.stdout = buf; sys.argv = [kp]
+            runpy.run_path(kp, run_name="__main__")
+        finally:
+            sys.stdout, sys.argv = saved
+        k = buf.getvalue().strip()
+        if k: return k
+    h = hashlib.sha256()
+    for d, ds, fs in os.walk(crate):
+        ds[:] = sorted(x for x in ds if x not in ("target", ".git"))
+        for f in sorted(fs):
+            fp = os.path.join(d, f); h.update(os.path.relpath(fp, crate).encode()); h.update(open(fp, "rb").read())
+    return h.hexdigest()[:16]
+
+@builtin("cargo")
+def _cargo(sh, a, i):
+    """Rust cannot run on the phone. `cargo build` for an iOS target fetches the library CI already built from the
+    same sources (a release tagged native-<key> in the project's GitHub repo)."""
+    import urllib.request, json
+    if not a or a[0] not in ("build", "b", "rustc"):
+        sh.err.write("note: cargo %s is not available on iPhone; skipping\n" % (a[0] if a else "")); return 0
+    crate = os.getcwd()
+    toml = os.path.join(crate, "Cargo.toml")
+    if not os.path.isfile(toml):
+        sh.err.write("error: no Cargo.toml in %s\n" % crate); return 1
+    text = open(toml).read()
+    m = re.search(r'\[lib\][^\[]*?name\s*=\s*"([^"]+)"', text) or re.search(r'\[package\][^\[]*?name\s*=\s*"([^"]+)"', text)
+    lib = (m.group(1) if m else "lib").replace("-", "_")
+    tgt = a[a.index("--target") + 1] if "--target" in a else "aarch64-apple-ios"
+    prof = "release" if "--release" in a else "debug"
+    root = crate
+    while root != "/" and not os.path.isdir(os.path.join(root, ".git")) and not os.path.isfile(os.path.join(root, "project.yml")) and not os.path.isdir(os.path.join(root, "tools")):
+        root = os.path.dirname(root)
+    key = _native_key(root, crate)
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if not repo:
+        sh.err.write("error: Rust needs a prebuilt library, but this project did not come from a GitHub link, so none can be found\n"); return 1
+    tag = "native-" + key
+    out = os.path.join(crate, "target", tgt, prof); os.makedirs(out, exist_ok=True)
+    dest = os.path.join(out, "lib%s.a" % lib)
+    url = "https://github.com/%s/releases/download/%s/lib%s.a" % (repo, tag, lib)
+    sh.err.write("note: Rust is not built on the phone; fetching the prebuilt %s (%s)\n" % (os.path.basename(dest), tag))
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "iOXcode"})
+        with urllib.request.urlopen(req, timeout=120, context=_ssl_ctx()) as r, open(dest, "wb") as f:
+            f.write(r.read())
+    except Exception as e:
+        sh.err.write("error: no prebuilt library for these Rust sources (%s).\n"
+                     "       Run the 'Native core' workflow in %s on GitHub once; it publishes release %s, then build again here.\n" % (e, repo, tag))
+        try: os.remove(dest)
+        except OSError: pass
+        return 1
+    sh.err.write("note: got %d KB\n" % (os.path.getsize(dest) // 1024)); return 0
 
 @builtin("pip", "pip3")
 def _pip(sh, a, i):

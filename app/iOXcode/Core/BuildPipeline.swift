@@ -453,6 +453,7 @@ final class BuildPipeline {
             var e = env
             let cwd = s.dir.map { project.url.appendingPathComponent($0).standardizedFileURL } ?? root
             e["GITHUB_WORKSPACE"] = project.url.path
+            if let o = Origins.load(project.url.lastPathComponent) { e["GITHUB_REPOSITORY"] = "\(o.owner)/\(o.repo)" }
             e["RUNNER_TEMP"] = work.appendingPathComponent("runner").path
             let r = PythonHost.shared.run(.shell(s.script), cwd: cwd, env: e, log: log)
             if r.exitCode != 0 {
