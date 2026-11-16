@@ -6,7 +6,7 @@ struct BuildsView: View {
     @State private var sharing: URL?
 
     var body: some View {
-        NavigationView {
+        StackNavigation {
             List {
                 if model.builds.isEmpty {
                     Text("Finished builds land here. Build a project and its IPA is kept in the app, ready to share or install.").foregroundColor(.secondary)

@@ -36,12 +36,19 @@ struct RootView: View {
     }
 }
 
+/// A NavigationView that always stacks. On a wide screen (unfolded phone, portrait or landscape) the default is a
+/// sidebar + detail split, which hides a plain screen like Setup behind an empty column.
+struct StackNavigation<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+    var body: some View { NavigationView { content() }.navigationViewStyle(.stack) }
+}
+
 struct ProjectsView: View {
     @EnvironmentObject var model: AppModel
     @State private var askLink = false
     @State private var link = ""
     var body: some View {
-        NavigationView {
+        StackNavigation {
             List {
                 if model.importing { HStack { ProgressView(); Text(model.importMessage).padding(.leading, 8) } }
                 if model.projects.isEmpty {
@@ -84,7 +91,7 @@ struct ProjectsView: View {
 struct ConsoleView: View {
     @EnvironmentObject var model: AppModel
     var body: some View {
-        NavigationView {
+        StackNavigation {
             ConsoleBody(console: model.console, building: model.building)
                 .navigationTitle(model.building ? "Building…" : "Console")
                 .toolbar {
@@ -168,7 +175,7 @@ struct ConsolePanel: View {
 struct SetupView: View {
     @EnvironmentObject var model: AppModel
     var body: some View {
-        NavigationView {
+        StackNavigation {
             Form {
                 Section("Compiler") {
                     Text(model.compilerStatus)
