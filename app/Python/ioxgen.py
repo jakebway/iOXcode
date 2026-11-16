@@ -200,7 +200,12 @@ def manifest_from_spec(spec_path):
                 notes.append("package %s is not declared under packages:" % d["package"])
             else:
                 if pk.get("path"):
-                    notes.append("local Swift package %s is not supported yet" % pk["path"])
+                    ab = os.path.abspath(os.path.join(root, expand(_str(pk["path"]))))
+                    pk_entry = next((x for x in pkgs if x["name"] == d["package"]), None)
+                    if pk_entry is None:
+                        pk_entry = {"name": d["package"], "url": ab, "kind": "local", "value": "", "products": []}
+                        pkgs.append(pk_entry)
+                    pk_entry["products"].append(d.get("product") or d["package"])
                 else:
                     kind, value = "branch", "HEAD"
                     if "from" in pk: kind, value = "from", _str(pk["from"])

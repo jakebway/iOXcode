@@ -1,0 +1,37 @@
+{
+ "notes": [],
+ "manifest": {
+  "name": "iOXcode",
+  "minOS": "16.0",
+  "bundleId": "com.jakebway.ioxcode",
+  "version": "0.1",
+  "build": "1",
+  "swiftVersion": "5",
+  "bridgingHeader": "iOXcode/Bridge.h",
+  "optimization": "none",
+  "infoPlistFile": "iOXcode/Info.plist",
+  "sources": [
+   "iOXcode"
+  ],
+  "resources": [],
+  "excludes": [],
+  "sourceResources": true,
+  "libraries": [],
+  "frameworks": [],
+  "libraryDirs": [],
+  "linkerFlags": [],
+  "packages": [
+   {
+    "name": "AssetKit",
+    "url": "/home/claude/ioxcode/app/Vendor/AssetKit",
+    "kind": "local",
+    "value": "",
+    "products": [
+     "AssetKit"
+    ]
+   }
+  ],
+  "scripts": []
+ },
+ "root": "app"
+}
