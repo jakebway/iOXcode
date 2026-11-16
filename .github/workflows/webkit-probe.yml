@@ -22,16 +22,12 @@ jobs:
           echo "Xcode: $SEL"; swiftc --version
           SDK=$(xcrun --sdk iphoneos --show-sdk-path); echo "SDK $SDK"
           TC=$DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr
-          echo "--- SDK WebKit"; find "$SDK/System/Library/Frameworks/WebKit.framework" -maxdepth 3 | grep -v Headers/ | head -40
-          echo "--- toolchain WebKit"; find $TC/lib/swift -name 'WebKit*' -o -name '_WebKit*' | head
-          echo "--- prebuilt-modules dirs"; ls $TC/lib/swift/iphoneos/prebuilt-modules 2>&1
-          # same shape as the pack: resource dir with iphoneos + shims
-          R=$RUNNER_TEMP/res; mkdir -p $R; for d in iphoneos shims; do ln -s $TC/lib/swift/$d $R/$d; done
-          mkdir t; cd t
-          printf 'import SwiftUI\nimport WebKit\nlet w = WKWebView()\n' > a.swift
-          echo "--- full toolchain"; swiftc -typecheck -sdk "$SDK" -target arm64-apple-ios17.0 a.swift 2>&1 | head -20
-          echo "--- pack-style resource dir"; swiftc -typecheck -sdk "$SDK" -target arm64-apple-ios17.0 -resource-dir $R -module-cache-path $RUNNER_TEMP/mc a.swift 2>&1 | head -20
-          echo "--- pack-style, only WebKit"; printf 'import WebKit\nlet w = WKWebView()\n' > b.swift; swiftc -typecheck -sdk "$SDK" -target arm64-apple-ios17.0 -resource-dir $R -module-cache-path $RUNNER_TEMP/mc2 b.swift 2>&1 | head -20
+          F="$SDK/System/Library/Frameworks"
+          ls -ld "$F/WebKit.framework"; readlink "$F/WebKit.framework" || true
+          echo "--- symlinks among frameworks"; find "$F" -maxdepth 1 -type l -exec ls -l {} \; | head -20
+          echo "--- WebKit (follow)"; find -L "$F/WebKit.framework" -maxdepth 2 | grep -v Headers/ | head -20
+          echo "--- all symlinks in SDK (count/targets outside)"; find "$SDK" -type l | wc -l; find "$SDK" -type l -exec readlink {} \; | grep -c '^/' || true
+          echo "--- where is real WebKit"; ls -la "$F" | grep -i webkit
       - name: Publish logs
         if: always()
         env: { GITHUB_TOKEN: "${{ github.token }}" }
