@@ -358,7 +358,7 @@ def workflow_script(repo_dir):
         if not run:
             continue
         run = _expr(_str(run), ctx)
-        if re.search(r"(^|[\s;&|(])xcodebuild\b", run):
+        if _runs_xcodebuild(run, repo_dir, _str(st.get("working-directory") or ".")):
             lines.append("echo %s" % _shq("== '%s' is the Xcode build: iOXcode takes over from here" % name))
             break
         wd = _expr(_str(st.get("working-directory") or defaults.get("working-directory") or "."), ctx)
@@ -373,6 +373,27 @@ def workflow_script(repo_dir):
         return None
     return {"name": "GitHub workflow: %s (%s)" % (job.get("name") or job_id, os.path.basename(f)),
             "script": "\n".join(lines) + "\n", "afterCompile": False, "dir": "."}
+
+
+_XCB = re.compile(r"(^|[\s;&|(])xcodebuild\b")
+
+
+def _runs_xcodebuild(run, repo_dir, wd):
+    """True when a step runs xcodebuild itself or through a script of the repo (bash Scripts/build.sh)."""
+    if _XCB.search(run):
+        return True
+    for m in re.finditer(r"(?:^|[\s;&|(])(?:(?:bash|sh|zsh|source|\.)\s+)?(\.?/?[\w.\-]+(?:/[\w.\-]+)*\.sh)\b", run):
+        for base in (os.path.join(repo_dir, wd), repo_dir):
+            f = os.path.normpath(os.path.join(base, m.group(1)))
+            if os.path.isfile(f):
+                try:
+                    with open(f, encoding="utf-8", errors="replace") as fh:
+                        if _XCB.search(fh.read()):
+                            return True
+                except OSError:
+                    pass
+                break
+    return False
 
 
 def _shq(s):
