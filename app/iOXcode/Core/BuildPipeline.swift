@@ -26,6 +26,31 @@ struct SDKLayout {
         return SDKLayout(sdk: s, swiftResource: sw, clangResource: clang)
     }
 
+    /// Apple's SDK keeps WebKit, SafariServices, JavaScriptCore and a few more frameworks as links into
+    /// System/Cryptexes/OS/... Turn each link into the real folder so the compiler and linker see an ordinary framework.
+    static func materializeFrameworkLinks(_ sdk: URL, log: LogSink) {
+        let fm = FileManager.default
+        let dir = sdk.appendingPathComponent("System/Library/Frameworks")
+        var done: [String] = [], broken: [String] = []
+        for name in (try? fm.contentsOfDirectory(atPath: dir.path)) ?? [] {
+            let u = dir.appendingPathComponent(name)
+            guard let dest = try? fm.destinationOfSymbolicLink(atPath: u.path) else { continue }
+            let real = URL(fileURLWithPath: dest, relativeTo: dir).standardizedFileURL
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: real.path, isDirectory: &isDir), isDir.boolValue else { broken.append(name); continue }
+            do {
+                try fm.removeItem(at: u)
+                try fm.copyItem(at: real, to: u)
+                done.append(name)
+            } catch {
+                try? fm.createSymbolicLink(atPath: u.path, withDestinationPath: dest)   // put the link back
+                broken.append(name)
+            }
+        }
+        if !done.isEmpty { log.log("SDK: made \(done.count) linked frameworks real (\(done.prefix(4).joined(separator: ", "))…)") }
+        if !broken.isEmpty { log.log("warning: SDK frameworks whose link leads nowhere: \(broken.joined(separator: ", ")); import the SDK pack again") }
+    }
+
     /// Says what is missing, for the Setup screen.
     static func problem() -> String? {
         let fm = FileManager.default
@@ -93,6 +118,7 @@ final class BuildPipeline {
         guard let layout = SDKLayout.locate() else {
             throw BuildError.message("No iPhone SDK found. Open Setup and import the SDK pack first.")
         }
+        SDKLayout.materializeFrameworkLinks(layout.sdk, log: log)
         let work = Paths.work.appendingPathComponent(m.name, isDirectory: true)
         try? fm.removeItem(at: work)
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
