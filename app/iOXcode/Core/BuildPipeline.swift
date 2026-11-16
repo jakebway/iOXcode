@@ -37,14 +37,14 @@ struct SDKLayout {
             guard let dest = try? fm.destinationOfSymbolicLink(atPath: u.path) else { continue }
             let real = URL(fileURLWithPath: dest.hasPrefix("/") ? dest : dir.path + "/" + dest).standardizedFileURL   // a link is relative to the folder it sits in
             var isDir: ObjCBool = false
-            guard fm.fileExists(atPath: real.path, isDirectory: &isDir), isDir.boolValue else { broken.append(name); continue }
+            guard fm.fileExists(atPath: real.path, isDirectory: &isDir), isDir.boolValue else { broken.append("\(name) (no folder at \(real.path.suffix(70)))"); continue }
             do {
                 try fm.removeItem(at: u)
                 try fm.copyItem(at: real, to: u)
                 done.append(name)
             } catch {
                 try? fm.createSymbolicLink(atPath: u.path, withDestinationPath: dest)   // put the link back
-                broken.append(name)
+                broken.append("\(name) (copy failed: \(error.localizedDescription))")
             }
         }
         if !done.isEmpty { log.log("SDK: made \(done.count) linked frameworks real (\(done.prefix(4).joined(separator: ", "))…)") }
