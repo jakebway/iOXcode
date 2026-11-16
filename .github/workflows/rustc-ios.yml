@@ -1,0 +1,85 @@
+name: Rust on device - build rustc for iPhone (spike)
+
+# Can the real Rust compiler be built as an iPhone program? Builds rustc (host = aarch64-apple-ios) from the
+# official sources, with the one target-spec change the rustc-on-iOS write-ups use (allow dynamic linking).
+# Long (LLVM for iOS is built from source). Logs go to the ci-logs branch. Output: size of what was built.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Rust release tag"
+        default: "1.90.0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rustc-ios
+  cancel-in-progress: false
+
+jobs:
+  rustc:
+    runs-on: macos-15
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust sources
+        run: |
+          mkdir -p ci-out
+          git clone -q --depth 1 --branch "${{ inputs.tag || '1.90.0' }}" https://github.com/rust-lang/rust "$RUNNER_TEMP/rust"
+          cd "$RUNNER_TEMP/rust"
+          git submodule update -q --init --depth 1 src/llvm-project library/backtrace src/tools/cargo 2>&1 | tail -3 || true
+          grep -rn "dynamic_linking" compiler/rustc_target/src/spec/base/apple/ compiler/rustc_target/src/spec/targets/aarch64_apple_ios.rs | tee "$GITHUB_WORKSPACE/ci-out/dynamic_linking-before.txt" || true
+      - name: Allow dynamic linking for iOS
+        run: |
+          cd "$RUNNER_TEMP/rust"
+          f=compiler/rustc_target/src/spec/base/apple/mod.rs
+          grep -n "dynamic_linking" "$f" || true
+          # the base spec turns dynamic linking off for the iOS-family OSes; turn it on
+          python3 - "$f" <<'P'
+          import re,sys
+          p=sys.argv[1]; s=open(p).read()
+          n=s.count("dynamic_linking: false")
+          s=s.replace("dynamic_linking: false","dynamic_linking: true")
+          open(p,"w").write(s); print("patched",n)
+          P
+          git diff --stat | tee "$GITHUB_WORKSPACE/ci-out/patch.txt"
+      - name: Configure
+        run: |
+          cd "$RUNNER_TEMP/rust"
+          cat > config.toml <<'C'
+          change-id = "ignore"
+          [llvm]
+          download-ci-llvm = false
+          ninja = true
+          [build]
+          build = "aarch64-apple-darwin"
+          host = ["aarch64-apple-ios"]
+          target = ["aarch64-apple-ios"]
+          docs = false
+          extended = false
+          tools = []
+          [rust]
+          channel = "nightly"
+          lld = false
+          C
+          brew install ninja cmake 2>&1 | tail -1
+      - name: Build rustc for iOS
+        id: build
+        continue-on-error: true
+        run: |
+          cd "$RUNNER_TEMP/rust"
+          export IPHONEOS_DEPLOYMENT_TARGET=16.0
+          python3 x.py build --stage 1 compiler/rustc library 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/build.log" | tail -n 40
+      - name: What came out
+        if: always()
+        run: |
+          cd "$RUNNER_TEMP/rust"
+          find build/aarch64-apple-darwin -path '*aarch64-apple-ios*' \( -name 'librustc_driver*' -o -name 'rustc*' \) -maxdepth 6 -exec ls -lh {} \; 2>/dev/null | head -20 | tee "$GITHUB_WORKSPACE/ci-out/products.txt"
+          tail -n 120 "$GITHUB_WORKSPACE/ci-out/build.log" > "$GITHUB_WORKSPACE/ci-out/build-tail.txt" || true
+      - name: Publish logs to the ci-logs branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "rustc-ios-${{ github.run_id }}"
