@@ -515,7 +515,19 @@ final class BuildPipeline {
             d["CFBundleIcons"] = ["CFBundlePrimaryIcon": ["CFBundleIconFiles": ["AppIcon60x60", "AppIcon76x76"]]]
         }
         for (k, v) in extra { d[k] = v }
-        for (k, v) in m.infoPlist { d[k] = v }
+        // Values from project.yml / build settings can use build variables too (CFBundleShortVersionString: $(MARKETING_VERSION)).
+        let bv: [String: String] = ["PRODUCT_NAME": m.name, "TARGET_NAME": m.name, "EXECUTABLE_NAME": m.name, "PRODUCT_MODULE_NAME": m.name,
+                                    "PRODUCT_BUNDLE_IDENTIFIER": m.bundleId, "MARKETING_VERSION": m.version, "CURRENT_PROJECT_VERSION": m.build,
+                                    "DEVELOPMENT_LANGUAGE": "en", "PRODUCT_BUNDLE_PACKAGE_TYPE": "APPL", "EXECUTABLE_PREFIX": ""]
+        for (k, v) in m.infoPlist {
+            var str = v
+            for (n, val) in bv {
+                str = str.replacingOccurrences(of: "$(\(n))", with: val).replacingOccurrences(of: "${\(n)}", with: val)
+                str = str.replacingOccurrences(of: "$(\(n):rfc1034identifier)", with: val.replacingOccurrences(of: "_", with: "-"))
+            }
+            if str.contains("$(") || str.contains("${") { continue }   // unknown variable: keep the value we already have
+            d[k] = str
+        }
         let data = try PropertyListSerialization.data(fromPropertyList: d, format: .xml, options: 0)
         try data.write(to: url)
     }
