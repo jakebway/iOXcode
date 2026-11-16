@@ -55,8 +55,8 @@ jobs:
           ninja = true
           [build]
           build = "aarch64-apple-darwin"
-          host = ["aarch64-apple-ios"]
-          target = ["aarch64-apple-ios"]
+          host = ["aarch64-apple-darwin", "aarch64-apple-ios"]
+          target = ["aarch64-apple-darwin", "aarch64-apple-ios"]
           docs = false
           extended = false
           tools = []
@@ -71,12 +71,12 @@ jobs:
         run: |
           cd "$RUNNER_TEMP/rust"
           export IPHONEOS_DEPLOYMENT_TARGET=16.0
-          python3 x.py build --stage 1 compiler/rustc library 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/build.log" | tail -n 40
+          python3 x.py build --stage 2 --host aarch64-apple-ios --target aarch64-apple-ios compiler/rustc library/std 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/build.log" | tail -n 40
       - name: What came out
         if: always()
         run: |
           cd "$RUNNER_TEMP/rust"
-          find build/aarch64-apple-darwin -path '*aarch64-apple-ios*' \( -name 'librustc_driver*' -o -name 'rustc*' \) -maxdepth 6 -exec ls -lh {} \; 2>/dev/null | head -20 | tee "$GITHUB_WORKSPACE/ci-out/products.txt"
+          find build/aarch64-apple-darwin -path '*aarch64-apple-ios*' \( -name 'librustc_driver*' -o -name 'rustc-main*' \) -maxdepth 7 -exec ls -lh {} \; 2>/dev/null | head -20 | tee "$GITHUB_WORKSPACE/ci-out/products.txt"
           tail -n 120 "$GITHUB_WORKSPACE/ci-out/build.log" > "$GITHUB_WORKSPACE/ci-out/build-tail.txt" || true
       - name: Publish logs to the ci-logs branch
         if: always()
