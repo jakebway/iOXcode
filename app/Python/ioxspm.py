@@ -185,7 +185,7 @@ def extract_package_call(src):
     # collect simple `let name = "string"` constants so references can be resolved
     consts = {}
     for m in re.finditer(r'(?m)^\s*(?:let|var)\s+(\w+)\s*(?::\s*[^=\n]+)?=\s*', src):
-        if src[m.end():m.end() + 8].startswith("Package("):
+        if re.match(r"(?:Package)?(?:\.init)?\(", src[m.end():m.end() + 16]):
             continue
         try:
             p = Parser(tokenize(src[m.end():m.end() + 200000]))
@@ -196,7 +196,12 @@ def extract_package_call(src):
             consts[m.group(1)] = val
     idx = src.find("Package(")
     if idx < 0:
-        return None, consts
+        # `let package: Package = .init(...)` (swift-png and others)
+        m = re.search(r"(?m)^\s*(?:let|var)\s+package\s*(?::\s*Package)?\s*=\s*(?:Package)?\.init\(", src)
+        if not m:
+            return None, consts
+        idx = m.end() - len(".init(")
+        src = src[:idx] + "Package(" + src[idx + len(".init("):]
     toks = tokenize(src[idx:])
     p = Parser(toks)
     call = p.parse_expr()
