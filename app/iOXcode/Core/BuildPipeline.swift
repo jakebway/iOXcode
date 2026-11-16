@@ -35,7 +35,7 @@ struct SDKLayout {
         for name in (try? fm.contentsOfDirectory(atPath: dir.path)) ?? [] {
             let u = dir.appendingPathComponent(name)
             guard let dest = try? fm.destinationOfSymbolicLink(atPath: u.path) else { continue }
-            let real = URL(fileURLWithPath: dest, relativeTo: dir).standardizedFileURL
+            let real = URL(fileURLWithPath: dest.hasPrefix("/") ? dest : dir.path + "/" + dest).standardizedFileURL   // a link is relative to the folder it sits in
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: real.path, isDirectory: &isDir), isDir.boolValue else { broken.append(name); continue }
             do {
