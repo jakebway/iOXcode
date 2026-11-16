@@ -162,7 +162,18 @@ struct RepoHomeView: View {
         }
         origin = o
         looking = false
-        if let o { info = await RepoInfo.fetch(o) }
+        if let o {
+            info = await RepoInfo.fetch(o)
+            // Opening a repo also pulls its newest commit (never while a build is running).
+            if !model.building {
+                let result = await GitHubSync.sync(project, origin: o) { line in Task { @MainActor in model.console.line(line) } }
+                if case .updated = result {
+                    let p = project
+                    await Task.detached { Generator.refresh(p, log: nil) }.value
+                    model.refresh()
+                }
+            }
+        }
     }
 }
 

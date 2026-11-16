@@ -68,7 +68,14 @@ final class AppModel: ObservableObject {
             logFile?.write(Data((s.hasSuffix("\n") ? s : s + "\n").utf8))
             Task { @MainActor in self?.console.line(s) }
         }
-        DispatchQueue.global(qos: .userInitiated).async {
+        Task.detached {
+            // Pull the newest commit first, so a build always reflects what is on GitHub.
+            if let origin = Origins.load(p.url.lastPathComponent) {
+                switch await GitHubSync.sync(p, origin: origin, log: { sink.log($0) }) {
+                case .updated: Generator.refresh(p, log: sink)
+                default: break
+                }
+            }
             do {
                 let ipa = try BuildPipeline(project: p, log: sink).run()
                 let rec = BuildLibrary.add(ipa: ipa, manifest: p.manifest, projectName: p.name)
@@ -131,8 +138,10 @@ final class AppModel: ObservableObject {
                     }
                 }
             }
-            if let origin { Origins.save(origin, for: name) }
-            else {
+            if let origin {
+                Origins.save(origin, for: name)
+                Task.detached { await GitHubSync.recordImport(name: name, folder: dest, origin: origin) }
+            } else {
                 // not imported from a link: find the repo in the background so Releases is ready when it is opened
                 Task.detached { if let o = await GitHubOrigin.infer(from: dest) { Origins.save(o, for: name) } }
             }
@@ -172,7 +181,7 @@ final class AppModel: ObservableObject {
                 try FileManager.default.moveItem(at: tmp, to: zip)
                 await MainActor.run {
                     self.importing = false
-                    self.importProject(zip, origin: GitHubOrigin(owner: owner, repo: repo))
+                    self.importProject(zip, origin: GitHubOrigin(owner: owner, repo: repo, branch: branch))
                 }
             } catch {
                 await MainActor.run {
@@ -205,7 +214,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func delete(_ p: Project) { try? FileManager.default.removeItem(at: p.url); Origins.remove(p.url.lastPathComponent); refresh() }
+    func delete(_ p: Project) { try? FileManager.default.removeItem(at: p.url); Origins.remove(p.url.lastPathComponent); GitHubSync.forget(p.url.lastPathComponent); refresh() }
 
     func deleteBuild(_ r: BuildRecord) { BuildLibrary.remove(r); builds = BuildLibrary.load() }
 

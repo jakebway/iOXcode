@@ -3,6 +3,7 @@ import Foundation
 struct GitHubOrigin: Codable, Hashable {
     var owner: String
     var repo: String
+    var branch: String? = nil
 
     /// Accepts "owner/repo" or any github.com link to the repo.
     static func parse(_ text: String) -> GitHubOrigin? {
