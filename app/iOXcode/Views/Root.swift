@@ -65,6 +65,7 @@ struct ProjectsView: View {
                         HStack {
                             Button("Build IPA") { model.build(p) }
                                 .buttonStyle(.borderedProminent).disabled(model.building)
+                            Button { ShowInFiles.open(p.url) } label: { Image(systemName: "folder") }.buttonStyle(.bordered)
                             Button("Delete", role: .destructive) { model.delete(p) }.buttonStyle(.bordered)
                         }
                     }.padding(.vertical, 4)
@@ -188,6 +189,14 @@ struct SetupView: View {
             .navigationTitle("Setup")
             .onAppear { model.refresh() }
         }
+    }
+}
+
+/// Opens the Files app at a folder of this app's Documents (they show under On My iPhone > iOXcode).
+enum ShowInFiles {
+    static func open(_ url: URL) {
+        guard let u = URL(string: "shareddocuments://" + url.standardizedFileURL.path) else { return }
+        UIApplication.shared.open(u)
     }
 }
 
