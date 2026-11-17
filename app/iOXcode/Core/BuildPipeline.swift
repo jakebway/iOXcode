@@ -799,7 +799,45 @@ enum PreviewStripper {
             return n
         }
         func skipSpaces(_ at: Int) -> Int { var j = at; while j < n, chars[j] == " " || chars[j] == "\t" || chars[j] == "\n" || chars[j] == "\r" { j += 1 }; return j }
+        // Comments and string literals are copied as they are: a "#Preview" inside one is text, not the macro.
+        func literalEnd(_ at: Int) -> Int? {
+            let c = chars[at]
+            if c == "/", at + 1 < n, chars[at + 1] == "/" { var j = at; while j < n, chars[j] != "\n" { j += 1 }; return j }
+            if c == "/", at + 1 < n, chars[at + 1] == "*" {
+                var j = at + 2, depth = 1
+                while j + 1 < n, depth > 0 {
+                    if chars[j] == "/", chars[j + 1] == "*" { depth += 1; j += 2 }
+                    else if chars[j] == "*", chars[j + 1] == "/" { depth -= 1; j += 2 }
+                    else { j += 1 }
+                }
+                return depth == 0 ? j : n
+            }
+            var k = at, hashes = 0
+            while k < n, chars[k] == "#" { hashes += 1; k += 1 }
+            guard k < n, chars[k] == "\"" else { return nil }
+            func closes(_ j: Int, quotes: Int) -> Bool {
+                guard j + quotes + hashes <= n else { return false }
+                for q in 0..<quotes where chars[j + q] != "\"" { return false }
+                for h in 0..<hashes where chars[j + quotes + h] != "#" { return false }
+                return true
+            }
+            func closesEscape(_ j: Int) -> Bool {   // in a raw string a backslash escapes only when followed by the same number of #
+                guard j + hashes < n else { return false }
+                for h in 0..<hashes where chars[j + 1 + h] != "#" { return false }
+                return true
+            }
+            let multi = k + 2 < n && chars[k + 1] == "\"" && chars[k + 2] == "\""
+            var j = k + (multi ? 3 : 1)
+            while j < n {
+                if chars[j] == "\\" { j += hashes == 0 ? 2 : (closesEscape(j) ? 2 : 1); continue }
+                if closes(j, quotes: multi ? 3 : 1) { return j + (multi ? 3 : 1) + hashes }
+                if !multi, chars[j] == "\n" { return j }
+                j += 1
+            }
+            return n
+        }
         while i < n {
+            if let e = literalEnd(i), e > i { result += String(chars[i..<e]); i = e; continue }
             if matches(i), i == 0 || !(chars[i - 1].isLetter || chars[i - 1].isNumber || chars[i - 1] == "_") {
                 var j = i + key.count
                 var k = skipSpaces(j)
