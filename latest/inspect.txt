@@ -1,0 +1,61 @@
+driver: build/aarch64-apple-darwin/stage1-rustc/aarch64-apple-ios/release/librustc_driver.dylib
+build/aarch64-apple-darwin/stage1-rustc/aarch64-apple-ios/release/librustc_driver.dylib:
+Load command 10
+      cmd LC_BUILD_VERSION
+  cmdsize 32
+ platform IOS
+    minos 16.0
+      sdk 18.5
+   ntools 1
+     tool LD
+  version 1167.5
+build/aarch64-apple-darwin/stage1-rustc/aarch64-apple-ios/release/librustc_driver.dylib: Mach-O 64-bit dynamically linked shared library arm64
+build/aarch64-apple-darwin/stage1-rustc/aarch64-apple-ios/release/librustc_driver.dylib:
+	@rpath/librustc_driver-758d2a432b5d27d4.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 1900.180.0)
+	/usr/lib/libiconv.2.dylib (compatibility version 7.0.0, current version 7.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)
+000000000002e2ec T __RNvCsgZZbjZeSBKu_17rustc_driver_impl12run_compiler
+0000000000037484 T __RNvCsgZZbjZeSBKu_17rustc_driver_impl4main
+00000000097f8890 D __RNvNvNtCs3Q6JGlHwGDT_15rustc_interface9interface12run_compiler8CALLSITE
+0000000009309960 S __RNvNvNvNtCs3Q6JGlHwGDT_15rustc_interface9interface12run_compiler8CALLSITE4META
+build/host/stage2/lib:
+librustc_driver-f1c5772fbd654c4e.dylib
+rustlib
+
+build/host/stage2/lib/rustlib:
+aarch64-apple-darwin
+aarch64-apple-ios
+rustc-src
+src
+libaddr2line-cf2225b077ab78fd.rlib
+libadler2-cbbd29a2ac46e66c.rlib
+liballoc-88117b783c10c9cf.rlib
+libcfg_if-951e1fcd545ce811.rlib
+libcompiler_builtins-b458a14f484aba83.rlib
+libcore-3481e10932296573.rlib
+libgetopts-33e5be280245839a.rlib
+libgimli-289038eff0732b89.rlib
+libhashbrown-13aad0ac2f9e658b.rlib
+liblibc-4fa17b1dff70c6f7.rlib
+libmemchr-a798764b9c6eb67e.rlib
+libminiz_oxide-f5e44eb7cc702481.rlib
+libobject-e89692145d3e49dc.rlib
+libpanic_abort-9612a01a047cfe12.rlib
+libpanic_unwind-ae84c315531dc52d.rlib
+libproc_macro-0f9bae8102eecb60.rlib
+librustc_demangle-74397181b26742ab.rlib
+librustc_literal_escaper-23be08a58ea58e8e.rlib
+librustc_std_workspace_alloc-67875597481080d7.rlib
+librustc_std_workspace_core-ddee9ce98a71a32a.rlib
+librustc_std_workspace_std-604983f541bf0d38.rlib
+libstd_detect-b15156a7b4ba38c6.rlib
+libstd-3f53dd0117707c3a.dylib
+libstd-3f53dd0117707c3a.rlib
+libsysroot-bb54f1d8ece3179b.rlib
+libtest-745c4b0e076c2874.rlib
+libunicode_width-52b26c9856d71003.rlib
+libunwind-126d326908113c7b.rlib
+self-contained
+total 321184
+-rwxr-xr-x  1 runner  staff  164444592 Nov 17 02:01 librustc_driver.dylib
