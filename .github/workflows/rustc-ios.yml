@@ -45,6 +45,39 @@ jobs:
           open(p,"w").write(s); print("patched",n)
           P
           git diff --stat | tee "$GITHUB_WORKSPACE/ci-out/patch.txt"
+      - name: C entry point for iOXcode
+        run: |
+          cd "$RUNNER_TEMP/rust"
+          # rustc's own main() ends with process::exit, which would close iOXcode. This entry runs one compile and
+          # returns its exit code instead; iOXcode loads the library and calls it like the swift and clang drivers.
+          cat >> compiler/rustc_driver/src/lib.rs <<'RS'
+
+          static IOX_INIT: std::sync::Once = std::sync::Once::new();
+
+          /// iOXcode: run one `rustc` command line in this process and return its exit code (0 = success).
+          #[unsafe(no_mangle)]
+          pub unsafe extern "C" fn ioxrustc_main(argc: std::ffi::c_int, argv: *const *const std::ffi::c_char) -> std::ffi::c_int {
+              let mut args: Vec<String> = Vec::new();
+              for i in 0..argc as isize {
+                  let p = unsafe { *argv.offset(i) };
+                  if p.is_null() { break; }
+                  args.push(unsafe { std::ffi::CStr::from_ptr(p) }.to_string_lossy().into_owned());
+              }
+              IOX_INIT.call_once(|| {
+                  rustc_driver_impl::install_ice_hook(rustc_driver_impl::DEFAULT_BUG_REPORT_URL, |_| ());
+              });
+              let mut callbacks = rustc_driver_impl::TimePassesCallbacks::default();
+              rustc_driver_impl::catch_with_exit_code(|| rustc_driver_impl::run_compiler(&args, &mut callbacks))
+          }
+          RS
+          tail -25 compiler/rustc_driver/src/lib.rs
+      - name: Cache LLVM
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/rust/build/aarch64-apple-darwin/llvm
+            ${{ runner.temp }}/rust/build/aarch64-apple-ios/llvm
+          key: rustc-ios-llvm-${{ inputs.tag || '1.90.0' }}
       - name: Configure
         run: |
           cd "$RUNNER_TEMP/rust"
@@ -90,7 +123,7 @@ jobs:
           vtool -show-build "$D" 2>&1 | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
           file "$D" | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
           otool -L "$D" | head -30 | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
-          nm -gU "$D" | grep -E "rustc_driver.*main|rustc_main|run_compiler" | head -20 | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+          nm -gU "$D" | grep -E "ioxrustc_main|rustc_driver.*main|run_compiler" | head -20 | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
           S=build/host/stage2
           ls "$S/lib" "$S/lib/rustlib" 2>&1 | head -20 | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
           ls "$S/lib/rustlib/aarch64-apple-ios/lib" 2>&1 | head -40 | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
@@ -102,6 +135,7 @@ jobs:
           ls -l "$RUNNER_TEMP/out"
           (cd "$RUNNER_TEMP/out" && zip -q librustc_driver.dylib.zip librustc_driver.dylib)
           TAG="rustc-ios-${{ inputs.tag || '1.90.0' }}"
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag 2>/dev/null || true
           gh release create "$TAG" "$RUNNER_TEMP/out/librustc_driver.dylib.zip" "$RUNNER_TEMP/out/rustlib-aarch64-apple-ios.tar.gz" \
             --repo "$GITHUB_REPOSITORY" --title "rustc for iPhone $TAG" --notes "rustc ${{ inputs.tag || '1.90.0' }} built to run on iOS (aarch64-apple-ios host)" || true
       - name: Publish logs to the ci-logs branch
