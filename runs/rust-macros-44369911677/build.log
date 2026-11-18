@@ -1,0 +1,180 @@
+=== serde_derive 1
+  Downloaded serde_derive v1.0.229
+  Downloaded proc-macro2 v1.0.107
+  Downloaded quote v1.0.47
+  Downloaded syn v3.0.10
+  Downloaded unicode-ident v1.0.27
+   Compiling unicode-ident v1.0.27
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling syn v3.0.10
+   Compiling serde_derive v1.0.229
+   Compiling m0 v0.0.0 (/Users/runner/work/_temp/m0)
+    Finished `release` profile [optimized] target(s) in 22.49s
+=== serde_repr 0.1
+  Downloaded serde_repr v0.1.21
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling syn v3.0.10
+   Compiling serde_repr v0.1.21
+   Compiling m1 v0.0.0 (/Users/runner/work/_temp/m1)
+    Finished `release` profile [optimized] target(s) in 9.08s
+=== thiserror-impl 2
+  Downloaded thiserror-impl v2.0.21
+   Compiling thiserror-impl v2.0.21
+   Compiling m2 v0.0.0 (/Users/runner/work/_temp/m2)
+    Finished `release` profile [optimized] target(s) in 3.71s
+=== thiserror-impl 1
+  Downloaded thiserror-impl v1.0.69
+  Downloaded syn v2.0.119
+   Compiling syn v2.0.119
+   Compiling thiserror-impl v1.0.69
+   Compiling m3 v0.0.0 (/Users/runner/work/_temp/m3)
+    Finished `release` profile [optimized] target(s) in 8.58s
+=== async-trait 0.1
+  Downloaded async-trait v0.1.92
+   Compiling syn v3.0.10
+   Compiling async-trait v0.1.92
+   Compiling m4 v0.0.0 (/Users/runner/work/_temp/m4)
+    Finished `release` profile [optimized] target(s) in 25.17s
+=== tokio-macros 2
+  Downloaded tokio-macros v2.7.2
+   Compiling syn v3.0.10
+   Compiling tokio-macros v2.7.2
+   Compiling m5 v0.0.0 (/Users/runner/work/_temp/m5)
+    Finished `release` profile [optimized] target(s) in 15.36s
+=== futures-macro 0.3
+  Downloaded futures-macro v0.3.34
+   Compiling futures-macro v0.3.34
+   Compiling m6 v0.0.0 (/Users/runner/work/_temp/m6)
+    Finished `release` profile [optimized] target(s) in 3.43s
+=== pin-project-internal 1
+  Downloaded pin-project-internal v1.1.13
+   Compiling syn v2.0.119
+   Compiling pin-project-internal v1.1.13
+   Compiling m7 v0.0.0 (/Users/runner/work/_temp/m7)
+    Finished `release` profile [optimized] target(s) in 14.93s
+=== tracing-attributes 0.1
+  Downloaded tracing-attributes v0.1.31
+   Compiling syn v2.0.119
+   Compiling tracing-attributes v0.1.31
+   Compiling m8 v0.0.0 (/Users/runner/work/_temp/m8)
+    Finished `release` profile [optimized] target(s) in 21.92s
+=== strum_macros 0.27
+  Downloaded strum_macros v0.27.2
+  Downloaded heck v0.5.0
+   Compiling heck v0.5.0
+   Compiling strum_macros v0.27.2
+   Compiling m9 v0.0.0 (/Users/runner/work/_temp/m9)
+    Finished `release` profile [optimized] target(s) in 4.48s
+=== strum_macros 0.26
+  Downloaded strum_macros v0.26.4
+  Downloaded rustversion v1.0.23
+   Compiling rustversion v1.0.23
+   Compiling syn v2.0.119
+   Compiling strum_macros v0.26.4
+error[E0428]: the name `filter_by_rust_version` is defined multiple times
+   --> /Users/runner/work/_temp/caches/cargo/src/strum_macros-0.26.4/src/macros/from_repr.rs:106:9
+    |
+101 |         fn filter_by_rust_version(_: TokenStream) -> TokenStream {
+    |         -------------------------------------------------------- previous definition of the value `filter_by_rust_version` here
+...
+106 |         fn filter_by_rust_version(s: TokenStream) -> TokenStream {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `filter_by_rust_version` redefined here
+    |
+    = note: `filter_by_rust_version` must be defined only once in the value namespace of this block
+
+error[E0428]: the name `try_from_str` is defined multiple times
+   --> /Users/runner/work/_temp/caches/cargo/src/strum_macros-0.26.4/src/macros/strings/from_string.rs:182:1
+    |
+171 | / fn try_from_str(
+172 | |     _name: &proc_macro2::Ident,
+173 | |     _impl_generics: &syn::ImplGenerics,
+174 | |     _ty_generics: &syn::TypeGenerics,
+...   |
+178 | |     Default::default()
+179 | | }
+    | |_- previous definition of the value `try_from_str` here
+...
+182 | / fn try_from_str(
+183 | |     name: &proc_macro2::Ident,
+184 | |     impl_generics: &syn::ImplGenerics,
+185 | |     ty_generics: &syn::TypeGenerics,
+...   |
+198 | | }
+    | |_^ `try_from_str` redefined here
+    |
+    = note: `try_from_str` must be defined only once in the value namespace of this module
+
+error[E0463]: can't find crate for `rustversion`
+   --> /Users/runner/work/_temp/caches/cargo/src/strum_macros-0.26.4/src/macros/from_repr.rs:100:11
+    |
+100 |         #[rustversion::before(1.46)]
+    |           ^^^^^^^^^^^ can't find crate
+
+error[E0463]: can't find crate for `rustversion`
+   --> /Users/runner/work/_temp/caches/cargo/src/strum_macros-0.26.4/src/macros/from_repr.rs:105:11
+    |
+105 |         #[rustversion::since(1.46)]
+    |           ^^^^^^^^^^^ can't find crate
+
+error[E0463]: can't find crate for `rustversion`
+   --> /Users/runner/work/_temp/caches/cargo/src/strum_macros-0.26.4/src/macros/strings/from_string.rs:170:3
+    |
+170 | #[rustversion::before(1.34)]
+    |   ^^^^^^^^^^^ can't find crate
+
+error[E0463]: can't find crate for `rustversion`
+   --> /Users/runner/work/_temp/caches/cargo/src/strum_macros-0.26.4/src/macros/strings/from_string.rs:181:3
+    |
+181 | #[rustversion::since(1.34)]
+    |   ^^^^^^^^^^^ can't find crate
+
+error: aborting due to 6 previous errors
+
+Some errors have detailed explanations: E0428, E0463.
+For more information about an error, try `rustc --explain E0428`.
+error: could not compile `strum_macros` (lib) due to previous error(s)
+=== num_enum_derive 0.7
+  Downloaded num_enum_derive v0.7.6
+  Downloaded proc-macro-crate v3.5.0
+  Downloaded toml_edit v0.25.19
+Traceback (most recent call last):
+  File "<stdin>", line 28, in <module>
+  File "/Users/runner/work/iOXcode/iOXcode/app/Python/ioxcargo.py", line 1067, in main
+    return build(rest, out, err)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/work/iOXcode/iOXcode/app/Python/ioxcargo.py", line 925, in build
+    r.resolve(want, not no_default)
+  File "/Users/runner/work/iOXcode/iOXcode/app/Python/ioxcargo.py", line 526, in resolve
+    self._visit(self.root, want)
+  File "/Users/runner/work/iOXcode/iOXcode/app/Python/ioxcargo.py", line 549, in _visit
+    child = self.package_for(alias, d)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/work/iOXcode/iOXcode/app/Python/ioxcargo.py", line 500, in package_for
+    src = fetch_crate(name, vstr(v), e.get("cksum"), self.log)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/work/iOXcode/iOXcode/app/Python/ioxcargo.py", line 272, in fetch_crate
+    data = _get(DL % (name, name, version))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/work/iOXcode/iOXcode/app/Python/ioxcargo.py", line 217, in _get
+    with urllib.request.urlopen(req, timeout=timeout, context=_ctx()) as r:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 215, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 521, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 630, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 559, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 404: 
