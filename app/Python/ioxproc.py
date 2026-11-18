@@ -181,14 +181,22 @@ class Popen:
 def install():
     """Swaps the real functions for these while a script runs. Returns a function that puts them back."""
     names = ["run", "call", "check_call", "check_output", "getstatusoutput", "getoutput", "Popen"]
-    saved = {n: getattr(subprocess, n) for n in names}
-    saved_system = os.system
+    saved = {n: getattr(subprocess, n, None) for n in names}
+    saved_system = getattr(os, "system", None)   # iOS's Python has no os.system at all
     for n in names:
         setattr(subprocess, n, globals()[n])
     os.system = system
 
     def restore():
         for n, f in saved.items():
-            setattr(subprocess, n, f)
-        os.system = saved_system
+            if f is None:
+                try: delattr(subprocess, n)
+                except AttributeError: pass
+            else:
+                setattr(subprocess, n, f)
+        if saved_system is None:
+            try: del os.system
+            except AttributeError: pass
+        else:
+            os.system = saved_system
     return restore
