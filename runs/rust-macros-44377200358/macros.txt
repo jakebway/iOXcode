@@ -1,0 +1,77 @@
+serde_derive 1.0.229 libserde_derive-1.0.229.dylib 2498936
+serde_repr 0.1.21 libserde_repr-0.1.21.dylib 1561336
+thiserror-impl 2.0.21 libthiserror_impl-2.0.21.dylib 2135632
+thiserror-impl 1.0.69 libthiserror_impl-1.0.69.dylib 1937168
+async-trait 0.1.92 libasync_trait-0.1.92.dylib 3429256
+tokio-macros 2.7.2 libtokio_macros-2.7.2.dylib 2842192
+futures-macro 0.3.34 libfutures_macro-0.3.34.dylib 2746384
+pin-project-internal 1.1.13 libpin_project_internal-1.1.13.dylib 2908976
+tracing-attributes 0.1.31 libtracing_attributes-0.1.31.dylib 3105328
+strum_macros 0.27.2 libstrum_macros-0.27.2.dylib 2358344
+bytemuck_derive 1.12.1 libbytemuck_derive-1.12.1.dylib 2066248
+zerocopy-derive 0.8.63 libzerocopy_derive-0.8.63.dylib 3161576
+zerocopy-derive 0.7.35 libzerocopy_derive-0.7.35.dylib 1719792
+displaydoc 0.2.7 libdisplaydoc-0.2.7.dylib 1736856
+clap_derive 4.6.8 libclap_derive-4.6.8.dylib 3298368
+derive_more-impl 2.1.1 libderive_more_impl-2.1.1.dylib 65848
+derive_more-impl 1.0.0 libderive_more_impl-1.0.0.dylib 65848
+paste 1.0.15 libpaste-1.0.15.dylib 600472
+rustversion 1.0.23 librustversion-1.0.23.dylib 590576
+ref-cast-impl 1.0.27 libref_cast_impl-1.0.27.dylib 1540144
+indoc 2.0.8 libindoc-2.0.8.dylib 564784
+async-stream-impl 0.3.6 libasync_stream_impl-0.3.6.dylib 2300008
+ctor-proc-macro 0.0.13 libctor_proc_macro-0.0.13.dylib 510056
+zeroize_derive 1.5.0 libzeroize_derive-1.5.0.dylib 2728656
+prost-derive 0.14.6 libprost_derive-0.14.6.dylib 2126128
+prost-derive 0.13.5 libprost_derive-0.13.5.dylib 2123872
+document-features 0.2.12 libdocument_features-0.2.12.dylib 591328
+const_format_proc_macros 0.2.37 libconst_format_proc_macros-0.2.37.dylib 800384
+yoke-derive 0.8.4 libyoke_derive-0.8.4.dylib 1981744
+zerovec-derive 0.11.7 libzerovec_derive-0.11.7.dylib 1923000
+zerofrom-derive 0.1.8 libzerofrom_derive-0.1.8.dylib 2086248
+enum-map-derive 0.17.0 libenum_map_derive-0.17.0.dylib 1470512
+derivative 2.2.0 libderivative-2.2.0.dylib 1954368
+darling_macro 0.21.3 libdarling_macro-0.21.3.dylib 3537640
+darling_macro 0.20.11 libdarling_macro-0.20.11.dylib 3514728
+objc2-proc-macros 0.2.0 libobjc2_proc_macros-0.2.0.dylib 506304
+bitfield-struct 0.11.0 libbitfield_struct-0.11.0.dylib 2667984
+modular-bitfield-impl 0.12.0 libmodular_bitfield_impl-0.12.0.dylib 2712240
+38 macros
+libasync_stream_impl-0.3.6.dylib:  platform IOS  minos 16.0 
+libasync_trait-0.1.92.dylib:  platform IOS  minos 16.0 
+libbitfield_struct-0.11.0.dylib:  platform IOS  minos 16.0 
+libbytemuck_derive-1.12.1.dylib:  platform IOS  minos 16.0 
+libclap_derive-4.6.8.dylib:  platform IOS  minos 16.0 
+libconst_format_proc_macros-0.2.37.dylib:  platform IOS  minos 16.0 
+libctor_proc_macro-0.0.13.dylib:  platform IOS  minos 16.0 
+libdarling_macro-0.20.11.dylib:  platform IOS  minos 16.0 
+libdarling_macro-0.21.3.dylib:  platform IOS  minos 16.0 
+libderivative-2.2.0.dylib:  platform IOS  minos 16.0 
+libderive_more_impl-1.0.0.dylib:  platform IOS  minos 16.0 
+libderive_more_impl-2.1.1.dylib:  platform IOS  minos 16.0 
+libdisplaydoc-0.2.7.dylib:  platform IOS  minos 16.0 
+libdocument_features-0.2.12.dylib:  platform IOS  minos 16.0 
+libenum_map_derive-0.17.0.dylib:  platform IOS  minos 16.0 
+libfutures_macro-0.3.34.dylib:  platform IOS  minos 16.0 
+libindoc-2.0.8.dylib:  platform IOS  minos 16.0 
+libmodular_bitfield_impl-0.12.0.dylib:  platform IOS  minos 16.0 
+libobjc2_proc_macros-0.2.0.dylib:  platform IOS  minos 16.0 
+libpaste-1.0.15.dylib:  platform IOS  minos 16.0 
+libpin_project_internal-1.1.13.dylib:  platform IOS  minos 16.0 
+libprost_derive-0.13.5.dylib:  platform IOS  minos 16.0 
+libprost_derive-0.14.6.dylib:  platform IOS  minos 16.0 
+libref_cast_impl-1.0.27.dylib:  platform IOS  minos 16.0 
+librustversion-1.0.23.dylib:  platform IOS  minos 16.0 
+libserde_derive-1.0.229.dylib:  platform IOS  minos 16.0 
+libserde_repr-0.1.21.dylib:  platform IOS  minos 16.0 
+libstrum_macros-0.27.2.dylib:  platform IOS  minos 16.0 
+libthiserror_impl-1.0.69.dylib:  platform IOS  minos 16.0 
+libthiserror_impl-2.0.21.dylib:  platform IOS  minos 16.0 
+libtokio_macros-2.7.2.dylib:  platform IOS  minos 16.0 
+libtracing_attributes-0.1.31.dylib:  platform IOS  minos 16.0 
+libyoke_derive-0.8.4.dylib:  platform IOS  minos 16.0 
+libzerocopy_derive-0.7.35.dylib:  platform IOS  minos 16.0 
+libzerocopy_derive-0.8.63.dylib:  platform IOS  minos 16.0 
+libzerofrom_derive-0.1.8.dylib:  platform IOS  minos 16.0 
+libzeroize_derive-1.5.0.dylib:  platform IOS  minos 16.0 
+libzerovec_derive-0.11.7.dylib:  platform IOS  minos 16.0 
