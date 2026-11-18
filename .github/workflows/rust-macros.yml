@@ -66,7 +66,11 @@ jobs:
               os.environ["IOX_ARTIFACTS_JSON"] = os.path.join(d, "artifacts.json")
               os.chdir(d)
               print("=== %s %s" % (name, ver), flush=True)
-              code = ioxcargo.main(["build", "--release", "--target", "aarch64-apple-ios"], sys.stdout, sys.stdout)
+              try:
+                  code = ioxcargo.main(["build", "--release", "--target", "aarch64-apple-ios"], sys.stdout, sys.stdout)
+              except BaseException as ex:      # a crate that can't be fetched or resolved must not stop the rest
+                  print("ERROR %s: %r" % (name, ex), flush=True)
+                  code = 1
               if code != 0 or not os.path.isfile(os.environ["IOX_ARTIFACTS_JSON"]):
                   failed.append("%s %s" % (name, ver))
                   continue
