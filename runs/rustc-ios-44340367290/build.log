@@ -1,0 +1,175 @@
+downloading https://static.rust-lang.org/dist/2025-08-07/rust-std-1.89.0-aarch64-apple-darwin.tar.xz
+downloading https://static.rust-lang.org/dist/2025-08-07/rustc-1.89.0-aarch64-apple-darwin.tar.xz
+downloading https://static.rust-lang.org/dist/2025-08-07/cargo-1.89.0-aarch64-apple-darwin.tar.xz
+extracting /Users/runner/work/_temp/rust/build/cache/2025-08-07/rust-std-1.89.0-aarch64-apple-darwin.tar.xz
+extracting /Users/runner/work/_temp/rust/build/cache/2025-08-07/rustc-1.89.0-aarch64-apple-darwin.tar.xz
+extracting /Users/runner/work/_temp/rust/build/cache/2025-08-07/cargo-1.89.0-aarch64-apple-darwin.tar.xz
+::group::Building bootstrap
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded block-buffer v0.10.4
+  Downloaded log v0.4.22
+  Downloaded xz2 v0.1.7
+  Downloaded itoa v1.0.11
+  Downloaded xattr v1.5.0
+  Downloaded walkdir v2.5.0
+  Downloaded typenum v1.17.0
+  Downloaded unicode-ident v1.0.13
+  Downloaded proc-macro2 v1.0.89
+  Downloaded memchr v2.7.4
+  Downloaded clap_builder v4.5.20
+  Downloaded crossbeam-epoch v0.9.18
+  Downloaded bitflags v2.6.0
+  Downloaded toml v0.5.11
+  Downloaded serde_json v1.0.132
+  Downloaded serde_derive v1.0.215
+  Downloaded ryu v1.0.18
+  Downloaded quote v1.0.37
+  Downloaded crossbeam-utils v0.8.20
+  Downloaded syn v2.0.87
+  Downloaded termcolor v1.4.1
+  Downloaded object v0.36.5
+  Downloaded shlex v1.3.0
+  Downloaded semver v1.0.23
+  Downloaded regex-syntax v0.8.5
+  Downloaded regex-automata v0.4.9
+  Downloaded rustix v1.0.7
+  Downloaded bstr v1.10.0
+  Downloaded pkg-config v0.3.31
+  Downloaded filetime v0.2.25
+  Downloaded fd-lock v4.0.4
+  Downloaded digest v0.10.7
+  Downloaded version_check v0.9.5
+  Downloaded sha2 v0.10.8
+  Downloaded same-file v1.0.6
+  Downloaded opener v0.5.2
+  Downloaded home v0.5.9
+  Downloaded generic-array v0.14.7
+  Downloaded heck v0.5.0
+  Downloaded globset v0.4.15
+  Downloaded errno v0.3.11
+  Downloaded crossbeam-deque v0.8.5
+  Downloaded cpufeatures v0.2.15
+  Downloaded cmake v0.1.54
+  Downloaded clap_lex v0.7.2
+  Downloaded libc v0.2.174
+  Downloaded lzma-sys v0.1.20
+  Downloaded clap_derive v4.5.18
+  Downloaded clap_complete v4.5.37
+  Downloaded clap v4.5.20
+  Downloaded cc v1.2.23
+  Downloaded anstyle v1.0.10
+  Downloaded tar v0.4.43
+  Downloaded serde v1.0.215
+  Downloaded cfg-if v1.0.0
+  Downloaded aho-corasick v1.1.3
+  Downloaded ignore v0.4.23
+  Downloaded crypto-common v0.1.6
+   Compiling libc v0.2.174
+   Compiling proc-macro2 v1.0.89
+   Compiling unicode-ident v1.0.13
+   Compiling version_check v0.9.5
+   Compiling memchr v2.7.4
+   Compiling typenum v1.17.0
+   Compiling generic-array v0.14.7
+   Compiling quote v1.0.37
+   Compiling shlex v1.3.0
+   Compiling syn v2.0.87
+   Compiling cc v1.2.23
+   Compiling rustix v1.0.7
+   Compiling serde v1.0.215
+   Compiling crossbeam-utils v0.8.20
+   Compiling errno v0.3.11
+   Compiling pkg-config v0.3.31
+   Compiling cfg-if v1.0.0
+   Compiling bitflags v2.6.0
+   Compiling lzma-sys v0.1.20
+   Compiling aho-corasick v1.1.3
+   Compiling heck v0.5.0
+   Compiling anstyle v1.0.10
+   Compiling clap_lex v0.7.2
+   Compiling regex-syntax v0.8.5
+   Compiling clap_builder v4.5.20
+   Compiling clap_derive v4.5.18
+   Compiling regex-automata v0.4.9
+   Compiling crossbeam-epoch v0.9.18
+   Compiling crypto-common v0.1.6
+   Compiling block-buffer v0.10.4
+   Compiling bstr v1.10.0
+   Compiling serde_json v1.0.132
+   Compiling same-file v1.0.6
+   Compiling semver v1.0.23
+   Compiling log v0.4.22
+   Compiling globset v0.4.15
+   Compiling walkdir v2.5.0
+   Compiling digest v0.10.7
+   Compiling crossbeam-deque v0.8.5
+   Compiling clap v4.5.20
+   Compiling serde_derive v1.0.215
+   Compiling xattr v1.5.0
+   Compiling filetime v0.2.25
+   Compiling cpufeatures v0.2.15
+   Compiling itoa v1.0.11
+   Compiling bootstrap v0.0.0 (/Users/runner/work/_temp/rust/src/bootstrap)
+   Compiling ryu v1.0.18
+   Compiling sha2 v0.10.8
+   Compiling tar v0.4.43
+   Compiling ignore v0.4.23
+   Compiling clap_complete v4.5.37
+   Compiling xz2 v0.1.7
+   Compiling toml v0.5.11
+   Compiling build_helper v0.1.0 (/Users/runner/work/_temp/rust/src/build_helper)
+   Compiling fd-lock v4.0.4
+   Compiling cmake v0.1.54
+   Compiling object v0.36.5
+   Compiling home v0.5.9
+   Compiling opener v0.5.2
+   Compiling termcolor v1.4.1
+    Finished `dev` profile [unoptimized] target(s) in 31.33s
+::endgroup::
+::group::Building LLVM for aarch64-apple-ios
+::endgroup::
+::group::Building LLVM for aarch64-apple-darwin
+CMAKE_TOOLCHAIN_FILE_aarch64-apple-darwin = None
+CMAKE_TOOLCHAIN_FILE_aarch64_apple_darwin = None
+HOST_CMAKE_TOOLCHAIN_FILE = None
+CMAKE_TOOLCHAIN_FILE = None
+CMAKE_PREFIX_PATH_aarch64-apple-darwin = None
+CMAKE_PREFIX_PATH_aarch64_apple_darwin = None
+HOST_CMAKE_PREFIX_PATH = None
+CMAKE_PREFIX_PATH = None
+CMAKE_aarch64-apple-darwin = None
+CMAKE_aarch64_apple_darwin = None
+HOST_CMAKE = None
+CMAKE = None
+running: cd "/Users/runner/work/_temp/rust/build/aarch64-apple-darwin/llvm/build" && CMAKE_PREFIX_PATH="" DESTDIR="" LC_ALL="C" "cmake" "/Users/runner/work/_temp/rust/src/llvm-project/llvm" "-DCMAKE_OSX_ARCHITECTURES=arm64" "-G" "Ninja" "-DLLVM_ENABLE_ASSERTIONS=OFF" "-DLLVM_UNREACHABLE_OPTIMIZE=OFF" "-DLLVM_ENABLE_PLUGINS=OFF" "-DLLVM_TARGETS_TO_BUILD=AArch64;AMDGPU;ARM;BPF;Hexagon;LoongArch;MSP430;Mips;NVPTX;PowerPC;RISCV;Sparc;SystemZ;WebAssembly;X86" "-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=AVR;M68k;CSKY;Xtensa" "-DLLVM_INCLUDE_EXAMPLES=OFF" "-DLLVM_INCLUDE_DOCS=OFF" "-DLLVM_INCLUDE_BENCHMARKS=OFF" "-DLLVM_INCLUDE_TESTS=OFF" "-DLLVM_ENABLE_LIBEDIT=OFF" "-DLLVM_ENABLE_BINDINGS=OFF" "-DLLVM_ENABLE_Z3_SOLVER=OFF" "-DLLVM_PARALLEL_COMPILE_JOBS=3" "-DLLVM_TARGET_ARCH=aarch64" "-DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-apple-darwin" "-DLLVM_ENABLE_WARNINGS=OFF" "-DLLVM_INSTALL_UTILS=ON" "-DLLVM_ENABLE_ZLIB=ON" "-DLLVM_ENABLE_LIBXML2=OFF" "-DLLVM_VERSION_SUFFIX=-rust-1.90.0-nightly" "-DCMAKE_INSTALL_MESSAGE=LAZY" "-DCMAKE_C_COMPILER=cc" "-DCMAKE_CXX_COMPILER=c++" "-DCMAKE_ASM_COMPILER=cc" "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections -fPIC --target=arm64-apple-macosx -mmacosx-version-min=15.5" "-DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections -fPIC --target=arm64-apple-macosx -mmacosx-version-min=15.5 -stdlib=libc++" "-DCMAKE_SHARED_LINKER_FLAGS=" "-DCMAKE_MODULE_LINKER_FLAGS=" "-DCMAKE_EXE_LINKER_FLAGS=" "-DLLVM_ENABLE_ZSTD=OFF" "-DCMAKE_INSTALL_PREFIX=/Users/runner/work/_temp/rust/build/aarch64-apple-darwin/llvm" "-DCMAKE_ASM_FLAGS= -ffunction-sections -fdata-sections -fPIC --target=arm64-apple-macosx -mmacosx-version-min=15.5" "-DCMAKE_BUILD_TYPE=Release"
+CMake Warning (deprecated) at /Users/runner/work/_temp/rust/src/llvm-project/cmake/Modules/CMakePolicy.cmake:6 (cmake_policy):
+  The OLD behavior for policy CMP0116 will be removed from a future version
+  of CMake.
+
+  The cmake-policies(7) manual explains that the OLD behaviors of all
+  policies are deprecated and that a policy should be set to OLD only under
+  specific short-term circumstances.  Projects should be ported to the NEW
+  behavior and not rely on setting a policy to OLD.
+Call Stack (most recent call first):
+  CMakeLists.txt:8 (include)
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+-- The C compiler identification is AppleClang 17.0.0.17000013
+-- The CXX compiler identification is AppleClang 17.0.0.17000013
+-- The ASM compiler identification is AppleClang
+-- Found assembler: /usr/bin/cc
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found libtool - /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/libtool
+-- Found Python3: /opt/homebrew/Frameworks/Python.framework/Versions/3.15/bin/python3.15 (found suitable version "3.15.2", minimum required is "3.0") found components: Interpreter
+-- Looking for __GLIBC__
