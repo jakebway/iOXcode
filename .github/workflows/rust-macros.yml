@@ -1,0 +1,105 @@
+name: Rust on device - procedural macros for iPhone
+
+# Procedural macros (serde's #[derive(Serialize)], thiserror, clap's derive, ...) are compiler plug-ins: the
+# compiler loads them as libraries. An iPhone app may only load libraries signed with it, so iOXcode carries the
+# popular ones, built here for iPhone by the same compiler build iOXcode runs (the Mac half of the rustc-ios
+# release) with iOXcode's own cargo, which runs their build scripts like cargo does.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Rust release tag (must match the rustc-ios release)"
+        default: "1.90.0"
+
+permissions:
+  contents: write
+
+jobs:
+  macros:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Toolchain
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p ci-out "$RUNNER_TEMP/rt"
+          gh release download "rustc-ios-${{ inputs.tag || '1.90.0' }}" -p rust-toolchain-darwin.tar.gz -D "$RUNNER_TEMP"
+          tar -xzf "$RUNNER_TEMP/rust-toolchain-darwin.tar.gz" -C "$RUNNER_TEMP/rt"
+          "$RUNNER_TEMP/rt/bin/rustc" -vV | tee ci-out/rustc.txt
+          ls "$RUNNER_TEMP/rt/lib/rustlib" | tee -a ci-out/rustc.txt
+      - name: Build the macros for iPhone
+        run: |
+          export IOX_RUSTC_EXE="$RUNNER_TEMP/rt/bin/rustc" IOX_RUST_SYSROOT="$RUNNER_TEMP/rt" IOX_BUILD_PROC_MACROS=1
+          export IOX_HOST_TRIPLE=aarch64-apple-darwin IOX_CACHES="$RUNNER_TEMP/caches" CARGO_TARGET_DIR="$RUNNER_TEMP/target"
+          export IPHONEOS_DEPLOYMENT_TARGET=16.0
+          PYTHONPATH="$GITHUB_WORKSPACE/app/Python" python3 - "$RUNNER_TEMP" <<'P' 2>&1 | tee ci-out/build.log
+          import io, json, os, sys, ioxcargo
+          tmp = sys.argv[1]
+          # one package per macro, so one that fails doesn't stop the others (built dependencies are shared)
+          wanted = [
+              ("serde_derive", "1"), ("serde_repr", "0.1"), ("thiserror-impl", "2"), ("thiserror-impl", "1"),
+              ("async-trait", "0.1"), ("tokio-macros", "2"), ("futures-macro", "0.3"), ("pin-project-internal", "1"),
+              ("tracing-attributes", "0.1"), ("strum_macros", "0.27"), ("strum_macros", "0.26"), ("num_enum_derive", "0.7"),
+              ("bytemuck_derive", "1"), ("zerocopy-derive", "0.8"), ("zerocopy-derive", "0.7"), ("displaydoc", "0.2"),
+              ("clap_derive", "4"), ("derive_more-impl", "2"), ("derive_more-impl", "1"), ("paste", "1"), ("rustversion", "1"),
+              ("ref-cast-impl", "1"), ("indoc", "2"), ("async-stream-impl", "0.3"), ("serde_with_macros", "3"),
+              ("ctor-proc-macro", "0.0"), ("ctor", "0.2"), ("zeroize_derive", "1"), ("prost-derive", "0.14"), ("prost-derive", "0.13"),
+              ("document-features", "0.2"), ("const_format_proc_macros", "0.2"), ("yoke-derive", "0.8"), ("zerovec-derive", "0.11"),
+              ("zerofrom-derive", "0.1"), ("enum-map-derive", "0.17"), ("getset", "0.1"), ("derivative", "2"), ("educe", "0.6"),
+              ("darling_macro", "0.21"), ("darling_macro", "0.20"), ("pyo3-macros", "0.26"), ("uniffi_macros", "0.29"),
+              ("objc2-proc-macros", "0.2"), ("bitfield-struct", "0.11"), ("modular-bitfield-impl", "0.12"),
+          ]
+          arts, failed = [], []
+          for n, (name, ver) in enumerate(wanted):
+              d = os.path.join(tmp, "m%d" % n)
+              os.makedirs(os.path.join(d, "src"), exist_ok=True)
+              open(os.path.join(d, "src", "lib.rs"), "w").close()
+              with open(os.path.join(d, "Cargo.toml"), "w") as f:
+                  f.write('[package]\nname = "m%d"\nversion = "0.0.0"\nedition = "2021"\n\n[dependencies]\n'
+                          'x = { package = "%s", version = "%s" }\n' % (n, name, ver))
+              os.environ["IOX_ARTIFACTS_JSON"] = os.path.join(d, "artifacts.json")
+              os.chdir(d)
+              print("=== %s %s" % (name, ver), flush=True)
+              code = ioxcargo.main(["build", "--release", "--target", "aarch64-apple-ios"], sys.stdout, sys.stdout)
+              if code != 0 or not os.path.isfile(os.environ["IOX_ARTIFACTS_JSON"]):
+                  failed.append("%s %s" % (name, ver))
+                  continue
+              arts += json.load(open(os.environ["IOX_ARTIFACTS_JSON"]))
+          json.dump(arts, open(os.path.join(tmp, "artifacts.json"), "w"), indent=1)
+          print("FAILED:", ", ".join(failed) or "none")
+          P
+      - name: Collect and check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          O="$RUNNER_TEMP/out/macros"; mkdir -p "$O"
+          python3 - "$RUNNER_TEMP/artifacts.json" "$O" <<'P' | tee ci-out/macros.txt
+          import json, os, shutil, sys
+          arts, out = json.load(open(sys.argv[1])), sys.argv[2]
+          index = {}
+          for a in arts:
+              if a["proc_macro"] and a["path"] and os.path.isfile(a["path"]):
+                  f = "lib%s-%s.dylib" % (a["lib_name"], a["version"])
+                  shutil.copy2(a["path"], os.path.join(out, f))
+                  index["%s %s" % (a["name"], a["version"])] = f
+                  print(a["name"], a["version"], f, os.path.getsize(a["path"]))
+          json.dump(index, open(os.path.join(out, "index.json"), "w"), indent=1, sort_keys=True)
+          print(len(index), "macros")
+          P
+          for f in "$O"/*.dylib; do echo "$(basename $f): $(vtool -show-build "$f" 2>/dev/null | grep -E 'platform|minos' | tr -s ' ' | tr '\n' ' ')"; done | tee -a ci-out/macros.txt
+          tar -C "$RUNNER_TEMP/out" -czf "$RUNNER_TEMP/rust-macros.tar.gz" macros
+          TAG="rust-macros-${{ inputs.tag || '1.90.0' }}"
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" "$RUNNER_TEMP/rust-macros.tar.gz" --title "Rust procedural macros for iPhone ($TAG)" \
+            --notes "Procedural macros built for iPhone by rustc ${{ inputs.tag || '1.90.0' }}; iOXcode carries them."
+      - name: Publish logs
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "rust-macros-${{ github.run_id }}"

@@ -1521,7 +1521,7 @@ def _python(sh, a, i):
 
 @builtin("rustup")
 def _rustup(sh, a, i):
-    sh.err.write("note: rustup is not needed on iPhone (Rust libraries come prebuilt); skipping\n"); return 0
+    sh.err.write("note: rustup is not needed on iPhone (iOXcode carries the Rust compiler and the iPhone standard library); skipping\n"); return 0
 
 def _native_key(root, crate):
     """Same key the repo's own tools/native_key.py gives, so a CI-built library can be matched to these sources."""
@@ -1543,10 +1543,37 @@ def _native_key(root, crate):
             fp = os.path.join(d, f); h.update(os.path.relpath(fp, crate).encode()); h.update(open(fp, "rb").read())
     return h.hexdigest()[:16]
 
+def _rust_on_device():
+    p = os.environ.get("IOX_RUSTC_LIB") or ""
+    return bool(p) and os.path.isfile(p)
+
+
+@builtin("rustc")
+def _rustc(sh, a, i):
+    """The real Rust compiler, running inside iOXcode."""
+    if not _rust_on_device():
+        sh.err.write("rustc: this copy of iOXcode has no Rust compiler\n"); return 127
+    import ioxcargo
+    args = list(a)
+    if args[:1] in (["--version"], ["-V"], ["-vV"]):
+        sh.out.write("rustc 1.90.0 (iOXcode)\nhost: aarch64-apple-ios\n" if "-vV" in args else "rustc 1.90.0 (iOXcode)\n"); return 0
+    if "--sysroot" not in args and not any(x.startswith("--sysroot=") for x in args):
+        args += ["--sysroot", ioxcargo.sysroot(lambda m: sh.err.write(m + "\n"))]
+    if "--target" not in args and not any(x.startswith("--target=") for x in args):
+        args += ["--target", ioxcargo.HOST]
+    try:
+        return ioxcargo.run_rustc(args, sh.err)
+    except ioxcargo.CargoError as e:
+        sh.err.write("error: %s\n" % e); return 1
+
+
 @builtin("cargo")
 def _cargo(sh, a, i):
-    """Rust cannot run on the phone. `cargo build` for an iOS target fetches the library CI already built from the
-    same sources (a release tagged native-<key> in the project's GitHub repo)."""
+    """`cargo build` with the Rust compiler inside iOXcode. (An iOXcode without it falls back to a library CI
+    already built from the same sources: a release tagged native-<key> in the project's GitHub repo.)"""
+    if _rust_on_device():
+        import ioxcargo
+        return ioxcargo.main(list(a), sh.out, sh.err)
     import urllib.request, json
     if not a or a[0] not in ("build", "b", "rustc"):
         sh.err.write("note: cargo %s is not available on iPhone; skipping\n" % (a[0] if a else "")); return 0

@@ -481,6 +481,7 @@ final class BuildPipeline {
             e["GITHUB_WORKSPACE"] = project.url.path
             if let o = Origins.load(project.url.lastPathComponent) { e["GITHUB_REPOSITORY"] = "\(o.owner)/\(o.repo)" }
             e["RUNNER_TEMP"] = work.appendingPathComponent("runner").path
+            for (k, v) in Paths.rustEnvironment() { e[k] = v }
             let r = PythonHost.shared.run(.shell(s.script), cwd: cwd, env: e, log: log)
             if r.exitCode != 0 {
                 if r.message.isEmpty || r.message.hasPrefix("This copy of iOXcode") || r.message.hasPrefix("Python could not start") { log.log(r.message) }

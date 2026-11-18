@@ -423,6 +423,7 @@ class Resolver:
         self.features = {}    # id -> set of features asked for
         self.edges = {}       # id -> {alias: dep id}
         self.restart = False
+        self.forced = {}      # crate name -> version that must be used (to match a carried procedural macro)
 
     def choose(self, name, req):
         entries = [e for e in index_entries(name, self.log) if not e.get("yanked")]
@@ -431,6 +432,16 @@ class Resolver:
         fits = [(v, e) for v, e in cands if matches(comps, v)]
         if not fits:
             raise CargoError("no version of '%s' on crates.io matches '%s'" % (name, req))
+        carried = bundled_macros().get(name) if not building_macros() else None
+        if carried:
+            mine = [(v, e) for v, e in fits if vstr(v) in carried]
+            if mine:
+                fits = mine
+        forced = self.forced.get(name)
+        if forced:
+            mine = [(v, e) for v, e in fits if vstr(v) == forced]
+            if mine:
+                fits = mine
         # a slot already chosen for this compatible range is reused (one version per slot, like cargo)
         for v, e in fits:
             key = (name, compat_key(v))
@@ -488,6 +499,20 @@ class Resolver:
             v, e = self.choose(name, str(d.get("version") or "*"))
             src = fetch_crate(name, vstr(v), e.get("cksum"), self.log)
             p = load_package(src, "registry")
+            if not building_macros():
+                for a2, d2 in _all_dep_decls(p):
+                    dn = d2.get("package") or a2
+                    req2 = str(d2.get("version") or "")
+                    carried = bundled_macros().get(dn)
+                    if carried and req2.strip().startswith("=") and not any(matches(req2, parse_version(cv)) for cv in carried):
+                        # this crate is released in lockstep with the macro iOXcode carries: use the matching release
+                        best = sorted(carried, key=lambda x: _vkey(parse_version(x)))[-1]
+                        if self.forced.get(name) != best and any(x["vers"] == best for x in index_entries(name, self.log)):
+                            self.forced[name] = best
+                            key = (name, compat_key(v))
+                            self.slots.pop(key, None)
+                            self.reqs.pop(key, None)
+                            self.restart = True
         if p.id not in self.pkgs:
             self.pkgs[p.id] = p
         return self.pkgs[p.id]
@@ -516,13 +541,16 @@ class Resolver:
             feats, on_deps, dep_feats = self.closure(pkg, have)
             self.features[pkg.id] = feats
             edges = self.edges.setdefault(pkg.id, {})
+            if pkg.proc_macro and not building_macros() and vstr(pkg.version) in (bundled_macros().get(pkg.name) or {}):
+                continue   # already built into iOXcode: its own dependencies aren't needed
             for alias, d in pkg.deps(self.cfg, self.triple):
                 if d.get("optional") and alias not in on_deps:
                     continue
                 child = self.package_for(alias, d)
                 if self.restart:
                     return
-                edges[alias] = child.id
+                # the name the code uses: the dependency's own library name, unless the dependency was renamed
+                edges[(alias.replace("-", "_") if d.get("package") else child.lib_name)] = child.id
                 ask = set(d.get("features") or [])
                 if d.get("default-features", d.get("default_features", True)):
                     ask.add("default")
@@ -571,10 +599,83 @@ def _all_dep_decls(pkg):
     return [(a, d if isinstance(d, dict) else {"version": d}) for a, d in out]
 
 
+# ---------------------------------------------------------------- procedural macros carried by iOXcode
+
+_bundled = None
+
+
+def bundled_macros():
+    """{crate name: {version: dylib path}} for the procedural macros built into iOXcode (signed with the app,
+    so the compiler may load them)."""
+    global _bundled
+    if _bundled is None:
+        _bundled = {}
+        d = os.environ.get("IOX_RUST_PROC_MACROS") or ""
+        idx = os.path.join(os.environ.get("IOX_RUST_PROC_MACROS_INDEX") or d, "index.json")
+        try:
+            for key, f in json.load(open(idx)).items():
+                name, ver = key.split(" ", 1)
+                path = f if os.path.isabs(f) else os.path.join(d, f)
+                _bundled.setdefault(name, {})[ver] = path
+        except (OSError, ValueError):
+            pass
+    return _bundled
+
+
+def building_macros():
+    return bool(os.environ.get("IOX_BUILD_PROC_MACROS"))
+
+
 # ---------------------------------------------------------------- build scripts
 
-def run_build_script(pkg, features, out_dir, triple, log):
-    """What `cargo` would get from running build.rs: (cfgs, env, warnings). Files go to out_dir."""
+def _run_build_script_for_real(pkg, features, out_dir, triple, log, prof):
+    """On a Mac (IOX_RUSTC_EXE set): compile build.rs for the Mac and run it, exactly like cargo."""
+    import subprocess
+    exe = os.environ["IOX_RUSTC_EXE"]
+    bdir = os.path.dirname(out_dir)
+    if any(True for _ in (pkg.raw.get("build-dependencies") or {})):
+        log("warning: %s: build-dependencies are not built here; the build script may fail" % pkg.name)
+    args = [exe, "--crate-name", "build_script_build", "--edition=%s" % pkg.edition, pkg.build_script,
+            "--crate-type", "bin", "-C", "opt-level=0", "--out-dir", bdir, "--cap-lints", "allow"]
+    for f in features:
+        args += ["--cfg", 'feature="%s"' % f]
+    r = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    if r.returncode != 0:
+        raise CargoError("failed to compile the build script of %s:\n%s" % (pkg.name, r.stdout))
+    env = dict(os.environ)
+    cfg = target_cfg(triple)
+    for k, v in cfg.items():
+        env["CARGO_CFG_" + k.upper()] = ",".join(sorted(v)) if isinstance(v, set) else v
+    env["CARGO_CFG_UNIX"] = ""
+    for f in features:
+        env["CARGO_FEATURE_" + f.upper().replace("-", "_")] = "1"
+    env.update({"OUT_DIR": out_dir, "TARGET": triple, "HOST": os.environ.get("IOX_HOST_TRIPLE", "aarch64-apple-darwin"),
+                "NUM_JOBS": "1", "OPT_LEVEL": str(prof.get("opt-level", 3)), "DEBUG": "true" if prof.get("debug") else "false",
+                "PROFILE": "release" if not prof.get("debug-assertions") else "debug", "RUSTC": exe, "RUSTDOC": "rustdoc",
+                "CARGO_ENCODED_RUSTFLAGS": ""})
+    r = subprocess.run([os.path.join(bdir, "build_script_build")], cwd=pkg.dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if r.returncode != 0:
+        raise CargoError("the build script of %s failed:\n%s%s" % (pkg.name, r.stdout, r.stderr))
+    cfgs, envs = [], {}
+    for line in r.stdout.splitlines():
+        m = re.match(r"^cargo::?([a-z-]+)=(.*)$", line.strip())
+        if not m:
+            continue
+        key, val = m.group(1), m.group(2)
+        if key == "rustc-cfg":
+            cfgs.append(val)
+        elif key == "rustc-env" and "=" in val:
+            a, b = val.split("=", 1)
+            envs[a] = b
+        elif key == "warning":
+            log("warning: %s: %s" % (pkg.name, val))
+    return cfgs, envs
+
+
+def run_build_script(pkg, features, out_dir, triple, log, prof=None):
+    """What `cargo` would get from running build.rs: (cfgs, env). Files go to out_dir."""
+    if os.environ.get("IOX_RUSTC_EXE"):
+        return _run_build_script_for_real(pkg, features, out_dir, triple, log, prof or {})
     name, v = pkg.name, pkg.version
     cfgs, env = [], {}
     if name in ("serde", "serde_core"):
@@ -647,7 +748,15 @@ def sysroot(log):
 
 
 def run_rustc(args, err):
-    """One rustc command line, in-process. Diagnostics go to err."""
+    """One rustc command line, in-process. Diagnostics go to err.
+    (On a Mac/CI, IOX_RUSTC_EXE names a rustc program to run instead; iOXcode uses that to build its own parts.)"""
+    exe = os.environ.get("IOX_RUSTC_EXE")
+    if exe:
+        import subprocess
+        r = subprocess.run([exe] + args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        if r.stdout:
+            err.write(r.stdout)
+        return r.returncode
     lib = rustc_library()
     if lib is None:
         raise CargoError("this copy of iOXcode has no Rust compiler")
@@ -701,7 +810,7 @@ def _profile(ws_manifest, name):
     return prof
 
 
-def _profile_flags(prof, final):
+def _profile_flags(prof, final, lto_run=False):
     f = ["-C", "opt-level=%s" % prof.get("opt-level", 3)]
     dbg = prof.get("debug")
     if dbg in (True, 2, "full", "true"):
@@ -720,11 +829,13 @@ def _profile_flags(prof, final):
     if cgu:
         f += ["-C", "codegen-units=%s" % cgu]
     lto = prof.get("lto")
-    if final and lto in (True, "fat", "true"):
+    # like cargo: LTO runs only when every output of the package can take it (bin, staticlib, cdylib); a package
+    # that is also an rlib gets plain object code, and so do its dependencies
+    if final and lto_run and lto in (True, "fat", "true"):
         f += ["-C", "lto"]
-    elif final and lto == "thin":
+    elif final and lto_run and lto == "thin":
         f += ["-C", "lto=thin"]
-    elif lto in (False, "false", None, "off") and not final:
+    elif not lto_run:
         f += ["-C", "embed-bitcode=no"]
     strip = prof.get("strip")
     if strip in (True, "symbols"):
@@ -827,13 +938,22 @@ def build(argv, out, err):
         order.append(pid)
     visit(root.id)
 
+    root_types = [t for t in root.crate_types if t not in ("bin", "cdylib", "dylib")] if not os.environ.get("IOX_RUSTC_EXE") else root.crate_types
+    lto_run = prof.get("lto") not in (False, "false", None, "off") and bool(root_types) and \
+        all(t in ("bin", "staticlib", "cdylib") for t in root_types)
+    carried_artifacts = {}
     for pid in order:
         p = r.pkgs[pid]
-        if p.proc_macro:
-            raise CargoError("%s %s is a procedural macro (a compiler plug-in). iOXcode can't load those on iPhone "
-                             "yet, so packages that need it (via %s) can't be built here." % (p.name, vstr(p.version), _who_needs(r, pid)))
+        if p.proc_macro and not building_macros():
+            have = (bundled_macros().get(p.name) or {}).get(vstr(p.version))
+            if not have:
+                versions = ", ".join(sorted(bundled_macros().get(p.name) or {})) or "none"
+                raise CargoError("%s %s is a procedural macro (a compiler plug-in, needed by %s). iPhone apps can only load "
+                                 "plug-ins signed with the app, and this version isn't one of those built into iOXcode "
+                                 "(it has: %s)." % (p.name, vstr(p.version), _who_needs(r, pid), versions))
+            carried_artifacts[pid] = have
 
-    sr = sysroot(log)
+    sr = os.environ.get("IOX_RUST_SYSROOT") or sysroot(log)
     flags_extra = _rustflags()
     artifacts = {}
     built = 0
@@ -841,10 +961,17 @@ def build(argv, out, err):
         p = r.pkgs[pid]
         feats = sorted(r.features.get(pid, set()))
         final = pid == root.id
+        if pid in carried_artifacts:
+            artifacts[pid] = carried_artifacts[pid]
+            continue
         h = hashlib.sha256(json.dumps([p.id, feats, prof, out_triple, final]).encode()).hexdigest()[:16]
         rlib = os.path.join(deps_dir, "lib%s-%s.rlib" % (p.lib_name, h))
         types = [t for t in (p.crate_types if final else ["lib"])]
-        if any(t in ("bin", "cdylib", "dylib") for t in types):
+        if p.proc_macro:
+            types = ["proc-macro"]
+            ext = ".dylib" if "apple" in out_triple else (".dll" if "windows" in out_triple else ".so")
+            rlib = os.path.join(deps_dir, "lib%s-%s%s" % (p.lib_name, h, ext))
+        if any(t in ("bin", "cdylib", "dylib") for t in types) and not os.environ.get("IOX_RUSTC_EXE"):
             log("warning: %s: crate-type %s needs a linker, which iOXcode doesn't have for Rust; building the others"
                 % (p.name, ", ".join(t for t in types if t in ("bin", "cdylib", "dylib"))))
             types = [t for t in types if t not in ("bin", "cdylib", "dylib")] or ["lib"]
@@ -875,13 +1002,13 @@ def build(argv, out, err):
                 od = os.path.join(out_dir, "build", "%s-%s" % (p.name, h), "out")
                 os.makedirs(od, exist_ok=True)
                 os.environ["OUT_DIR"] = od
-                c, e = run_build_script(p, feats, od, out_triple, log)
+                c, e = run_build_script(p, feats, od, out_triple, log, prof)
                 cfgs += c
                 os.environ.update(e)
             args = ["--crate-name", p.lib_name, "--edition=%s" % p.edition, p.lib_path, "--error-format=human"]
             for t in types:
                 args += ["--crate-type", t]
-            args += _profile_flags(prof, final)
+            args += _profile_flags(prof, final, lto_run)
             for f in feats:
                 args += ["--cfg", 'feature="%s"' % f]
             for c in cfgs:
@@ -890,8 +1017,10 @@ def build(argv, out, err):
                      "--target", out_triple, "--sysroot", sr, "-L", "dependency=%s" % deps_dir]
             if p.source != "path":
                 args += ["--cap-lints", "allow"]
+            if p.proc_macro:
+                args += ["--extern", "proc_macro"]
             for alias, cid in sorted(r.edges.get(pid, {}).items()):
-                args += ["--extern", "%s=%s" % (alias.replace("-", "_"), artifacts[cid])]
+                args += ["--extern", "%s=%s" % (alias, artifacts[cid])]
             args += flags_extra
             code = run_rustc(args, err)
         finally:
@@ -911,6 +1040,10 @@ def build(argv, out, err):
                 src = os.path.join(deps_dir, "lib%s-%s%s" % (p.lib_name, h, ext))
                 if os.path.isfile(src):
                     shutil.copy2(src, os.path.join(out_dir, "lib%s%s" % (p.lib_name, ext)))
+    if os.environ.get("IOX_ARTIFACTS_JSON"):
+        with open(os.environ["IOX_ARTIFACTS_JSON"], "w") as f:
+            json.dump([{"name": r.pkgs[pid].name, "version": vstr(r.pkgs[pid].version), "lib_name": r.pkgs[pid].lib_name,
+                        "proc_macro": r.pkgs[pid].proc_macro, "path": artifacts.get(pid)} for pid in order], f, indent=1)
     mode = "optimized" if int(str(prof.get("opt-level", 0)).replace("s", "2").replace("z", "2")) > 0 else "unoptimized"
     log("    Finished `%s` profile [%s%s] target(s) in %.2fs" % (prof_name, mode, " + debuginfo" if prof.get("debug") else "", time.time() - t0))
     return 0

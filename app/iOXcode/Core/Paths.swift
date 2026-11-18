@@ -30,6 +30,20 @@ enum Paths {
         return nil
     }
 
+    /// Where the Rust compiler iOXcode carries lives, for `cargo` and `rustc` in build scripts.
+    static func rustEnvironment() -> [String: String] {
+        var e: [String: String] = ["IOX_CACHES": caches.path]
+        guard let fw = Bundle.main.privateFrameworksPath else { return e }
+        let lib = (fw as NSString).appendingPathComponent("librustc_driver.dylib")
+        guard FileManager.default.fileExists(atPath: lib) else { return e }
+        let rust = (Bundle.main.bundlePath as NSString).appendingPathComponent("Rust")
+        e["IOX_RUSTC_LIB"] = lib
+        e["IOX_RUST_SYSROOT_ARCHIVE"] = (rust as NSString).appendingPathComponent("rustlib-aarch64-apple-ios.tar.gz")
+        e["IOX_RUST_PROC_MACROS"] = fw
+        e["IOX_RUST_PROC_MACROS_INDEX"] = (rust as NSString).appendingPathComponent("macros")
+        return e
+    }
+
     static func ensure(_ url: URL) {
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     }

@@ -69,6 +69,23 @@ jobs:
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: Get the Rust compiler for iPhone
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.with_compiler }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          mkdir -p /tmp/rust
+          if gh release download rustc-ios-1.90.0 -p 'librustc_driver.dylib.zip' -p 'rustlib-aarch64-apple-ios.tar.gz' -D /tmp/rust --clobber; then
+            unzip -oq /tmp/rust/librustc_driver.dylib.zip -d /tmp/rust
+            echo "RUST_DIR=/tmp/rust" >> "$GITHUB_ENV"
+            if nm -gU /tmp/rust/librustc_driver.dylib | grep -q ioxrustc_main; then echo "rustc entry point: ok"; else echo "::warning::this rustc build has no ioxrustc_main yet"; fi
+            gh release download rust-macros-1.90.0 -p 'rust-macros.tar.gz' -D /tmp/rust --clobber && tar -xzf /tmp/rust/rust-macros.tar.gz -C /tmp/rust || echo "no procedural macros published yet"
+            ls -lh /tmp/rust
+          else
+            echo "::warning::No rustc-ios release yet. Building the app WITHOUT Rust."
+          fi
+
       - name: Get the clang headers that match the compiler
         env:
           GH_TOKEN: ${{ github.token }}
@@ -159,6 +176,18 @@ jobs:
             echo "compiler embedded:"; ls -lh "$APP/Frameworks/"
           else
             echo "no compiler embedded"
+          fi
+          if [ -n "${RUST_DIR:-}" ] && nm -gU "$RUST_DIR/librustc_driver.dylib" | grep -q ioxrustc_main; then
+            mkdir -p "$APP/Frameworks" "$APP/Rust"
+            cp "$RUST_DIR/librustc_driver.dylib" "$APP/Frameworks/"
+            cp "$RUST_DIR/rustlib-aarch64-apple-ios.tar.gz" "$APP/Rust/"
+            if [ -d "$RUST_DIR/macros" ]; then
+              mkdir -p "$APP/Rust/macros"
+              cp "$RUST_DIR"/macros/*.dylib "$APP/Frameworks/"
+              cp "$RUST_DIR/macros/index.json" "$APP/Rust/macros/"
+              echo "rust procedural macros: $(ls "$RUST_DIR"/macros/*.dylib | wc -l)"
+            fi
+            echo "rust embedded: $(du -sh "$APP/Frameworks/librustc_driver.dylib" | cut -f1) compiler, $(du -sh "$APP/Rust" | cut -f1) library"
           fi
           if [ -n "${CLANG_RESOURCE:-}" ]; then cp -R "$CLANG_RESOURCE" "$APP/ClangResource"; echo "clang headers embedded: $(du -sh "$APP/ClangResource" | cut -f1)"; fi
           if [ -n "${PY_XCF:-}" ]; then
