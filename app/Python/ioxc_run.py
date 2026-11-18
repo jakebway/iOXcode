@@ -31,6 +31,8 @@ def python_main(argv, out):
         print("python3: interactive mode is not available in a build script", file=out)
         return 2
     saved_argv, saved_path = list(sys.argv), list(sys.path)
+    import ioxproc
+    restore_subprocess = ioxproc.install()   # subprocess.run(["git", ...]) etc. run through ioxsh
     try:
         if args[0] == "-m":
             if len(args) < 2:
@@ -69,6 +71,7 @@ def python_main(argv, out):
         traceback.print_exc(file=out)
         return 1
     finally:
+        restore_subprocess()
         sys.argv, sys.path[:] = saved_argv, saved_path
 
 

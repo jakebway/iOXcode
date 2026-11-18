@@ -134,9 +134,26 @@ jobs:
           [ -d "$S/lib/rustlib/aarch64-apple-ios" ] && tar -C "$S/lib/rustlib" -czf "$RUNNER_TEMP/out/rustlib-aarch64-apple-ios.tar.gz" aarch64-apple-ios
           ls -l "$RUNNER_TEMP/out"
           (cd "$RUNNER_TEMP/out" && zip -q librustc_driver.dylib.zip librustc_driver.dylib)
+          # the Mac compiler of the same build, with the iPhone and Mac standard libraries: other workflows use it to
+          # build what iOXcode carries for Rust (procedural macros) without rebuilding the compiler
+          for st in stage1 stage2; do
+            T=build/host/$st
+            echo "$st: $(ls $T/bin 2>/dev/null | tr '\n' ' ') | $(ls $T/lib/rustlib 2>/dev/null | tr '\n' ' ')" | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+          done
+          for st in stage1 stage2; do
+            T=build/host/$st
+            if [ -x "$T/bin/rustc" ] && [ -d "$T/lib/rustlib/aarch64-apple-ios/lib" ] && [ -d "$T/lib/rustlib/aarch64-apple-darwin/lib" ]; then
+              "$T/bin/rustc" -vV | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+              tar -C "$T" -czhf "$RUNNER_TEMP/out/rust-toolchain-darwin.tar.gz" --exclude 'lib/rustlib/src' --exclude 'lib/rustlib/rustc-src' bin lib
+              echo "toolchain from $st" | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
+              break
+            fi
+          done
+          ls -l "$RUNNER_TEMP/out" | tee -a "$GITHUB_WORKSPACE/ci-out/inspect.txt"
           TAG="rustc-ios-${{ inputs.tag || '1.90.0' }}"
           gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag 2>/dev/null || true
           gh release create "$TAG" "$RUNNER_TEMP/out/librustc_driver.dylib.zip" "$RUNNER_TEMP/out/rustlib-aarch64-apple-ios.tar.gz" \
+            $( [ -f "$RUNNER_TEMP/out/rust-toolchain-darwin.tar.gz" ] && echo "$RUNNER_TEMP/out/rust-toolchain-darwin.tar.gz" ) \
             --repo "$GITHUB_REPOSITORY" --title "rustc for iPhone $TAG" --notes "rustc ${{ inputs.tag || '1.90.0' }} built to run on iOS (aarch64-apple-ios host)" || true
       - name: Publish logs to the ci-logs branch
         if: always()
