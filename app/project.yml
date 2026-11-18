@@ -15,6 +15,9 @@ targets:
     dependencies:
       - package: AssetKit
         product: AssetKit
+    postBuildScripts:
+      - name: Embed compiler, Rust, Python and clang headers
+        script: python3 Scripts/embed_payload.py
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jakebway.ioxcode

@@ -472,7 +472,7 @@ final class BuildPipeline {
             "EXECUTABLE_PATH": "\(m.name).app/\(m.name)", "INFOPLIST_PATH": "\(m.name).app/Info.plist",
             "DERIVED_FILE_DIR": derived.path, "DERIVED_SOURCES_DIR": derived.path, "TEMP_DIR": work.path,
             "OBJECT_FILE_DIR": work.path, "SCRIPT_INPUT_FILE_COUNT": "0", "SCRIPT_OUTPUT_FILE_COUNT": "0",
-            "IOXCODE": "1",
+            "IOXCODE": "1", "IOX_APP_BUNDLE": Bundle.main.bundlePath,
         ]
         for s in scripts {
             log.log("-- script: \(s.name)")
