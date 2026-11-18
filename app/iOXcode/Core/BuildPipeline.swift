@@ -489,6 +489,30 @@ final class BuildPipeline {
         }
     }
 
+    /// An INFOPLIST_KEY_<key> build setting as Xcode writes it into Info.plist: YES/NO become true/false, list
+    /// settings (orientations, device capabilities) become arrays, _iPad / _iPhone become ~ipad / ~iphone, and the
+    /// *_Generation switches generate their dictionaries.
+    static func infoPlistKeySetting(_ k: String, _ v: String, current: [String: Any]) -> (String, Any)? {
+        let yes = v == "YES" || v == "true"
+        switch k {
+        case "UILaunchScreen_Generation":
+            return yes && current["UILaunchStoryboardName"] == nil ? ("UILaunchScreen", current["UILaunchScreen"] ?? [String: Any]()) : nil
+        case "UIApplicationSceneManifest_Generation":
+            return yes ? ("UIApplicationSceneManifest", current["UIApplicationSceneManifest"] ?? ["UIApplicationSupportsMultipleScenes": true]) : nil
+        default: break
+        }
+        if k.hasSuffix("_Generation") { return nil }
+        var key = k
+        if key.hasSuffix("_iPad") { key = String(key.dropLast(5)) + "~ipad" }
+        else if key.hasSuffix("_iPhone") { key = String(key.dropLast(7)) + "~iphone" }
+        let lists: Set<String> = ["UISupportedInterfaceOrientations", "UIRequiredDeviceCapabilities", "NSUserActivityTypes", "LSApplicationQueriesSchemes"]
+        if lists.contains(key.components(separatedBy: "~")[0]) {
+            return (key, v.split(whereSeparator: { $0 == " " || $0 == "," }).map(String.init).filter { !$0.isEmpty })
+        }
+        if v == "YES" || v == "NO" { return (key, v == "YES") }
+        return (key, v)
+    }
+
     private func writeInfoPlist(_ m: Manifest, to url: URL, base: URL, extra: [String: Any] = [:]) throws {
         var d: [String: Any] = [
             "CFBundleExecutable": m.name,
@@ -546,14 +570,15 @@ final class BuildPipeline {
         let bv: [String: String] = ["PRODUCT_NAME": m.name, "TARGET_NAME": m.name, "EXECUTABLE_NAME": m.name, "PRODUCT_MODULE_NAME": m.name,
                                     "PRODUCT_BUNDLE_IDENTIFIER": m.bundleId, "MARKETING_VERSION": m.version, "CURRENT_PROJECT_VERSION": m.build,
                                     "DEVELOPMENT_LANGUAGE": "en", "PRODUCT_BUNDLE_PACKAGE_TYPE": "APPL", "EXECUTABLE_PREFIX": ""]
-        for (k, v) in m.infoPlist {
+        for (k, v) in m.infoPlist.sorted(by: { $0.key < $1.key }) {
             var str = v
             for (n, val) in bv {
                 str = str.replacingOccurrences(of: "$(\(n))", with: val).replacingOccurrences(of: "${\(n)}", with: val)
                 str = str.replacingOccurrences(of: "$(\(n):rfc1034identifier)", with: val.replacingOccurrences(of: "_", with: "-"))
             }
             if str.contains("$(") || str.contains("${") { continue }   // unknown variable: keep the value we already have
-            d[k] = str
+            guard let kv = Self.infoPlistKeySetting(k, str, current: d) else { continue }
+            d[kv.0] = kv.1
         }
         let data = try PropertyListSerialization.data(fromPropertyList: d, format: .xml, options: 0)
         try data.write(to: url)

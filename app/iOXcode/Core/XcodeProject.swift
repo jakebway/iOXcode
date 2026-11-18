@@ -193,7 +193,9 @@ enum XcodeProjectReader {
         if let f = str("INFOPLIST_FILE") { m.infoPlistFile = expand(f).replacingOccurrences(of: "./", with: "") }
         for (k, v) in bs where k.hasPrefix("INFOPLIST_KEY_") {
             let key = String(k.dropFirst("INFOPLIST_KEY_".count))
-            if let s = v as? String, !s.isEmpty, s != "YES", s != "NO", !key.contains("Generation") { m.infoPlist[key] = expand(s) }
+            // every value goes through (YES/NO, lists, *_Generation); BuildPipeline turns them into Info.plist values like Xcode
+            if let s = v as? String, !s.isEmpty { m.infoPlist[key] = expand(s) }
+            else if let a = v as? [String] { m.infoPlist[key] = a.map(expand).joined(separator: " ") }
         }
         m.swiftFlags = (str("OTHER_SWIFT_FLAGS") ?? "").split(separator: " ").map(String.init).filter { !$0.hasPrefix("$") && !$0.isEmpty }
         m.linkerFlags = []

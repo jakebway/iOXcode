@@ -82,6 +82,30 @@ def _settings(block, config="Release"):
     return dict(block)
 
 
+def _xcodegen_info_plist(properties):
+    """XcodeGen's generated Info.plist: its default keys, overridden by the target's `info.properties`."""
+    d = {
+        "CFBundleDevelopmentRegion": "$(DEVELOPMENT_LANGUAGE)",
+        "CFBundleExecutable": "$(EXECUTABLE_NAME)",
+        "CFBundleIdentifier": "$(PRODUCT_BUNDLE_IDENTIFIER)",
+        "CFBundleInfoDictionaryVersion": "6.0",
+        "CFBundleName": "$(PRODUCT_NAME)",
+        "CFBundlePackageType": "$(PRODUCT_BUNDLE_PACKAGE_TYPE)",
+        "CFBundleShortVersionString": "1.0",
+        "CFBundleVersion": "1",
+        "LSRequiresIPhoneOS": True,
+    }
+
+    def clean(v):   # YAML gives None for `key:` with nothing after it; a plist has no null
+        if isinstance(v, dict):
+            return {str(k): clean(x) for k, x in v.items() if x is not None}
+        if isinstance(v, list):
+            return [clean(x) for x in v if x is not None]
+        return v
+    d.update(clean(properties))
+    return d
+
+
 def manifest_from_spec(spec_path):
     spec = _load_spec(spec_path)
     root = os.path.dirname(spec_path)
@@ -139,12 +163,30 @@ def manifest_from_spec(spec_path):
     if plist:
         m["infoPlistFile"] = expand(plist)
     props = {}
-    for k, v in (info.get("properties") or {}).items():
-        if isinstance(v, (str, int, float)) and not isinstance(v, bool):
-            props[k] = str(v)
+    if info.get("properties") is not None:
+        # XcodeGen writes the Info.plist file itself: its default keys, then `properties` with their real types
+        # (true/false, dictionaries, arrays). Do the same into .ioxcode so every key reaches the app.
+        gen = _xcodegen_info_plist(info.get("properties") or {})
+        rel = os.path.join(".ioxcode", "Info-%s.plist" % (target_name or "App"))
+        try:
+            import plistlib
+            os.makedirs(os.path.join(root, ".ioxcode"), exist_ok=True)
+            with open(os.path.join(root, rel), "wb") as f:
+                plistlib.dump(gen, f, sort_keys=True)
+            m["infoPlistFile"] = rel
+        except Exception as e:
+            notes.append("could not write the Info.plist from project.yml: %s" % e)
+            for k, v in gen.items():
+                if isinstance(v, (str, int, float)) and not isinstance(v, bool):
+                    props[k] = str(v)
     for k, v in s.items():
-        if k.startswith("INFOPLIST_KEY_") and isinstance(v, (str, int, float)) and not isinstance(v, bool):
-            props[k[len("INFOPLIST_KEY_"):]] = str(v)
+        if k.startswith("INFOPLIST_KEY_"):
+            # passed as Xcode build settings are: iOXcode turns them into Info.plist values the way Xcode does
+            if isinstance(v, bool):
+                v = "YES" if v else "NO"
+            elif isinstance(v, list):
+                v = " ".join(_str(x) for x in v)
+            props[k[len("INFOPLIST_KEY_"):]] = _str(v)
     if s.get("PRODUCT_DISPLAY_NAME"):
         props["CFBundleDisplayName"] = _str(s["PRODUCT_DISPLAY_NAME"])
     if props:
