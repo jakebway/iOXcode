@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import CoreML
 
 struct SDKLayout {
     let sdk: URL            // iPhoneOS.sdk
@@ -305,6 +306,18 @@ final class BuildPipeline {
             let ext = src.pathExtension.lowercased()
             if ext == "xcassets" { appCatalogs.append(src); continue }
             if ext == "xcstrings" { StringCatalog.compile(src, into: app, log: log); continue }
+            if ext == "mlmodel" || ext == "mlpackage" {
+                // Xcode compiles Core ML models into .mlmodelc; Core ML on the phone does the same
+                do {
+                    let compiled = try MLModel.compileModel(at: src)
+                    let dst = app.appendingPathComponent(src.deletingPathExtension().lastPathComponent + ".mlmodelc")
+                    try? fm.removeItem(at: dst)
+                    try fm.moveItem(at: compiled, to: dst)
+                    log.log("compiled Core ML model \(src.lastPathComponent)")
+                } catch { log.log("warning: could not compile the Core ML model \(src.lastPathComponent): \(error.localizedDescription)") }
+                continue
+            }
+            if ext == "metal" { log.log("warning: \(src.lastPathComponent): Metal shaders can't be compiled on iPhone, so default.metallib is missing"); continue }
             // a localized file (Base.lproj/Main.storyboard, en.lproj/Localizable.strings) goes into its .lproj folder
             let parentName = src.deletingLastPathComponent().lastPathComponent
             var dstDir = app

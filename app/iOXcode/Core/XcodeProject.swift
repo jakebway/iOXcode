@@ -8,6 +8,26 @@ enum XcodeProjectReader {
         var warnings: [String]
     }
 
+    /// `KEY[sdk=iphoneos*][arch=arm64]`: the setting name and whether its conditions hold for a Release build of an iPhone app.
+    static func splitCondition(_ key: String) -> (base: String, applies: Bool) {
+        guard let first = key.firstIndex(of: "[") else { return (key, true) }
+        let base = String(key[..<first])
+        var applies = true
+        var rest = key[first...]
+        let values = ["sdk": "iphoneos", "arch": "arm64", "config": "Release", "variant": "normal"]
+        while let open = rest.firstIndex(of: "["), let close = rest.firstIndex(of: "]"), open < close {
+            let cond = String(rest[rest.index(after: open)..<close])
+            let parts = cond.split(separator: "=", maxSplits: 1).map(String.init)
+            if parts.count == 2 {
+                let pattern = "^" + NSRegularExpression.escapedPattern(for: parts[1]).replacingOccurrences(of: "\\*", with: ".*") + "$"
+                let value = values[parts[0]] ?? ""
+                if value.range(of: pattern, options: .regularExpression) == nil { applies = false }
+            }
+            rest = rest[rest.index(after: close)...]
+        }
+        return (base, applies)
+    }
+
     static func findProject(in dir: URL) -> URL? {
         let fm = FileManager.default
         func scan(_ d: URL) -> URL? {
@@ -75,8 +95,12 @@ enum XcodeProjectReader {
                     continue
                 }
                 guard let eq = line.firstIndex(of: "=") else { continue }
-                let key = line[..<eq].trimmingCharacters(in: .whitespaces)
-                if key.contains("[") { continue }
+                var key = line[..<eq].trimmingCharacters(in: .whitespaces)
+                if key.contains("[") {
+                    let c = splitCondition(key)
+                    if !c.applies { continue }          // e.g. KEY[sdk=macosx*] is not for an iPhone build
+                    key = c.base
+                }
                 var value = line[line.index(after: eq)...].trimmingCharacters(in: .whitespaces)
                 if value.contains("$(inherited)") || value.contains("${inherited}") {
                     let prev = (out[key] as? String) ?? ""
@@ -98,7 +122,12 @@ enum XcodeProjectReader {
                     parseXcconfig(dir.isEmpty ? rel : dir + "/" + rel, into: &out)
                 }
             }
-            for (k, v) in (pick?["buildSettings"] as? [String: Any]) ?? [:] { out[k] = v }
+            let own = (pick?["buildSettings"] as? [String: Any]) ?? [:]
+            for (k, v) in own where !k.contains("[") { out[k] = v }
+            for (k, v) in own where k.contains("[") {      // conditional settings (KEY[sdk=iphoneos*]) win when they apply
+                let c = splitCondition(k)
+                if c.applies { out[c.base] = v }
+            }
             return out
         }
         let projectObj = objects.first { ($0.value["isa"] as? String) == "PBXProject" }?.value
