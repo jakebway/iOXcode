@@ -102,3 +102,27 @@ enum NativeLinker {
         String(UInt(bitPattern: unsafeBitCast(entry, to: UnsafeRawPointer.self)))
     }
 }
+
+extension WasmRunner {
+    /// A 143-byte WASI program that prints "hello from wasm" (assembled by hand); proves the interpreter works.
+    static let helloModule: [UInt8] = [0,97,115,109,1,0,0,0,1,12,2,96,4,127,127,127,127,1,127,96,0,0,2,35,1,22,119,97,115,105,95,115,110,97,112,115,104,111,116,95,112,114,101,118,105,101,119,49,8,102,100,95,119,114,105,116,101,0,0,3,2,1,1,5,3,1,0,1,7,19,2,6,109,101,109,111,114,121,2,0,6,95,115,116,97,114,116,0,1,10,16,1,14,0,65,1,65,0,65,1,65,228,0,16,0,26,11,11,35,2,0,65,0,11,8,8,0,0,0,16,0,0,0,0,65,8,11,16,104,101,108,108,111,32,102,114,111,109,32,119,97,115,109,10]
+
+    /// Runs the hello program and reports in one line; shown in every build log.
+    static func selfTest() -> String {
+        let path = NSTemporaryDirectory() + "iox-hello.wasm"
+        do { try Data(helloModule).write(to: URL(fileURLWithPath: path)) } catch { return "interpreter: could not write test module" }
+        var out: [Int32] = [0, 0], err: [Int32] = [0, 0]
+        guard pipe(&out) == 0, pipe(&err) == 0 else { return "interpreter: no pipes" }
+        let code = run(path: path, args: ["hello.wasm"], environment: [:], preopens: [],
+                       stdinFd: open("/dev/null", O_RDONLY), stdoutFd: out[1], stderrFd: err[1])
+        close(out[1]); close(err[1])
+        func drain(_ fd: Int32) -> String {
+            var data = Data(); var buf = [UInt8](repeating: 0, count: 4096)
+            while true { let n = read(fd, &buf, buf.count); if n <= 0 { break }; data.append(contentsOf: buf[0..<n]) }
+            close(fd); return String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let o = drain(out[0]), e = drain(err[0])
+        return code == 0 && o == "hello from wasm" ? "WebAssembly interpreter ready (self-test passed)"
+                                                  : "WebAssembly interpreter FAILED self-test (exit \(code)) \(o) \(e)"
+    }
+}
