@@ -1,3 +1,10 @@
-56:        .executable(name: "wasmkit-cli", targets: ["CLI"]),
-85:        .executableTarget(
-231:        .executableTarget(
+swift-driver version: 1.120.5 Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)
+Target: arm64-apple-macosx15.0
+tag 0.5.0 tools 6.3
+tag 0.4.2 tools 6.3
+tag 0.4.1 tools 6.3
+tag 0.4.0 tools 6.3
+tag 0.3.1 tools 6.3
+tag 0.3.0 tools 6.3
+tag 0.2.2 tools 6.0
+USING 0.2.2

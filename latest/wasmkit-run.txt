@@ -1,1 +1,1 @@
-/Users/runner/work/_temp/f3d16935-cdb4-4939-aa30-a1f9e1d92c6f.sh: line 15: : command not found
+/Users/runner/work/_temp/fde3a134-4e63-4e18-9940-29422c2d71b6.sh: line 20: .build/release/wasmkit-cli: No such file or directory
