@@ -1,1 +1,1 @@
-xcodebuild: error: Could not resolve package dependencies:
+** BUILD SUCCEEDED **
