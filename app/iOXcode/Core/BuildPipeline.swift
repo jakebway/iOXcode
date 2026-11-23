@@ -294,8 +294,14 @@ final class BuildPipeline {
             let ext = src.pathExtension.lowercased()
             if ext == "xcassets" { appCatalogs.append(src); continue }
             if ext == "xcstrings" { StringCatalog.compile(src, into: app, log: log); continue }
-            if ["storyboard", "xib"].contains(ext) { log.log("note: \(src.lastPathComponent) is not compiled yet (no interface compiler on device)"); continue }
-            let dst = app.appendingPathComponent(src.lastPathComponent)
+            // a localized file (Base.lproj/Main.storyboard, en.lproj/Localizable.strings) goes into its .lproj folder
+            let parentName = src.deletingLastPathComponent().lastPathComponent
+            var dstDir = app
+            if parentName.hasSuffix(".lproj") && ext != "lproj" {
+                dstDir = app.appendingPathComponent(parentName, isDirectory: true)
+                try? fm.createDirectory(at: dstDir, withIntermediateDirectories: true)
+            }
+            let dst = dstDir.appendingPathComponent(src.lastPathComponent)
             try? fm.removeItem(at: dst)
             if fm.fileExists(atPath: src.path) { try fm.copyItem(at: src, to: dst) }
             else { log.log("warning: resource not found: \(r)") }
@@ -342,6 +348,7 @@ final class BuildPipeline {
             do { try DataModelCompiler.writeCompiled(bundle: dm.bundle, version: dm.version, entities: dm.entities, into: app) }
             catch { log.log("warning: could not write the compiled model \(dm.bundle.lastPathComponent): \(error)") }
         }
+        InterfaceCompilation.compileAll(in: app, log: log)
         var m2 = m
         if m2.icon == nil, let ic = iconFromCatalog { IconWriter.write(ic, into: app, log: log); m2.icon = "-" }
         try writeInfoPlist(m2, to: app.appendingPathComponent("Info.plist"), base: project.root, extra: catalogPlist)
@@ -910,5 +917,38 @@ enum PreviewStripper {
             result.append(chars[i]); i += 1
         }
         return result
+    }
+}
+
+
+/// Xcode's interface compile step (ibtool): every .storyboard and .xib copied into the app becomes a .storyboardc / .nib.
+enum InterfaceCompilation {
+    static func compileAll(in app: URL, log: LogSink) {
+        let fm = FileManager.default
+        var files: [URL] = []
+        if let en = fm.enumerator(at: app, includingPropertiesForKeys: nil) {
+            for case let u as URL in en {
+                let e = u.pathExtension.lowercased()
+                if e == "storyboard" || e == "xib" { files.append(u) }
+            }
+        }
+        guard !files.isEmpty else { return }
+        var done = 0
+        for f in files {
+            let isStoryboard = f.pathExtension.lowercased() == "storyboard"
+            let out = f.deletingPathExtension().appendingPathExtension(isStoryboard ? "storyboardc" : "nib")
+            try? fm.removeItem(at: out)
+            var code: Int32 = 1
+            let work = { code = ioxIBCompile(f.path, out.path, 0) }
+            if Thread.isMainThread { work() } else { DispatchQueue.main.sync(execute: work) }
+            if code == 0 {
+                try? fm.removeItem(at: f)
+                done += 1
+            } else {
+                try? fm.removeItem(at: out)
+                log.log("warning: could not compile \(f.lastPathComponent); the file is shipped as it is and will not load")
+            }
+        }
+        log.log("compiled \(done) of \(files.count) interface files (storyboards, xibs)")
     }
 }

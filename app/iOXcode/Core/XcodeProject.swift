@@ -254,7 +254,11 @@ enum XcodeProjectReader {
                         if ext == "swift", let p = resolve(ref) { swiftFiles.append(p) }
                         else if CCompiler.extensions.contains(ext), let p = resolve(ref) { cSources.append(p) }
                     case "PBXResourcesBuildPhase":
-                        if (fo["isa"] as? String) == "PBXVariantGroup" { continue }
+                        if (fo["isa"] as? String) == "PBXVariantGroup" {
+                            // a localized file (Main.storyboard with Base.lproj/en.lproj variants): every variant is a resource
+                            for c in (fo["children"] as? [String]) ?? [] { if let p = resolve(c) { resources.append(p) } }
+                            continue
+                        }
                         if let p = resolve(ref) { resources.append(p) }
                     case "PBXFrameworksBuildPhase":
                         let base = ((name as NSString).lastPathComponent as NSString).deletingPathExtension
