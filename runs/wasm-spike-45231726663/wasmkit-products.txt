@@ -1,0 +1,3 @@
+56:        .executable(name: "wasmkit-cli", targets: ["CLI"]),
+85:        .executableTarget(
+231:        .executableTarget(
