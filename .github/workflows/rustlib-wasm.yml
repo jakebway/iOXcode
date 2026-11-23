@@ -1,0 +1,95 @@
+name: Rust wasm32-wasip1 standard library (for build-time code on the phone)
+
+# Builds the standard library for wasm32-wasip1 with the same Rust compiler the app carries (the Mac copy of the
+# rustc-ios build), with a wasi-libc sysroot from wasi-sdk. The app unpacks it next to the iPhone standard library,
+# so Rust build scripts and procedural macros can be compiled to WebAssembly on the device and run in the
+# interpreter. Output: rustlib-wasm32-wasip1.tar.gz on the rustc-ios release, plus a hello program for tests.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Rust release tag (same as the rustc-ios build)"
+        default: "1.90.0"
+      wasi_sdk:
+        description: "wasi-sdk major version"
+        default: "27"
+
+permissions:
+  contents: write
+
+jobs:
+  std:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p ci-out "$RUNNER_TEMP/rt" "$RUNNER_TEMP/sdk"
+          gh release download "rustc-ios-${{ inputs.tag || '1.90.0' }}" -p rust-toolchain-darwin.tar.gz -D "$RUNNER_TEMP"
+          tar -xzf "$RUNNER_TEMP/rust-toolchain-darwin.tar.gz" -C "$RUNNER_TEMP/rt"
+          V="${{ inputs.wasi_sdk || '27' }}"
+          for url in \
+            "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-$V/wasi-sdk-$V.0-arm64-macos.tar.gz" \
+            "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-arm64-macos.tar.gz"; do
+            if curl -fsSL "$url" -o "$RUNNER_TEMP/sdk.tgz"; then echo "wasi-sdk: $url" | tee ci-out/wasi-sdk.txt; break; fi
+          done
+          tar -xzf "$RUNNER_TEMP/sdk.tgz" -C "$RUNNER_TEMP/sdk" --strip-components=1
+          ls "$RUNNER_TEMP/sdk" "$RUNNER_TEMP/sdk/share/wasi-sysroot/lib" 2>&1 | tee -a ci-out/wasi-sdk.txt
+          "$RUNNER_TEMP/rt/bin/rustc" -vV | tee ci-out/rustc.txt
+      - name: Rust library sources (the same release)
+        run: |
+          git clone -q --depth 1 --branch "${{ inputs.tag || '1.90.0' }}" https://github.com/rust-lang/rust "$RUNNER_TEMP/rust"
+          cd "$RUNNER_TEMP/rust"
+          git submodule update -q --init --depth 1 library/backtrace library/stdarch 2>&1 | tail -3 || true
+          mkdir -p "$RUNNER_TEMP/rt/lib/rustlib/src"
+          ln -sfn "$RUNNER_TEMP/rust" "$RUNNER_TEMP/rt/lib/rustlib/src/rust"
+      - name: Build std for wasm32-wasip1
+        run: |
+          S="$RUNNER_TEMP/sdk"
+          export RUSTC="$RUNNER_TEMP/rt/bin/rustc" RUSTC_BOOTSTRAP=1
+          export CC_wasm32_wasip1="$S/bin/clang" AR_wasm32_wasip1="$S/bin/llvm-ar"
+          export CFLAGS_wasm32_wasip1="--sysroot=$S/share/wasi-sysroot"
+          mkdir -p "$RUNNER_TEMP/b/src" && cd "$RUNNER_TEMP/b"
+          printf '[package]\nname="hello"\nversion="0.0.0"\nedition="2021"\n[profile.release]\nopt-level=2\npanic="abort"\n' > Cargo.toml
+          printf 'fn main(){ let v: Vec<u64> = (1..=10).collect(); println!("hello from rust wasm: {}", v.iter().sum::<u64>()); eprintln!("stderr ok"); }\n' > src/main.rs
+          rustup toolchain list || true
+          cargo +stable build --release --target wasm32-wasip1 -Zbuild-std=std,panic_abort -Zbuild-std-features=compiler-builtins-mem \
+            --config "target.wasm32-wasip1.linker=\"$S/bin/wasm-ld\"" 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/build.log" | tail -30
+          ls -l target/wasm32-wasip1/release/hello.wasm target/wasm32-wasip1/release/deps | head -50 | tee "$GITHUB_WORKSPACE/ci-out/products.txt"
+      - name: Assemble the sysroot piece and test it
+        run: |
+          S="$RUNNER_TEMP/sdk"
+          D="$RUNNER_TEMP/out/wasm32-wasip1"
+          mkdir -p "$D/lib/self-contained" "$RUNNER_TEMP/out"
+          cp "$RUNNER_TEMP/b/target/wasm32-wasip1/release/deps/"*.rlib "$D/lib/"
+          cp "$RUNNER_TEMP/b/target/wasm32-wasip1/release/deps/"*.rmeta "$D/lib/" 2>/dev/null || true
+          SR="$S/share/wasi-sysroot/lib/wasm32-wasip1"; [ -d "$SR" ] || SR="$S/share/wasi-sysroot/lib/wasm32-wasi"
+          cp "$SR"/*.a "$SR"/*.o "$D/lib/self-contained/" 2>&1 | tail -2
+          ls "$D/lib/self-contained" | tee ci-out/self-contained.txt
+          ls "$D/lib" | head -40 | tee ci-out/rlibs.txt
+          # prove the copy works as a sysroot piece: compile with rustc alone (as the phone will), link with wasm-ld
+          export RUSTC_BOOTSTRAP=1
+          T="$RUNNER_TEMP/t"; mkdir -p "$T/sys/lib/rustlib"; cp -R "$D" "$T/sys/lib/rustlib/"
+          cp "$RUNNER_TEMP/b/src/main.rs" "$T/main.rs"
+          "$RUNNER_TEMP/rt/bin/rustc" --sysroot "$T/sys" --target wasm32-wasip1 -C panic=abort -O -C linker="$S/bin/wasm-ld" -C linker-flavor=wasm-ld \
+            -Z print-link-args "$T/main.rs" -o "$T/main.wasm" 2>&1 | tee ci-out/rustc-link.txt | tail -20
+          ls -l "$T/main.wasm" && node --no-warnings -e '
+          const {WASI}=require("node:wasi");const fs=require("fs");const w=new WASI({version:"preview1"});
+          WebAssembly.instantiate(fs.readFileSync(process.argv[1]),w.getImportObject()).then(r=>{console.log("exit",w.start(r.instance))})' "$T/main.wasm" 2>&1 | tee ci-out/run.txt
+          cp "$T/main.wasm" "$RUNNER_TEMP/out/hello-rust.wasm"
+          tar -C "$RUNNER_TEMP/out" -czf "$RUNNER_TEMP/out/rustlib-wasm32-wasip1.tar.gz" wasm32-wasip1
+          ls -l "$RUNNER_TEMP/out"
+      - name: Publish to the rustc-ios release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "rustc-ios-${{ inputs.tag || '1.90.0' }}" "$RUNNER_TEMP/out/rustlib-wasm32-wasip1.tar.gz" "$RUNNER_TEMP/out/hello-rust.wasm" --clobber --repo "$GITHUB_REPOSITORY"
+      - name: Publish logs to the ci-logs branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "rustlib-wasm-${{ github.run_id }}"

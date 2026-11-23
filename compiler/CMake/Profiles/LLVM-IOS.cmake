@@ -14,7 +14,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET ${TOOLCHAIN_DEPLOYMENT_TARGET} CACHE STRING "Nat
 set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE CACHE STRING "Link probes validate iOS SDK libraries without running their outputs." FORCE)
 set(CMAKE_MACOSX_BUNDLE OFF CACHE BOOL "Only library targets are selected." FORCE)
 set(LLVM_ENABLE_PROJECTS "clang;lld" CACHE STRING "Swift needs Clang libraries and the Mach-O linker." FORCE)
-set(LLVM_TARGETS_TO_BUILD AArch64 CACHE STRING "Only arm64 code generation is needed." FORCE)
+set(LLVM_TARGETS_TO_BUILD "AArch64;WebAssembly" CACHE STRING "arm64 for the apps, WebAssembly for build-time code (macros, build scripts) that runs in the in-app interpreter." FORCE)
 set(LLVM_DEFAULT_TARGET_TRIPLE ${TOOLCHAIN_PROGRAM_TARGET} CACHE STRING "The compiler emits arm64 iOS programs." FORCE)
 set(LLVM_HOST_TRIPLE ${TOOLCHAIN_COMPILER_HOST} CACHE STRING "The compiler itself runs on iOS." FORCE)
 set(LLVM_NATIVE_TOOL_DIR "${TOOLCHAIN_BUILD_ROOT}/host-tools/bin" CACHE PATH "Generators run on the Mac." FORCE)

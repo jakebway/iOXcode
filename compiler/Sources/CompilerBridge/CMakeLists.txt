@@ -20,7 +20,7 @@ target_include_directories(SwiftCompilerBridge PRIVATE "${TOOLCHAIN_LLVM_SOURCE}
   "${TOOLCHAIN_LLVM_SOURCE}/clang/include"
   "${TOOLCHAIN_BUILD_ROOT}/llvm-ios/tools/clang/include")
 target_link_libraries(SwiftCompilerBridge PRIVATE
-  swiftFrontendTool swiftCompilerModules swiftIDETool swiftIDE lldMachO lldCommon
+  swiftFrontendTool swiftCompilerModules swiftIDETool swiftIDE lldMachO lldWasm lldCommon
   clangDriver clangFrontendTool clangFrontend clangCodeGen clangSerialization)
 if(APPLE)
   target_link_libraries(SwiftCompilerBridge PRIVATE "-framework CoreFoundation")

@@ -6,7 +6,7 @@ set(CMAKE_BUILD_TYPE Release CACHE STRING "The build tools use optimization with
 set(CMAKE_OSX_SYSROOT macosx CACHE STRING "TableGen runs on the build machine." FORCE)
 set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "The build machine uses Apple silicon." FORCE)
 set(LLVM_ENABLE_PROJECTS clang CACHE STRING "Clang supplies its TableGen executable." FORCE)
-set(LLVM_TARGETS_TO_BUILD AArch64 CACHE STRING "The final compiler needs the arm64 backend." FORCE)
+set(LLVM_TARGETS_TO_BUILD "AArch64;WebAssembly" CACHE STRING "The final compiler needs the arm64 and WebAssembly backends." FORCE)
 set(LLVM_INCLUDE_TESTS OFF CACHE BOOL "Only the two generator tools are selected." FORCE)
 set(LLVM_INCLUDE_BENCHMARKS OFF CACHE BOOL "Benchmarks are outside this build." FORCE)
 set(LLVM_INCLUDE_EXAMPLES OFF CACHE BOOL "Examples are outside this build." FORCE)

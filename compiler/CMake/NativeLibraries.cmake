@@ -1,6 +1,7 @@
 # These library targets satisfy the pinned frontend and bridge link closure.
 set(TOOLCHAIN_NATIVE_LIBRARIES
   lldMachO
+  lldWasm
   lldCommon
   clangTooling
   clangToolingRefactor
@@ -40,6 +41,12 @@ set(TOOLCHAIN_NATIVE_LIBRARIES
   clangRewrite
   clangLex
   clangBasic
+  LLVMWebAssemblyCodeGen
+  LLVMWebAssemblyAsmParser
+  LLVMWebAssemblyDisassembler
+  LLVMWebAssemblyDesc
+  LLVMWebAssemblyUtils
+  LLVMWebAssemblyInfo
   LLVMAArch64CodeGen
   LLVMAsmPrinter
   LLVMAArch64AsmParser

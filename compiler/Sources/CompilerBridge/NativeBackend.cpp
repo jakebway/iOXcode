@@ -26,6 +26,7 @@
 #include <utility>
 
 LLD_HAS_DRIVER(macho)
+LLD_HAS_DRIVER(wasm)
 
 /// The build links the upstream object-reader implementation without invoking a subprocess.
 int autolink_extract_main(llvm::ArrayRef<const char *> arguments, const char *programName,
@@ -83,7 +84,8 @@ swift_toolchain::BackendResult swift_toolchain::runLinker(int32_t count,
                                                           const char *const *arguments) {
   std::string message;
   llvm::raw_string_ostream stream(message);
-  const lld::DriverDef drivers[] = {{lld::Darwin, &lld::macho::link}};
+  // argv[0] picks the flavor: "ld64.lld" links Mach-O (iPhone apps), "wasm-ld" links WebAssembly (build-time code).
+  const lld::DriverDef drivers[] = {{lld::Darwin, &lld::macho::link}, {lld::Wasm, &lld::wasm::link}};
   const auto result =
       lld::lldMain({arguments, static_cast<size_t>(count)}, stream, stream, drivers);
   return {result.retCode, result.canRunAgain, std::move(message)};

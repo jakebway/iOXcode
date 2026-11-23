@@ -823,7 +823,13 @@ def _awk_parse(prog):
     return [(p, b) for p, b in items]
 
 
+def wasm(sh, a, i):
+    import ioxwasm
+    return ioxwasm.main(a, sh.out, sh.err, i or "")
+
+
 def register(table):
+    table.update({"wasm": wasm, "wasmtime": wasm, "wasmer": wasm, "wasmkit": wasm, "wasmkit-cli": wasm})
     table.update({"plutil": plutil, "PlistBuddy": plistbuddy, "defaults": defaults, "xcrun": xcrun, "sw_vers": sw_vers,
                   "cut": cut, "tee": tee, "diff": diff, "stat": stat, "du": du, "base64": base64, "printenv": printenv,
                   "awk": awk, "gawk": awk, "nawk": awk})
