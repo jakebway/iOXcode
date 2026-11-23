@@ -1,0 +1,3 @@
+hello from rust wasm: 55
+stderr ok
+exit 0

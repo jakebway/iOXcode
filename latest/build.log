@@ -1,12 +1,12 @@
     Updating crates.io index
  Downloading crates ...
-  Downloaded cfg-if v1.0.1
   Downloaded wasi v0.11.1+wasi-snapshot-preview1
   Downloaded getopts v0.2.23
+  Downloaded hashbrown v0.15.4
   Downloaded rustc-literal-escaper v0.0.5
   Downloaded rustc-demangle v0.1.25
-  Downloaded hashbrown v0.15.4
   Downloaded unicode-width v0.2.1
+  Downloaded cfg-if v1.0.1
   Downloaded libc v0.2.174
    Compiling compiler_builtins v0.1.160 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/compiler-builtins/compiler-builtins)
    Compiling core v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/core)
@@ -16,12 +16,12 @@
    Compiling alloc v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/alloc)
    Compiling cfg-if v1.0.1
    Compiling unwind v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/unwind)
-   Compiling rustc-demangle v0.1.25
    Compiling panic_abort v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/panic_abort)
+   Compiling rustc-demangle v0.1.25
    Compiling rustc-std-workspace-alloc v1.99.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/rustc-std-workspace-alloc)
    Compiling std_detect v0.1.5 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/std_detect)
-   Compiling hashbrown v0.15.4
    Compiling wasi v0.11.1+wasi-snapshot-preview1
+   Compiling hashbrown v0.15.4
    Compiling panic_unwind v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/panic_unwind)
    Compiling rustc-std-workspace-std v1.99.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/rustc-std-workspace-std)
    Compiling rustc-literal-escaper v0.0.5

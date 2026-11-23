@@ -1,0 +1,38 @@
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded wasi v0.11.1+wasi-snapshot-preview1
+  Downloaded getopts v0.2.23
+  Downloaded hashbrown v0.15.4
+  Downloaded rustc-literal-escaper v0.0.5
+  Downloaded rustc-demangle v0.1.25
+  Downloaded unicode-width v0.2.1
+  Downloaded cfg-if v1.0.1
+  Downloaded libc v0.2.174
+   Compiling compiler_builtins v0.1.160 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/compiler-builtins/compiler-builtins)
+   Compiling core v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/core)
+   Compiling libc v0.2.174
+   Compiling std v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/std)
+   Compiling rustc-std-workspace-core v1.99.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/rustc-std-workspace-core)
+   Compiling alloc v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/alloc)
+   Compiling cfg-if v1.0.1
+   Compiling unwind v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/unwind)
+   Compiling panic_abort v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/panic_abort)
+   Compiling rustc-demangle v0.1.25
+   Compiling rustc-std-workspace-alloc v1.99.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/rustc-std-workspace-alloc)
+   Compiling std_detect v0.1.5 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/std_detect)
+   Compiling wasi v0.11.1+wasi-snapshot-preview1
+   Compiling hashbrown v0.15.4
+   Compiling panic_unwind v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/panic_unwind)
+   Compiling rustc-std-workspace-std v1.99.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/rustc-std-workspace-std)
+   Compiling rustc-literal-escaper v0.0.5
+   Compiling proc_macro v0.0.0 (/Users/runner/work/_temp/rt/lib/rustlib/src/rust/library/proc_macro)
+   Compiling hello v0.0.0 (/Users/runner/work/_temp/b)
+error: linking with `/Users/runner/work/_temp/sdk/bin/wasm-ld` failed: exit status: 1
+  |
+  = note:  "/Users/runner/work/_temp/sdk/bin/wasm-ld" "-flavor" "wasm" "--export" "__main_void" "-z" "stack-size=1048576" "--stack-first" "--allow-undefined" "--no-demangle" "crt1-command.o" "<2 object files omitted>" "/Users/runner/work/_temp/b/target/wasm32-wasip1/release/deps/{libpanic_abort-c194b00725ec230a,libstd-e25dda722418f1f3,libwasi-378376da65add6a8,librustc_demangle-8ae17218cbee788d,libstd_detect-7ab8781192c2aadc,libhashbrown-75fba739fe91d6fc,librustc_std_workspace_alloc-5a2c436df368cd4e,libunwind-4986f4331f835a59,libcfg_if-b909d894146597cc,liblibc-9ed7054a7c5ebc8e}.rlib" "-l" "c" "/Users/runner/work/_temp/b/target/wasm32-wasip1/release/deps/{librustc_std_workspace_core-dca8f009226ee5db,liballoc-0a6a5d5e873ba4ef,libcore-b8246230a1e7b7f6,libcompiler_builtins-26678919f7bc5534}.rlib" "-L" "<sysroot>/lib/rustlib/wasm32-wasip1/lib/self-contained" "-o" "/Users/runner/work/_temp/b/target/wasm32-wasip1/release/deps/hello-2e7a4a192ec65069.wasm" "--gc-sections" "-O2" "--strip-debug"
+  = note: some arguments are omitted. use `--verbose` to show all linker arguments
+  = note: wasm-ld: error: cannot open crt1-command.o: No such file or directory
+          wasm-ld: error: unable to find library -lc
+          
+
+error: could not compile `hello` (bin "hello") due to 1 previous error

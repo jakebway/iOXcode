@@ -1,0 +1,13 @@
+wasi-sdk: https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-27/wasi-sdk-27.0-arm64-macos.tar.gz
+/Users/runner/work/_temp/sdk:
+bin
+lib
+share
+VERSION
+
+/Users/runner/work/_temp/sdk/share/wasi-sysroot/lib:
+wasm32-wasi
+wasm32-wasi-threads
+wasm32-wasip1
+wasm32-wasip1-threads
+wasm32-wasip2

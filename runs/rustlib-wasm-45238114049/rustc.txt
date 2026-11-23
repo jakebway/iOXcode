@@ -5,5 +5,3 @@ commit-date: 2025-09-14
 host: aarch64-apple-darwin
 release: 1.90.0-nightly
 LLVM version: 20.1.8
-aarch64-apple-darwin
-aarch64-apple-ios
