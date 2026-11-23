@@ -33,8 +33,8 @@ Status: done / building (pushed, not yet verified on device) / todo.
 9. Widgets, extensions, watchOS apps, App Clips, Messages/sticker extensions: extensions done (building); watch app/App Clip todo (#22). [EMULATE]
 
 ## D. Running code at build time (the wall: nothing compiled on the phone can be loaded)
-1. WebAssembly host: embed an interpreter (WasmKit, pure Swift, no JIT; wasm3 as the fast fallback) with WASI. Compile host-side code to wasm32-wasip1 and interpret it. [WORKAROUND] spike running (wasm-spike.yml)
-2. Wasm backends in our compilers: the iPhone Swift compiler is built with the AArch64 backend only (needs WebAssembly + lld wasm); rustc needs wasm32-wasip1 std + a wasm linker. [EMULATE] todo
+1. WebAssembly host: embed an interpreter (WasmKit, pure Swift, no JIT; wasm3 as the fast fallback) with WASI. Compile host-side code to wasm32-wasip1 and interpret it. [WORKAROUND] runner + `wasm` shell command written (WasmKit 0.5.0, needs Swift 6.3 so the app builds on macOS 26); awaiting first on-device test (`wasm --selftest`)
+2. Wasm backends in our compilers: the iPhone Swift compiler is built with the AArch64 backend only (needs WebAssembly + lld wasm); rustc needs wasm32-wasip1 std + a wasm linker. [EMULATE] compiler: WebAssembly target + lldWasm added (rebuild running); rust std: rustlib-wasm.yml running; Rust wasm bins link in-process (ioxcargo prints link args, wasm-ld runs in the compiler library). Swift wasm stdlib for 6.4-dev: still todo (needs a macOS-host build of the same source)
 3. Swift macros: third-party macros built to wasm and hosted through the compiler's plugin protocol (Wacro shows the approach); keep prebuilt first-party macros. [WORKAROUND] todo
 4. Rust: build scripts and proc macros as wasm (replaces the fixed prebuilt set); linking bin/cdylib; code-appended features. [WORKAROUND] in progress (#26); today 38 prebuilt macros
 5. Build tools run by repos (SwiftGen, Sourcery, SwiftLint, protoc, jq, ripgrep ...): prebuilt in CI as wasm or ported to Python. [WORKAROUND] todo
