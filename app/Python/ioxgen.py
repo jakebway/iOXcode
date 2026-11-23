@@ -159,6 +159,25 @@ def manifest_from_spec(spec_path):
             break
     if target is None:
         return None, ["project.yml has no iOS app target"]
+    m = _target_manifest(spec, root, target_name, target, notes)
+    # app extensions (widgets, share, intents...) that the app depends on
+    for d in target.get("dependencies") or []:
+        if not (isinstance(d, dict) and d.get("target") in targets):
+            continue
+        t = targets[d["target"]]
+        if not isinstance(t, dict):
+            continue
+        ttype = str(t.get("type", ""))
+        if ttype.startswith("app-extension"):
+            e = _target_manifest(spec, root, d["target"], t, notes)
+            e["productType"] = "app-extension"
+            m.setdefault("extensions", []).append(e)
+        elif d.get("target") != target_name:
+            notes.append("target %s (%s) is not built yet" % (d["target"], ttype or "unknown type"))
+    return m, notes
+
+
+def _target_manifest(spec, root, target_name, target, notes):
     options = spec.get("options") or {}
     s = {}
     s.update(_settings(spec.get("settings")))
@@ -300,7 +319,7 @@ def manifest_from_spec(spec_path):
                         pkgs.append(pk_entry)
                     pk_entry["products"].append(d.get("product") or d["package"])
         elif "target" in d:
-            notes.append("extra targets (extensions, frameworks) are not built yet: " + str(d["target"]))
+            pass        # extensions are read by manifest_from_spec; other targets are reported there
         elif "carthage" in d:
             notes.append("Carthage is not supported: " + str(d["carthage"]))
     for p in _str(s.get("LIBRARY_SEARCH_PATHS")).split():
@@ -337,7 +356,7 @@ def manifest_from_spec(spec_path):
             if text:
                 scripts.append({"name": sc.get("name") or key, "script": text, "afterCompile": after})
     m["scripts"] = scripts
-    return m, notes
+    return m
 
 
 # ---------------------------------------------------------------- GitHub workflows

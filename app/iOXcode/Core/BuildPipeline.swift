@@ -82,6 +82,9 @@ final class BuildPipeline {
     var packageLibraries: [String] = []
     var packageFrameworks: [String] = []
     var packageCCompiler: CCompiler?
+    /// Set for an app extension that the app embeds (widget, share, intents ...): built like the app but into a .appex.
+    var manifestOverride: Manifest?
+    var isExtension = false
     init(project: Project, log: LogSink) { self.project = project; self.log = log }
 
     /// Returns the finished .ipa.
@@ -108,10 +111,10 @@ final class BuildPipeline {
 
     func run() throws -> URL {
         let fm = FileManager.default
-        Generator.refresh(project, log: log)
-        let m = project.manifest
+        if !isExtension { Generator.refresh(project, log: log) }
+        let m = manifestOverride ?? project.manifest
         let t0 = Date()
-        log.log("== Building \(m.name) (\(m.bundleId))")
+        log.log(isExtension ? "== Building extension \(m.name) (\(m.bundleId))" : "== Building \(m.name) (\(m.bundleId))")
         log.log("memory available: \(CompilerHost.shared.availableMemoryMB) MB")
 
         if let err = CompilerHost.shared.load() { throw BuildError.message(err) }
@@ -119,10 +122,10 @@ final class BuildPipeline {
             throw BuildError.message("No iPhone SDK found. Open Setup and import the SDK pack first.")
         }
         SDKLayout.materializeFrameworkLinks(layout.sdk, log: log)
-        let work = Paths.work.appendingPathComponent(m.name, isDirectory: true)
+        let work = Paths.work.appendingPathComponent(isExtension ? m.name + "-appex" : m.name, isDirectory: true)
         try? fm.removeItem(at: work)
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
-        let app = work.appendingPathComponent("Payload/\(m.name).app", isDirectory: true)
+        let app = work.appendingPathComponent("Payload/\(m.name).\(isExtension ? "appex" : "app")", isDirectory: true)
         try runScripts(m.scripts.filter { !$0.afterCompile }, m: m, app: app, work: work, layout: layout)
 
         let files = project.swiftFiles(for: m)
@@ -170,7 +173,7 @@ final class BuildPipeline {
         // Swift packages: compile each module (dependencies first) into .o + .swiftmodule
         var packageObjects: [URL] = []
         let moduleDir = work.appendingPathComponent("modules", isDirectory: true)
-        let commonArgs: [String] = ["-target", target, "-sdk", layout.sdk.path,
+        var commonArgs: [String] = ["-target", target, "-sdk", layout.sdk.path,
                "-parse-as-library",
                "-resource-dir", resourceDir.path,
                "-module-cache-path", moduleCache.path,
@@ -178,6 +181,7 @@ final class BuildPipeline {
                "-Xllvm", "-aarch64-use-tbi", "-empty-abi-descriptor", "-disable-clang-spi",
                "-no-auto-bridging-header-chaining", "-enable-cross-import-overlays",
                "-target-sdk-version", sdkVersion(layout.sdk), "-target-sdk-name", "iphoneos" + sdkVersion(layout.sdk)]
+        if isExtension { commonArgs.append("-application-extension") }
         if !m.packages.isEmpty {
             packageCCompiler = CCompiler(log: log, sdk: layout.sdk, clangResource: clangDir, target: target, moduleCache: moduleCache)
             try fm.createDirectory(at: moduleDir, withIntermediateDirectories: true)
@@ -239,6 +243,7 @@ final class BuildPipeline {
         case "size": fe += ["-Osize"]
         default: fe += ["-Onone"]
         }
+        if isExtension { fe += ["-application-extension"] }
         fe += MacroPlugins.arguments(log: log)
         if !packageObjects.isEmpty { fe += ["-I", moduleDir.path] }
         fe += headerArgs + packageCArgs
@@ -258,6 +263,7 @@ final class BuildPipeline {
                             "-syslibroot", layout.sdk.path,
                             "-L", layout.sdk.appendingPathComponent("usr/lib/swift").path,
                             "-L", layout.swiftResource.appendingPathComponent("iphoneos").path]
+        if isExtension { ld += ["-application_extension", "-framework", "Foundation"] }
         for d in m.libraryDirs { ld += ["-L", project.root.appendingPathComponent(d).path] }
         for l in m.libraries { ld += ["-l" + l] }
         for f in m.frameworks { ld += ["-framework", f] }
@@ -265,7 +271,7 @@ final class BuildPipeline {
         for f in packageFrameworks where !m.frameworks.contains(f) { ld += ["-framework", f] }
         ld += ["-lSystem", "-lc++", "-lobjc",
                "-rpath", "/usr/lib/swift", "-rpath", "@executable_path/Frameworks",
-               "-dead_strip", "-e", "_main", obj.path] + packageObjects.map { $0.path } + cObjects.map { $0.path }
+               "-dead_strip", "-e", isExtension ? "_NSExtensionMain" : "_main", obj.path] + packageObjects.map { $0.path } + cObjects.map { $0.path }
         // Apple's own link line also adds the back-deployment pack
         let compat = layout.swiftResource.appendingPathComponent("iphoneos/libswiftCompatibilityPacks.a")
         if fm.fileExists(atPath: compat.path) { ld.append(compat.path) }
@@ -343,7 +349,24 @@ final class BuildPipeline {
             let src = project.root.appendingPathComponent(icon)
             if fm.fileExists(atPath: src.path) { IconWriter.write(src, into: app, log: log) }
         }
+        // App extensions go into PlugIns/, as Xcode's "Embed Foundation Extensions" phase does
+        for ext in m.extensions where !isExtension {
+            if !ext.bundleId.hasPrefix(m.bundleId + ".") {
+                log.log("warning: the extension \(ext.name) has the bundle id \(ext.bundleId), which does not start with \(m.bundleId). iOS will not install it.")
+            }
+            let sub = BuildPipeline(project: project, log: log)
+            sub.manifestOverride = ext
+            sub.isExtension = true
+            let built = try sub.run()
+            let plugIns = app.appendingPathComponent("PlugIns", isDirectory: true)
+            try fm.createDirectory(at: plugIns, withIntermediateDirectories: true)
+            let dst = plugIns.appendingPathComponent(built.lastPathComponent)
+            try? fm.removeItem(at: dst)
+            try fm.copyItem(at: built, to: dst)
+            log.log("embedded extension \(built.lastPathComponent)")
+        }
         try runScripts(m.scripts.filter { $0.afterCompile }, m: m, app: app, work: work, layout: layout)
+        if isExtension { return app }
         try fm.createDirectory(at: Paths.output, withIntermediateDirectories: true)
         let ipa = Paths.output.appendingPathComponent("\(m.name).ipa")
         try Zip.create(from: work.appendingPathComponent("Payload").deletingLastPathComponent().appendingPathComponent("Payload"), to: ipa, prefix: "Payload")
@@ -530,6 +553,8 @@ final class BuildPipeline {
             "CFBundleInfoDictionaryVersion": "6.0",
             "MinimumOSVersion": m.minOS,
             "DTPlatformName": "iphoneos", "DTPlatformVersion": "27.1", "DTSDKName": "iphoneos27.1",
+            "CFBundleDevelopmentRegion": "en", "DTCompiler": "com.apple.compilers.llvm.clang.1_0",
+            "DTXcode": "2630", "DTXcodeBuild": "17C529",
             "CFBundleSupportedPlatforms": ["iPhoneOS"],
             "UIDeviceFamily": m.deviceFamily ?? [1, 2],   // like Xcode: the project's TARGETED_DEVICE_FAMILY (iPhone-only apps run in a phone-sized window on a big screen)
             "LSRequiresIPhoneOS": true,
@@ -537,13 +562,18 @@ final class BuildPipeline {
             "UIRequiredDeviceCapabilities": ["arm64"],
             "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"],
         ]
+        let packageType = isExtension ? "XPC!" : "APPL"
+        if isExtension {      // an extension has none of the app's launch/orientation defaults; its own Info.plist adds what it needs
+            d["CFBundlePackageType"] = packageType
+            for k in ["UILaunchScreen", "UISupportedInterfaceOrientations", "UIRequiredDeviceCapabilities"] { d.removeValue(forKey: k) }
+        }
         if let f = m.infoPlistFile,
            let data = try? Data(contentsOf: base.appendingPathComponent(f)),
            let extra = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {
             let vars: [String: String] = [
                 "PRODUCT_MODULE_NAME": m.name, "PRODUCT_NAME": m.name, "TARGET_NAME": m.name, "EXECUTABLE_NAME": m.name,
                 "PRODUCT_BUNDLE_IDENTIFIER": m.bundleId, "MARKETING_VERSION": m.version, "CURRENT_PROJECT_VERSION": m.build,
-                "DEVELOPMENT_LANGUAGE": "en", "PRODUCT_BUNDLE_PACKAGE_TYPE": "APPL", "EXECUTABLE_PREFIX": "",
+                "DEVELOPMENT_LANGUAGE": "en", "PRODUCT_BUNDLE_PACKAGE_TYPE": packageType, "EXECUTABLE_PREFIX": "",
                 "PRODUCT_MODULE_NAME_C99": m.name]
             // Build variables inside the file (even nested ones such as the scene delegate class) get Xcode's values.
             func substitute(_ v: Any) -> Any? {
@@ -574,7 +604,7 @@ final class BuildPipeline {
         // Values from project.yml / build settings can use build variables too (CFBundleShortVersionString: $(MARKETING_VERSION)).
         let bv: [String: String] = ["PRODUCT_NAME": m.name, "TARGET_NAME": m.name, "EXECUTABLE_NAME": m.name, "PRODUCT_MODULE_NAME": m.name,
                                     "PRODUCT_BUNDLE_IDENTIFIER": m.bundleId, "MARKETING_VERSION": m.version, "CURRENT_PROJECT_VERSION": m.build,
-                                    "DEVELOPMENT_LANGUAGE": "en", "PRODUCT_BUNDLE_PACKAGE_TYPE": "APPL", "EXECUTABLE_PREFIX": ""]
+                                    "DEVELOPMENT_LANGUAGE": "en", "PRODUCT_BUNDLE_PACKAGE_TYPE": packageType, "EXECUTABLE_PREFIX": ""]
         for (k, v) in m.infoPlist.sorted(by: { $0.key < $1.key }) {
             var str = v
             for (n, val) in bv {

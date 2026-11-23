@@ -126,253 +126,273 @@ enum XcodeProjectReader {
             if a != b { return a }
             return ($0.value["name"] as? String ?? "") < ($1.value["name"] as? String ?? "")
         }
-        guard let target = ordered.first else { return nil }
-        let targetName = target.value["name"] as? String ?? "App"
-        if appTargets.count > 1 { warnings.append("This project has \(appTargets.count) app targets; building \(targetName).") }
-        if targets.count > appTargets.count { warnings.append("Extensions, widgets and other targets are not built yet.") }
+        guard let appTarget = ordered.first else { return nil }
+        if appTargets.count > 1 { warnings.append("This project has \(appTargets.count) app targets; building \(appTarget.value["name"] as? String ?? "App").") }
+        /// One target's Manifest from its build settings, phases and packages.
+        func buildManifest(_ target: (key: String, value: [String: Any])) -> Manifest {
+            let targetName = target.value["name"] as? String ?? "App"
 
-        let bs = merged(target.value)
+            let bs = merged(target.value)
 
-        func str(_ key: String) -> String? {
-            if let s = bs[key] as? String { return s }
-            if let a = bs[key] as? [String] { return a.joined(separator: " ") }
-            return nil
-        }
-        let productName0 = (str("PRODUCT_NAME") ?? targetName)
-        func expand(_ s: String) -> String {
-            var out = s
-            let vars: [String: String] = ["PRODUCT_NAME": productName0.replacingOccurrences(of: "$(TARGET_NAME)", with: targetName),
-                                          "TARGET_NAME": targetName, "SRCROOT": ".", "PROJECT_DIR": ".",
-                                          "inherited": "", "PRODUCT_NAME:rfc1034identifier": productName0.filter { $0.isLetter || $0.isNumber || $0 == "-" }]
-            for (k, v) in vars {
-                out = out.replacingOccurrences(of: "$(\(k))", with: v).replacingOccurrences(of: "${\(k)}", with: v)
+            func str(_ key: String) -> String? {
+                if let s = bs[key] as? String { return s }
+                if let a = bs[key] as? [String] { return a.joined(separator: " ") }
+                return nil
             }
-            // anything else that is itself a build setting (often from an .xcconfig): $(ORGANIZATION_IDENTIFIER) etc.
-            for _ in 0..<5 {
-                guard out.contains("$(") else { break }
-                var changed = false
-                let names: [String] = {
-                    guard let re = try? NSRegularExpression(pattern: "\\$\\(([A-Za-z0-9_]+)\\)") else { return [] }
-                    let ns = out as NSString
-                    return re.matches(in: out, range: NSRange(location: 0, length: ns.length)).map { ns.substring(with: $0.range(at: 1)) }
-                }()
-                for name in names {
-                    if let v = str(name), !v.contains("$(\(name))") {
-                        out = out.replacingOccurrences(of: "$(\(name))", with: v); changed = true
+            let productName0 = (str("PRODUCT_NAME") ?? targetName)
+            func expand(_ s: String) -> String {
+                var out = s
+                let vars: [String: String] = ["PRODUCT_NAME": productName0.replacingOccurrences(of: "$(TARGET_NAME)", with: targetName),
+                                              "TARGET_NAME": targetName, "SRCROOT": ".", "PROJECT_DIR": ".",
+                                              "inherited": "", "PRODUCT_NAME:rfc1034identifier": productName0.filter { $0.isLetter || $0.isNumber || $0 == "-" }]
+                for (k, v) in vars {
+                    out = out.replacingOccurrences(of: "$(\(k))", with: v).replacingOccurrences(of: "${\(k)}", with: v)
+                }
+                // anything else that is itself a build setting (often from an .xcconfig): $(ORGANIZATION_IDENTIFIER) etc.
+                for _ in 0..<5 {
+                    guard out.contains("$(") else { break }
+                    var changed = false
+                    let names: [String] = {
+                        guard let re = try? NSRegularExpression(pattern: "\\$\\(([A-Za-z0-9_]+)\\)") else { return [] }
+                        let ns = out as NSString
+                        return re.matches(in: out, range: NSRange(location: 0, length: ns.length)).map { ns.substring(with: $0.range(at: 1)) }
+                    }()
+                    for name in names {
+                        if let v = str(name), !v.contains("$(\(name))") {
+                            out = out.replacingOccurrences(of: "$(\(name))", with: v); changed = true
+                        }
                     }
+                    if !changed { break }
                 }
-                if !changed { break }
+                return out
             }
-            return out
-        }
 
-        var m = Manifest()
-        let cleanName = expand(productName0).filter { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" }
-        m.name = cleanName.isEmpty ? "App" : cleanName
-        if let n = str("INFOPLIST_KEY_CFBundleDisplayName") { m.displayName = expand(n) }
-        m.bundleId = expand(str("PRODUCT_BUNDLE_IDENTIFIER") ?? "com.example.\(m.name.lowercased())")
-        m.bundleId = m.bundleId.replacingOccurrences(of: "\\$\\([A-Za-z0-9_:]+\\)", with: "", options: .regularExpression)     // unset variables (e.g. a missing local override) are empty, as in Xcode
-        if let v = str("MARKETING_VERSION") { m.version = expand(v) }
-        if let v = str("CURRENT_PROJECT_VERSION") { m.build = expand(v) }
-        if let v = str("IPHONEOS_DEPLOYMENT_TARGET") { m.minOS = expand(v) }
-        if let f = str("TARGETED_DEVICE_FAMILY") {
-            let fam = expand(f).split(separator: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }.filter { $0 == 1 || $0 == 2 }
-            if !fam.isEmpty { m.deviceFamily = fam }
-        }
-        if let v = str("SWIFT_VERSION") { do {
-                // -swift-version takes a language mode (4, 4.2, 5, 6); SWIFT_VERSION = 6.2 means mode 6
-                let ver = expand(v).trimmingCharacters(in: .whitespaces)
-                m.swiftVersion = ver == "4.2" ? "4.2" : String(ver.split(separator: ".").first ?? "5")
-            } }
-        if let h = str("SWIFT_OBJC_BRIDGING_HEADER") { m.bridgingHeader = expand(h).replacingOccurrences(of: "./", with: "") }
-        switch str("SWIFT_OPTIMIZATION_LEVEL") ?? "" {
-        case "-O", "-Ounchecked": m.optimization = "speed"
-        case "-Osize": m.optimization = "size"
-        default: m.optimization = "none"
-        }
-        if let f = str("INFOPLIST_FILE") { m.infoPlistFile = expand(f).replacingOccurrences(of: "./", with: "") }
-        for (k, v) in bs where k.hasPrefix("INFOPLIST_KEY_") {
-            let key = String(k.dropFirst("INFOPLIST_KEY_".count))
-            // every value goes through (YES/NO, lists, *_Generation); BuildPipeline turns them into Info.plist values like Xcode
-            if let s = v as? String, !s.isEmpty { m.infoPlist[key] = expand(s) }
-            else if let a = v as? [String] { m.infoPlist[key] = a.map(expand).joined(separator: " ") }
-        }
-        var swiftSettings: [String: String] = [:]
-        for k in bs.keys where k.hasPrefix("SWIFT_") { if let v = str(k) { swiftSettings[k] = v } }
-        m.swiftFlags = SwiftSettings.flags(swiftSettings)
-        m.swiftFlags += (str("OTHER_SWIFT_FLAGS") ?? "").split(separator: " ").map(String.init).filter { !$0.hasPrefix("$") && !$0.isEmpty }
-        m.linkerFlags = []
-        // OTHER_LDFLAGS: -lname, -framework Name, everything else is passed through
-        var extraLibs: [String] = [], extraFrameworks: [String] = []
-        do {
-            let raw: String = expand(str("OTHER_LDFLAGS") ?? "")
-            let pieces: [String] = raw.split(separator: " ").map { String($0) }
-            var toks: [String] = []
-            for piece in pieces {
-                if piece.isEmpty || piece == "$(inherited)" || piece == "-ObjC" { continue }
-                toks.append(piece)
+            var m = Manifest()
+            let cleanName = expand(productName0).filter { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" }
+            m.name = cleanName.isEmpty ? "App" : cleanName
+            if let n = str("INFOPLIST_KEY_CFBundleDisplayName") { m.displayName = expand(n) }
+            m.bundleId = expand(str("PRODUCT_BUNDLE_IDENTIFIER") ?? "com.example.\(m.name.lowercased())")
+            m.bundleId = m.bundleId.replacingOccurrences(of: "\\$\\([A-Za-z0-9_:]+\\)", with: "", options: .regularExpression)     // unset variables (e.g. a missing local override) are empty, as in Xcode
+            if let v = str("MARKETING_VERSION") { m.version = expand(v) }
+            if let v = str("CURRENT_PROJECT_VERSION") { m.build = expand(v) }
+            if let v = str("IPHONEOS_DEPLOYMENT_TARGET") { m.minOS = expand(v) }
+            if let f = str("TARGETED_DEVICE_FAMILY") {
+                let fam = expand(f).split(separator: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }.filter { $0 == 1 || $0 == 2 }
+                if !fam.isEmpty { m.deviceFamily = fam }
             }
-            var i = 0
-            while i < toks.count {
-                let t = toks[i]
-                if t == "-framework", i + 1 < toks.count { extraFrameworks.append(toks[i + 1]); i += 2; continue }
-                if t.hasPrefix("-l") && t.count > 2 { extraLibs.append(String(t.dropFirst(2))) }
-                else if !t.hasPrefix("$") { m.linkerFlags.append(t) }
-                i += 1
+            if let v = str("SWIFT_VERSION") { do {
+                    // -swift-version takes a language mode (4, 4.2, 5, 6); SWIFT_VERSION = 6.2 means mode 6
+                    let ver = expand(v).trimmingCharacters(in: .whitespaces)
+                    m.swiftVersion = ver == "4.2" ? "4.2" : String(ver.split(separator: ".").first ?? "5")
+                } }
+            if let h = str("SWIFT_OBJC_BRIDGING_HEADER") { m.bridgingHeader = expand(h).replacingOccurrences(of: "./", with: "") }
+            switch str("SWIFT_OPTIMIZATION_LEVEL") ?? "" {
+            case "-O", "-Ounchecked": m.optimization = "speed"
+            case "-Osize": m.optimization = "size"
+            default: m.optimization = "none"
             }
-        }
-        if (str("OTHER_LDFLAGS") ?? "").contains("-ObjC") { m.linkerFlags.append("-ObjC") }
-
-        // build phases
-        var swiftFiles: [String] = []
-        var resources: [String] = []
-        var frameworks: [String] = []
-        var libs: [String] = []
-        var libDirs: [String] = []
-        var cSources: [String] = []
-        var scripts: [BuildScript] = []
-        var sawSources = false
-        for phaseId in (target.value["buildPhases"] as? [String]) ?? [] {
-            guard let phase = objects[phaseId], let isa = phase["isa"] as? String else { continue }
-            if isa == "PBXSourcesBuildPhase" { sawSources = true }
-            if isa == "PBXShellScriptBuildPhase", let text = phase["shellScript"] as? String {
-                let name = (phase["name"] as? String) ?? "Run Script"
-                let shell = (phase["shellPath"] as? String) ?? "/bin/sh"
-                let body = shell.contains("python") ? "python3 - <<'IOXCODE_PY'\n\(text)\nIOXCODE_PY\n" : text
-                scripts.append(BuildScript(name: name, script: body, afterCompile: sawSources))
-                continue
+            if let f = str("INFOPLIST_FILE") { m.infoPlistFile = expand(f).replacingOccurrences(of: "./", with: "") }
+            for (k, v) in bs where k.hasPrefix("INFOPLIST_KEY_") {
+                let key = String(k.dropFirst("INFOPLIST_KEY_".count))
+                // every value goes through (YES/NO, lists, *_Generation); BuildPipeline turns them into Info.plist values like Xcode
+                if let s = v as? String, !s.isEmpty { m.infoPlist[key] = expand(s) }
+                else if let a = v as? [String] { m.infoPlist[key] = a.map(expand).joined(separator: " ") }
             }
-            for bf in (phase["files"] as? [String]) ?? [] {
-                guard let buildFile = objects[bf] else { continue }
-                if buildFile["productRef"] != nil { continue }
-                guard let ref = buildFile["fileRef"] as? String, let fo = objects[ref] else { continue }
-                let name = (fo["path"] as? String) ?? (fo["name"] as? String) ?? ""
-                let ext = (name as NSString).pathExtension.lowercased()
-                switch isa {
-                case "PBXSourcesBuildPhase":
-                    if ext == "swift", let p = resolve(ref) { swiftFiles.append(p) }
-                    else if CCompiler.extensions.contains(ext), let p = resolve(ref) { cSources.append(p) }
-                case "PBXResourcesBuildPhase":
-                    if (fo["isa"] as? String) == "PBXVariantGroup" { continue }
-                    if let p = resolve(ref) { resources.append(p) }
-                case "PBXFrameworksBuildPhase":
-                    let base = ((name as NSString).lastPathComponent as NSString).deletingPathExtension
-                    if ext == "framework" { frameworks.append(base) }
-                    else if ext == "tbd" || ext == "dylib" { libs.append(base.hasPrefix("lib") ? String(base.dropFirst(3)) : base) }
-                    else if ext == "a", let p = resolve(ref) {
-                        libs.append(base.hasPrefix("lib") ? String(base.dropFirst(3)) : base)
-                        libDirs.append((p as NSString).deletingLastPathComponent)
-                    }
-                default: break
+            var swiftSettings: [String: String] = [:]
+            for k in bs.keys where k.hasPrefix("SWIFT_") { if let v = str(k) { swiftSettings[k] = v } }
+            m.swiftFlags = SwiftSettings.flags(swiftSettings)
+            m.swiftFlags += (str("OTHER_SWIFT_FLAGS") ?? "").split(separator: " ").map(String.init).filter { !$0.hasPrefix("$") && !$0.isEmpty }
+            m.linkerFlags = []
+            // OTHER_LDFLAGS: -lname, -framework Name, everything else is passed through
+            var extraLibs: [String] = [], extraFrameworks: [String] = []
+            do {
+                let raw: String = expand(str("OTHER_LDFLAGS") ?? "")
+                let pieces: [String] = raw.split(separator: " ").map { String($0) }
+                var toks: [String] = []
+                for piece in pieces {
+                    if piece.isEmpty || piece == "$(inherited)" || piece == "-ObjC" { continue }
+                    toks.append(piece)
+                }
+                var i = 0
+                while i < toks.count {
+                    let t = toks[i]
+                    if t == "-framework", i + 1 < toks.count { extraFrameworks.append(toks[i + 1]); i += 2; continue }
+                    if t.hasPrefix("-l") && t.count > 2 { extraLibs.append(String(t.dropFirst(2))) }
+                    else if !t.hasPrefix("$") { m.linkerFlags.append(t) }
+                    i += 1
                 }
             }
-        }
-        // Folder-synced groups (Xcode 16+): every file in the folder belongs to the target, except listed exceptions.
-        var syncedDirs: [String] = []
-        var syncedExcludes: [String] = []
-        for gid in (target.value["fileSystemSynchronizedGroups"] as? [String]) ?? [] {
-            guard let g = objects[gid], let dir = resolve(gid) else { continue }
-            syncedDirs.append(dir)
-            for eid in (g["exceptions"] as? [String]) ?? [] {
-                guard let ex = objects[eid], (ex["target"] as? String) == nil || (ex["target"] as? String) == target.key else { continue }
-                for e in (ex["membershipExceptions"] as? [String]) ?? [] { syncedExcludes.append(dir + "/" + e) }
-            }
-        }
-        if !syncedDirs.isEmpty {
-            let fm = FileManager.default
-            let ex = syncedExcludes.map { root.appendingPathComponent($0).standardizedFileURL.path }
-            for d in syncedDirs {
-                let base = root.appendingPathComponent(d)
-                guard let en = fm.enumerator(at: base, includingPropertiesForKeys: nil) else { continue }
-                for case let u as URL in en {
-                    if u.lastPathComponent.hasPrefix(".") { en.skipDescendants(); continue }
-                    let path = u.standardizedFileURL.path
-                    if ex.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) { en.skipDescendants(); continue }
-                    let rel = String(path.dropFirst(root.standardizedFileURL.path.count + 1))
-                    if u.pathExtension == "swift" { swiftFiles.append(rel) }
-                    else if CCompiler.extensions.contains(u.pathExtension.lowercased()) { cSources.append(rel) }
+            if (str("OTHER_LDFLAGS") ?? "").contains("-ObjC") { m.linkerFlags.append("-ObjC") }
+
+            // build phases
+            var swiftFiles: [String] = []
+            var resources: [String] = []
+            var frameworks: [String] = []
+            var libs: [String] = []
+            var libDirs: [String] = []
+            var cSources: [String] = []
+            var scripts: [BuildScript] = []
+            var sawSources = false
+            for phaseId in (target.value["buildPhases"] as? [String]) ?? [] {
+                guard let phase = objects[phaseId], let isa = phase["isa"] as? String else { continue }
+                if isa == "PBXSourcesBuildPhase" { sawSources = true }
+                if isa == "PBXShellScriptBuildPhase", let text = phase["shellScript"] as? String {
+                    let name = (phase["name"] as? String) ?? "Run Script"
+                    let shell = (phase["shellPath"] as? String) ?? "/bin/sh"
+                    let body = shell.contains("python") ? "python3 - <<'IOXCODE_PY'\n\(text)\nIOXCODE_PY\n" : text
+                    scripts.append(BuildScript(name: name, script: body, afterCompile: sawSources))
+                    continue
                 }
-            }
-            m.sources = syncedDirs
-            m.excludes = syncedExcludes
-            m.sourceResources = true
-        }
-
-        // Swift packages that live inside the project folder (referenced by path)
-        var localDirs: [String: String] = [:]      // relative dir -> Package.swift text
-        func addLocal(_ rel: String) {
-            let pkg = root.appendingPathComponent(rel).appendingPathComponent("Package.swift")
-            if let t = try? String(contentsOf: pkg, encoding: .utf8) { localDirs[rel] = t }
-        }
-        // Xcode picks up every package inside a folder-synced group (NetNewsWire keeps ~20 under Modules/)
-        for (id, o) in objects where (o["isa"] as? String) == "PBXFileSystemSynchronizedRootGroup" {
-            guard let gdir = resolve(id) else { continue }
-            let base = root.appendingPathComponent(gdir)
-            if let subs = try? FileManager.default.contentsOfDirectory(atPath: base.path) {
-                for sub in subs.sorted() where !sub.hasPrefix(".") { addLocal(gdir.isEmpty ? sub : gdir + "/" + sub) }
-            }
-            addLocal(gdir)
-        }
-        for (id, o) in objects {
-            if (o["isa"] as? String) == "XCLocalSwiftPackageReference", let rel = o["relativePath"] as? String { addLocal(rel) }
-            else if (o["isa"] as? String) == "PBXFileReference", (o["lastKnownFileType"] as? String) == "wrapper", let rel = resolve(id) { addLocal(rel) }
-        }
-
-        // Swift packages: XCRemoteSwiftPackageReference + the products this target links
-        var wanted: [String: [String]] = [:]     // package reference id -> product names
-        for pid in (target.value["packageProductDependencies"] as? [String]) ?? [] {
-            guard let dep = objects[pid], let pname = dep["productName"] as? String else { continue }
-            if let pref = dep["package"] as? String { wanted[pref, default: []].append(pname) }
-            else {
-                // the package that declares a library product of this name, else any package that mentions it
-                let declares = localDirs.filter { $0.value.range(of: "\\.library\\(\\s*name:\\s*\"\(pname)\"", options: .regularExpression) != nil }
-                let hit = declares.keys.sorted().first ?? localDirs.filter { $0.value.contains("\"\(pname)\"") }.keys.sorted().first
-                if let rel = hit { wanted["local:" + rel, default: []].append(pname) }
-            }
-        }
-        var packages: [PackageRef] = []
-        for (id, products) in wanted {
-            if id.hasPrefix("local:") {
-                let rel = String(id.dropFirst(6))
-                let abs = root.appendingPathComponent(rel).standardizedFileURL.path
-                packages.append(PackageRef(name: (rel as NSString).lastPathComponent, url: abs, kind: "local", value: "", products: products))
-                continue
-            }
-            guard let o = objects[id] else { continue }
-            if let rel = o["relativePath"] as? String {
-                let abs = root.appendingPathComponent(rel).standardizedFileURL.path
-                packages.append(PackageRef(name: (rel as NSString).lastPathComponent, url: abs, kind: "local", value: "", products: products))
-            } else if let url = o["repositoryURL"] as? String {
-                var kind = "branch", value = "HEAD"
-                if let r = o["requirement"] as? [String: Any] {
-                    switch r["kind"] as? String ?? "" {
-                    case "upToNextMajorVersion": kind = "from"; value = r["minimumVersion"] as? String ?? ""
-                    case "upToNextMinorVersion": kind = "minor"; value = r["minimumVersion"] as? String ?? ""
-                    case "exactVersion": kind = "exact"; value = r["version"] as? String ?? ""
-                    case "versionRange": kind = "from"; value = r["minimumVersion"] as? String ?? ""
-                    case "branch": kind = "branch"; value = r["branch"] as? String ?? "HEAD"
-                    case "revision": kind = "revision"; value = r["revision"] as? String ?? ""
+                for bf in (phase["files"] as? [String]) ?? [] {
+                    guard let buildFile = objects[bf] else { continue }
+                    if buildFile["productRef"] != nil { continue }
+                    guard let ref = buildFile["fileRef"] as? String, let fo = objects[ref] else { continue }
+                    let name = (fo["path"] as? String) ?? (fo["name"] as? String) ?? ""
+                    let ext = (name as NSString).pathExtension.lowercased()
+                    switch isa {
+                    case "PBXSourcesBuildPhase":
+                        if ext == "swift", let p = resolve(ref) { swiftFiles.append(p) }
+                        else if CCompiler.extensions.contains(ext), let p = resolve(ref) { cSources.append(p) }
+                    case "PBXResourcesBuildPhase":
+                        if (fo["isa"] as? String) == "PBXVariantGroup" { continue }
+                        if let p = resolve(ref) { resources.append(p) }
+                    case "PBXFrameworksBuildPhase":
+                        let base = ((name as NSString).lastPathComponent as NSString).deletingPathExtension
+                        if ext == "framework" { frameworks.append(base) }
+                        else if ext == "tbd" || ext == "dylib" { libs.append(base.hasPrefix("lib") ? String(base.dropFirst(3)) : base) }
+                        else if ext == "a", let p = resolve(ref) {
+                            libs.append(base.hasPrefix("lib") ? String(base.dropFirst(3)) : base)
+                            libDirs.append((p as NSString).deletingLastPathComponent)
+                        }
                     default: break
                     }
                 }
-                packages.append(PackageRef(name: (url as NSString).lastPathComponent.replacingOccurrences(of: ".git", with: ""), url: url, kind: kind, value: value, products: products))
+            }
+            // Folder-synced groups (Xcode 16+): every file in the folder belongs to the target, except listed exceptions.
+            var syncedDirs: [String] = []
+            var syncedExcludes: [String] = []
+            for gid in (target.value["fileSystemSynchronizedGroups"] as? [String]) ?? [] {
+                guard let g = objects[gid], let dir = resolve(gid) else { continue }
+                syncedDirs.append(dir)
+                for eid in (g["exceptions"] as? [String]) ?? [] {
+                    guard let ex = objects[eid], (ex["target"] as? String) == nil || (ex["target"] as? String) == target.key else { continue }
+                    for e in (ex["membershipExceptions"] as? [String]) ?? [] { syncedExcludes.append(dir + "/" + e) }
+                }
+            }
+            if !syncedDirs.isEmpty {
+                let fm = FileManager.default
+                let ex = syncedExcludes.map { root.appendingPathComponent($0).standardizedFileURL.path }
+                for d in syncedDirs {
+                    let base = root.appendingPathComponent(d)
+                    guard let en = fm.enumerator(at: base, includingPropertiesForKeys: nil) else { continue }
+                    for case let u as URL in en {
+                        if u.lastPathComponent.hasPrefix(".") { en.skipDescendants(); continue }
+                        let path = u.standardizedFileURL.path
+                        if ex.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) { en.skipDescendants(); continue }
+                        let rel = String(path.dropFirst(root.standardizedFileURL.path.count + 1))
+                        if u.pathExtension == "swift" { swiftFiles.append(rel) }
+                        else if CCompiler.extensions.contains(u.pathExtension.lowercased()) { cSources.append(rel) }
+                    }
+                }
+                m.sources = syncedDirs
+                m.excludes = syncedExcludes
+                m.sourceResources = true
+            }
+
+            // Swift packages that live inside the project folder (referenced by path)
+            var localDirs: [String: String] = [:]      // relative dir -> Package.swift text
+            func addLocal(_ rel: String) {
+                let pkg = root.appendingPathComponent(rel).appendingPathComponent("Package.swift")
+                if let t = try? String(contentsOf: pkg, encoding: .utf8) { localDirs[rel] = t }
+            }
+            // Xcode picks up every package inside a folder-synced group (NetNewsWire keeps ~20 under Modules/)
+            for (id, o) in objects where (o["isa"] as? String) == "PBXFileSystemSynchronizedRootGroup" {
+                guard let gdir = resolve(id) else { continue }
+                let base = root.appendingPathComponent(gdir)
+                if let subs = try? FileManager.default.contentsOfDirectory(atPath: base.path) {
+                    for sub in subs.sorted() where !sub.hasPrefix(".") { addLocal(gdir.isEmpty ? sub : gdir + "/" + sub) }
+                }
+                addLocal(gdir)
+            }
+            for (id, o) in objects {
+                if (o["isa"] as? String) == "XCLocalSwiftPackageReference", let rel = o["relativePath"] as? String { addLocal(rel) }
+                else if (o["isa"] as? String) == "PBXFileReference", (o["lastKnownFileType"] as? String) == "wrapper", let rel = resolve(id) { addLocal(rel) }
+            }
+
+            // Swift packages: XCRemoteSwiftPackageReference + the products this target links
+            var wanted: [String: [String]] = [:]     // package reference id -> product names
+            for pid in (target.value["packageProductDependencies"] as? [String]) ?? [] {
+                guard let dep = objects[pid], let pname = dep["productName"] as? String else { continue }
+                if let pref = dep["package"] as? String { wanted[pref, default: []].append(pname) }
+                else {
+                    // the package that declares a library product of this name, else any package that mentions it
+                    let declares = localDirs.filter { $0.value.range(of: "\\.library\\(\\s*name:\\s*\"\(pname)\"", options: .regularExpression) != nil }
+                    let hit = declares.keys.sorted().first ?? localDirs.filter { $0.value.contains("\"\(pname)\"") }.keys.sorted().first
+                    if let rel = hit { wanted["local:" + rel, default: []].append(pname) }
+                }
+            }
+            var packages: [PackageRef] = []
+            for (id, products) in wanted {
+                if id.hasPrefix("local:") {
+                    let rel = String(id.dropFirst(6))
+                    let abs = root.appendingPathComponent(rel).standardizedFileURL.path
+                    packages.append(PackageRef(name: (rel as NSString).lastPathComponent, url: abs, kind: "local", value: "", products: products))
+                    continue
+                }
+                guard let o = objects[id] else { continue }
+                if let rel = o["relativePath"] as? String {
+                    let abs = root.appendingPathComponent(rel).standardizedFileURL.path
+                    packages.append(PackageRef(name: (rel as NSString).lastPathComponent, url: abs, kind: "local", value: "", products: products))
+                } else if let url = o["repositoryURL"] as? String {
+                    var kind = "branch", value = "HEAD"
+                    if let r = o["requirement"] as? [String: Any] {
+                        switch r["kind"] as? String ?? "" {
+                        case "upToNextMajorVersion": kind = "from"; value = r["minimumVersion"] as? String ?? ""
+                        case "upToNextMinorVersion": kind = "minor"; value = r["minimumVersion"] as? String ?? ""
+                        case "exactVersion": kind = "exact"; value = r["version"] as? String ?? ""
+                        case "versionRange": kind = "from"; value = r["minimumVersion"] as? String ?? ""
+                        case "branch": kind = "branch"; value = r["branch"] as? String ?? "HEAD"
+                        case "revision": kind = "revision"; value = r["revision"] as? String ?? ""
+                        default: break
+                        }
+                    }
+                    packages.append(PackageRef(name: (url as NSString).lastPathComponent.replacingOccurrences(of: ".git", with: ""), url: url, kind: kind, value: value, products: products))
+                }
+            }
+            m.packages = packages
+            m.swiftFiles = swiftFiles
+            m.cFiles = cSources
+            if let d = str("GCC_PREPROCESSOR_DEFINITIONS") { m.cDefines = d.split(separator: " ").map(String.init).filter { !$0.contains("$") && !$0.isEmpty } }
+            if let a = str("CLANG_ENABLE_OBJC_ARC") { m.objcArc = a != "NO" }
+            m.scripts = scripts
+            m.resources = resources
+            m.frameworks = frameworks + extraFrameworks
+            m.libraries = libs + extraLibs
+            // library search paths from build settings
+            var dirs = libDirs
+            if let ls = str("LIBRARY_SEARCH_PATHS") {
+                for d in ls.split(separator: " ") { let e = expand(String(d)).replacingOccurrences(of: "\"", with: ""); if !e.hasPrefix("$") { dirs.append(e) } }
+            }
+            m.libraryDirs = Array(Set(dirs)).sorted()
+            return m
+        }
+        var m = buildManifest(appTarget)
+        // App extensions (widgets, share, intents, ...) that the app target embeds
+        var skipped = Set<String>()
+        for depId in (appTarget.value["dependencies"] as? [String]) ?? [] {
+            guard let dep = objects[depId], let tid = dep["target"] as? String, let t = objects[tid],
+                  (t["isa"] as? String) == "PBXNativeTarget" else { continue }
+            let type = t["productType"] as? String ?? ""
+            if type.hasPrefix("com.apple.product-type.app-extension") {
+                guard isIOS(t) else { skipped.insert(t["name"] as? String ?? tid); continue }
+                var e = buildManifest((key: tid, value: t))
+                e.productType = "app-extension"
+                m.extensions.append(e)
+            } else {
+                skipped.insert(t["name"] as? String ?? tid)
             }
         }
-        m.packages = packages
-        m.swiftFiles = swiftFiles
-        m.cFiles = cSources
-        if let d = str("GCC_PREPROCESSOR_DEFINITIONS") { m.cDefines = d.split(separator: " ").map(String.init).filter { !$0.contains("$") && !$0.isEmpty } }
-        if let a = str("CLANG_ENABLE_OBJC_ARC") { m.objcArc = a != "NO" }
-        m.scripts = scripts
-        m.resources = resources
-        m.frameworks = frameworks + extraFrameworks
-        m.libraries = libs + extraLibs
-        // library search paths from build settings
-        var dirs = libDirs
-        if let ls = str("LIBRARY_SEARCH_PATHS") {
-            for d in ls.split(separator: " ") { let e = expand(String(d)).replacingOccurrences(of: "\"", with: ""); if !e.hasPrefix("$") { dirs.append(e) } }
-        }
-        m.libraryDirs = Array(Set(dirs)).sorted()
+        if !skipped.isEmpty { warnings.append("Not built yet: \(skipped.sorted().joined(separator: ", ")).") }
         return Result(manifest: m, root: root, warnings: warnings)
     }
 }

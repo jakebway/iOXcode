@@ -85,6 +85,8 @@ struct Manifest: Codable {
     var excludes: [String] = []                // folders/files under `sources` that are not compiled
     var deviceFamily: [Int]?                   // TARGETED_DEVICE_FAMILY: 1 = iPhone, 2 = iPad (Xcode default: both)
     var sourceResources = false                // non-code files inside `sources` are copied too (XcodeGen does that)
+    var productType: String?                   // "app-extension" for an extension target; nil for the app
+    var extensions: [Manifest] = []            // app extensions (widgets, share, intents) embedded in the app
 
     init() {}
     init(from decoder: Decoder) throws {
@@ -100,10 +102,11 @@ struct Manifest: Codable {
         infoPlistFile = get(.infoPlistFile, nil as String?); swiftFiles = get(.swiftFiles, nil as [String]?)
         cFiles = get(.cFiles, nil as [String]?); cDefines = get(.cDefines, []); cFlags = get(.cFlags, []); headerDirs = get(.headerDirs, []); objcArc = get(.objcArc, true)
         scripts = get(.scripts, []); packages = get(.packages, []); excludes = get(.excludes, []); sourceResources = get(.sourceResources, false); deviceFamily = get(.deviceFamily, nil as [Int]?)
+        productType = get(.productType, nil as String?); extensions = get(.extensions, [])
     }
     enum Keys: String, CodingKey {
         case name, displayName, bundleId, version, build, minOS, sources, bridgingHeader, optimization, swiftVersion
-        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles, cFiles, cDefines, cFlags, headerDirs, objcArc, scripts, excludes, sourceResources, packages, deviceFamily
+        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles, cFiles, cDefines, cFlags, headerDirs, objcArc, scripts, excludes, sourceResources, packages, deviceFamily, productType, extensions
     }
 
     static func load(from dir: URL) -> Manifest {
