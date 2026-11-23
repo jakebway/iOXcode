@@ -87,6 +87,7 @@ struct Manifest: Codable {
     var sourceResources = false                // non-code files inside `sources` are copied too (XcodeGen does that)
     var productType: String?                   // "app-extension" for an extension target; nil for the app
     var extensions: [Manifest] = []            // app extensions (widgets, share, intents) embedded in the app
+    var localTargets: [Manifest] = []          // framework / static-library targets of this project that this target uses, dependencies first
 
     init() {}
     init(from decoder: Decoder) throws {
@@ -102,12 +103,25 @@ struct Manifest: Codable {
         infoPlistFile = get(.infoPlistFile, nil as String?); swiftFiles = get(.swiftFiles, nil as [String]?)
         cFiles = get(.cFiles, nil as [String]?); cDefines = get(.cDefines, []); cFlags = get(.cFlags, []); headerDirs = get(.headerDirs, []); objcArc = get(.objcArc, true)
         scripts = get(.scripts, []); packages = get(.packages, []); excludes = get(.excludes, []); sourceResources = get(.sourceResources, false); deviceFamily = get(.deviceFamily, nil as [Int]?)
-        productType = get(.productType, nil as String?); extensions = get(.extensions, [])
+        productType = get(.productType, nil as String?); extensions = get(.extensions, []); localTargets = get(.localTargets, [])
     }
     enum Keys: String, CodingKey {
         case name, displayName, bundleId, version, build, minOS, sources, bridgingHeader, optimization, swiftVersion
-        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles, cFiles, cDefines, cFlags, headerDirs, objcArc, scripts, excludes, sourceResources, packages, deviceFamily, productType, extensions
+        case libraryDirs, libraries, frameworks, resources, icon, swiftFlags, linkerFlags, infoPlist, infoPlistFile, swiftFiles, cFiles, cDefines, cFlags, headerDirs, objcArc, scripts, excludes, sourceResources, packages, deviceFamily, productType, extensions, localTargets
     }
+
+    /// The Swift packages of this target and of the local targets it uses, one entry per package with all products.
+    var allPackages: [PackageRef] {
+        var out: [PackageRef] = []
+        for p in packages + localTargets.flatMap({ $0.packages }) {
+            if let i = out.firstIndex(where: { $0.url == p.url && $0.kind == p.kind && $0.value == p.value }) {
+                for pr in p.products where !out[i].products.contains(pr) { out[i].products.append(pr) }
+            } else { out.append(p) }
+        }
+        return out
+    }
+    /// Names that are modules of this project (framework and static-library targets), so they are not linked as system frameworks.
+    var localModuleNames: Set<String> { Set(localTargets.map { $0.name }) }
 
     static func load(from dir: URL) -> Manifest {
         var m = loadBase(from: dir)

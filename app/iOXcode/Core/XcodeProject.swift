@@ -380,7 +380,32 @@ enum XcodeProjectReader {
             m.libraryDirs = Array(Set(dirs)).sorted()
             return m
         }
-        var m = buildManifest(appTarget)
+        /// Framework and static-library targets that `t` depends on (through other such targets too), dependencies first.
+        func localClosure(_ t: [String: Any], _ seen: inout Set<String>, _ out: inout [(key: String, value: [String: Any])]) {
+            for depId in (t["dependencies"] as? [String]) ?? [] {
+                guard let dep = objects[depId], let tid = dep["target"] as? String, let tt = objects[tid], !seen.contains(tid) else { continue }
+                let type = tt["productType"] as? String ?? ""
+                guard type == "com.apple.product-type.framework" || type == "com.apple.product-type.library.static", isIOS(tt) else { continue }
+                seen.insert(tid)
+                localClosure(tt, &seen, &out)
+                out.append((key: tid, value: tt))
+            }
+        }
+        func withLocalTargets(_ man: Manifest, _ t: (key: String, value: [String: Any])) -> Manifest {
+            var result = man
+            var seen = Set<String>()
+            var list: [(key: String, value: [String: Any])] = []
+            localClosure(t.value, &seen, &list)
+            var built: [Manifest] = []
+            for item in list {
+                var x = buildManifest(item)
+                x.productType = "framework"
+                built.append(x)
+            }
+            result.localTargets = built
+            return result
+        }
+        var m = withLocalTargets(buildManifest(appTarget), appTarget)
         // App extensions (widgets, share, intents, ...) that the app target embeds
         var skipped = Set<String>()
         for depId in (appTarget.value["dependencies"] as? [String]) ?? [] {
@@ -389,10 +414,10 @@ enum XcodeProjectReader {
             let type = t["productType"] as? String ?? ""
             if type.hasPrefix("com.apple.product-type.app-extension") {
                 guard isIOS(t) else { skipped.insert(t["name"] as? String ?? tid); continue }
-                var e = buildManifest((key: tid, value: t))
+                var e = withLocalTargets(buildManifest((key: tid, value: t)), (key: tid, value: t))
                 e.productType = "app-extension"
                 m.extensions.append(e)
-            } else {
+            } else if type != "com.apple.product-type.framework" && type != "com.apple.product-type.library.static" {
                 skipped.insert(t["name"] as? String ?? tid)
             }
         }

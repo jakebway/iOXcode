@@ -182,10 +182,20 @@ final class BuildPipeline {
                "-no-auto-bridging-header-chaining", "-enable-cross-import-overlays",
                "-target-sdk-version", sdkVersion(layout.sdk), "-target-sdk-name", "iphoneos" + sdkVersion(layout.sdk)]
         if isExtension { commonArgs.append("-application-extension") }
-        if !m.packages.isEmpty {
-            packageCCompiler = CCompiler(log: log, sdk: layout.sdk, clangResource: clangDir, target: target, moduleCache: moduleCache)
+        // the packages of this target and of the framework / static-library targets it uses are resolved together
+        var withPackages = m
+        withPackages.packages = m.allPackages
+        if !withPackages.packages.isEmpty || !m.localTargets.isEmpty {
             try fm.createDirectory(at: moduleDir, withIntermediateDirectories: true)
-            packageObjects = try buildPackages(m, work: work, moduleDir: moduleDir, common: commonArgs)
+        }
+        if !withPackages.packages.isEmpty {
+            packageCCompiler = CCompiler(log: log, sdk: layout.sdk, clangResource: clangDir, target: target, moduleCache: moduleCache)
+            packageObjects = try buildPackages(withPackages, work: work, moduleDir: moduleDir, common: commonArgs)
+        }
+        // framework and static-library targets of the project: built as modules and linked into the app
+        for t in m.localTargets {
+            packageObjects += try buildLocalTarget(t, work: work, moduleDir: moduleDir, common: commonArgs, layout: layout,
+                                                   clangDir: clangDir, target: target, moduleCache: moduleCache, localNames: m.localModuleNames)
         }
         // C / Objective-C / C++ of the app itself, compiled by the in-process clang
         var cObjects: [URL] = []
@@ -266,9 +276,9 @@ final class BuildPipeline {
         if isExtension { ld += ["-application_extension", "-framework", "Foundation"] }
         for d in m.libraryDirs { ld += ["-L", project.root.appendingPathComponent(d).path] }
         for l in m.libraries { ld += ["-l" + l] }
-        for f in m.frameworks { ld += ["-framework", f] }
+        for f in m.frameworks where !m.localModuleNames.contains(f) { ld += ["-framework", f] }
         for l in packageLibraries where !m.libraries.contains(l) && l != "c++" { ld += ["-l" + l] }
-        for f in packageFrameworks where !m.frameworks.contains(f) { ld += ["-framework", f] }
+        for f in packageFrameworks where !m.frameworks.contains(f) && !m.localModuleNames.contains(f) { ld += ["-framework", f] }
         ld += ["-lSystem", "-lc++", "-lobjc",
                "-rpath", "/usr/lib/swift", "-rpath", "@executable_path/Frameworks",
                "-dead_strip", "-e", isExtension ? "_NSExtensionMain" : "_main", obj.path] + packageObjects.map { $0.path } + cObjects.map { $0.path }
@@ -288,7 +298,8 @@ final class BuildPipeline {
         var iconFromCatalog: URL?
         var appCatalogs: [URL] = []
         var catalogPlist: [String: Any] = [:]
-        let resourceURLs = (m.resources.map { project.root.appendingPathComponent($0) } + project.sourceResourceFiles(for: m)).filter { $0.pathExtension != "xcdatamodeld" }
+        let localResources = m.localTargets.flatMap { t in t.resources.map { project.root.appendingPathComponent($0) } + project.sourceResourceFiles(for: t) }
+        let resourceURLs = (m.resources.map { project.root.appendingPathComponent($0) } + project.sourceResourceFiles(for: m) + localResources).filter { $0.pathExtension != "xcdatamodeld" }
         for src in resourceURLs {
             let r = src.lastPathComponent
             let ext = src.pathExtension.lowercased()
@@ -481,6 +492,54 @@ final class BuildPipeline {
             guard res.exitCode == 0 else { throw BuildError.message("Swift package module \(name) failed to compile (exit \(res.exitCode))") }
             objects.append(o)
         }
+        _ = fm
+        return objects
+    }
+
+    /// A framework or static-library target of the project, built as a Swift module (and C code) that is linked into the app.
+    /// Its resources are copied into the app, where Bundle(for:) finds them because the code lives in the app's own binary.
+    func buildLocalTarget(_ t: Manifest, work: URL, moduleDir: URL, common: [String], layout: SDKLayout, clangDir: URL?,
+                          target: String, moduleCache: URL, localNames: Set<String>) throws -> [URL] {
+        let fm = FileManager.default
+        let name = String(t.name.map { $0.isLetter || $0.isNumber || $0 == "_" ? $0 : "_" })
+        var objects: [URL] = []
+        for l in t.libraries where !packageLibraries.contains(l) { packageLibraries.append(l) }
+        for f in t.frameworks where !packageFrameworks.contains(f) && !localNames.contains(f) { packageFrameworks.append(f) }
+        let cFiles = project.cFiles(for: t)
+        if !cFiles.isEmpty {
+            var o = CCompiler.Options()
+            var dirs = CCompiler.headerDirectories(under: [project.root])
+            dirs += t.headerDirs.map { project.root.appendingPathComponent($0).path }
+            dirs.append(project.root.path)
+            o.includeDirs = dirs
+            o.defines = t.cDefines
+            o.arc = t.objcArc
+            o.optimize = t.optimization != "none"
+            o.extraFlags = t.cFlags
+            let cc = CCompiler(log: log, sdk: layout.sdk, clangResource: clangDir, target: target, moduleCache: moduleCache)
+            objects += try cc.compile(cFiles, into: work.appendingPathComponent("local-c-\(name)", isDirectory: true), options: o, label: name)
+        }
+        let files = project.swiftFiles(for: t)
+        if files.isEmpty { return objects }
+        log.log("-- target \(name) (\(files.count) files)")
+        let sources = MacroEmulation.prepare(PreviewStripper.prepare(files, root: project.root, work: work, log: log, sdk: layout.sdk), work: work, log: log)
+        let obj = work.appendingPathComponent("local-\(name).o")
+        var fe = ["-c"] + sources.map { $0.path } + common
+        fe += ["-module-name", name, "-swift-version", t.swiftVersion,
+               "-emit-module", "-emit-module-path", moduleDir.appendingPathComponent("\(name).swiftmodule").path,
+               "-I", moduleDir.path, "-o", obj.path]
+        fe += t.optimization == "none" ? ["-Onone"] : ["-O"]
+        fe += MacroPlugins.arguments(log: LogSink { _ in })
+        fe += packageCArgs
+        if !cFiles.isEmpty {
+            for d in CCompiler.headerDirectories(under: [project.root]) { fe += ["-Xcc", "-I", "-Xcc", d] }
+        }
+        if let h = t.bridgingHeader { fe += ["-import-objc-header", project.root.appendingPathComponent(h).path] }
+        fe += t.swiftFlags
+        let res = CompilerHost.shared.frontend(fe)
+        if !res.message.isEmpty { log.log(res.message) }
+        guard res.exitCode == 0 else { throw BuildError.message("Target \(name) failed to compile (exit \(res.exitCode))") }
+        objects.append(obj)
         _ = fm
         return objects
     }

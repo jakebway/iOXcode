@@ -160,6 +160,36 @@ def manifest_from_spec(spec_path):
     if target is None:
         return None, ["project.yml has no iOS app target"]
     m = _target_manifest(spec, root, target_name, target, notes)
+
+    def ios(t):
+        plat = t.get("platform") or t.get("supportedDestinations") or ""
+        plat = " ".join(plat) if isinstance(plat, list) else str(plat)
+        return "iOS" in plat or plat == "" or "auto" in plat
+
+    def local_targets(t, seen=None, out=None):
+        """Framework and static-library targets that t uses (also through each other), dependencies first."""
+        seen = set() if seen is None else seen
+        out = [] if out is None else out
+        for d in t.get("dependencies") or []:
+            n = d.get("target") if isinstance(d, dict) else None
+            tt = targets.get(n) if n else None
+            if not isinstance(tt, dict) or n in seen or n == target_name:
+                continue
+            ttype = str(tt.get("type", ""))
+            if ttype in ("framework", "library.static", "staticFramework") and ios(tt):
+                seen.add(n)
+                local_targets(tt, seen, out)
+                out.append(n)
+        return out
+
+    def locals_of(t):
+        result = []
+        for n in local_targets(t):
+            lm = _target_manifest(spec, root, n, targets[n], notes)
+            lm["productType"] = "framework"
+            result.append(lm)
+        return result
+    m["localTargets"] = locals_of(target)
     # app extensions (widgets, share, intents...) that the app depends on
     for d in target.get("dependencies") or []:
         if not (isinstance(d, dict) and d.get("target") in targets):
@@ -171,7 +201,10 @@ def manifest_from_spec(spec_path):
         if ttype.startswith("app-extension"):
             e = _target_manifest(spec, root, d["target"], t, notes)
             e["productType"] = "app-extension"
+            e["localTargets"] = locals_of(t)
             m.setdefault("extensions", []).append(e)
+        elif ttype in ("framework", "library.static", "staticFramework"):
+            pass
         elif d.get("target") != target_name:
             notes.append("target %s (%s) is not built yet" % (d["target"], ttype or "unknown type"))
     return m, notes
