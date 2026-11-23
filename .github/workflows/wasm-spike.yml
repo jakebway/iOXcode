@@ -1,0 +1,63 @@
+name: Spike - can build-time code run as WebAssembly on the phone
+
+# Checks the pieces of the "compile host code to WebAssembly and interpret it" plan:
+#  1. does the rustc built for iPhone have the WebAssembly code generator, and is there a wasm linker next to it
+#  2. are there Swift wasm SDKs on swift.org for the Swift version the app's compiler is built from
+#  3. does WasmKit (an interpreter written in Swift, no JIT) build and run a WASI program
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  spike:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust compiler for iPhone - WebAssembly code generator?
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p ci-out "$RUNNER_TEMP/rt"
+          gh release download rustc-ios-1.90.0 -p rust-toolchain-darwin.tar.gz -D "$RUNNER_TEMP"
+          tar -xzf "$RUNNER_TEMP/rust-toolchain-darwin.tar.gz" -C "$RUNNER_TEMP/rt"
+          R="$RUNNER_TEMP/rt/bin/rustc"
+          { echo "== version"; $R -vV
+            echo "== wasm targets known to rustc"; $R --print target-list | grep -i wasm
+            echo "== LLVM wasm backend present? (prints CPUs when it is)"; $R --print target-cpus --target wasm32-wasip1 2>&1 | head -8
+            echo "== wasm linker next to the compiler?"; find "$RUNNER_TEMP/rt" -iname '*wasm-ld*' -o -iname 'rust-lld*' | head
+            echo "== std libraries available"; ls "$RUNNER_TEMP/rt/lib/rustlib"
+          } 2>&1 | tee ci-out/rust.txt
+      - name: Swift wasm SDKs on swift.org
+        run: |
+          { echo "app compiler is built from: $(grep -m1 swiftVersion compiler/Toolchain.lock.json)"
+            for v in 6.1 6.2 6.2.1 6.2.2 6.3 6.3.1; do
+              for u in "https://download.swift.org/swift-$v-release/wasm-sdk/swift-$v-RELEASE/swift-$v-RELEASE_wasm.artifactbundle.tar.gz"; do
+                echo "$v -> HTTP $(curl -s -o /dev/null -w '%{http_code}' -I "$u")  $u"
+              done
+            done
+            echo "== development snapshots (main branch, what 6.4 is built from)"
+            curl -s -o /dev/null -w 'main wasm sdk index: HTTP %{http_code}\n' -I "https://download.swift.org/development/wasm-sdk/"
+            curl -s "https://download.swift.org/development/wasm-sdk/latest-build.yml" | head -5
+          } 2>&1 | tee ci-out/swift-sdk.txt
+      - name: WasmKit runs a WASI program
+        run: |
+          set -x
+          rustup target add wasm32-wasip1 2>&1 | tail -1
+          mkdir -p "$RUNNER_TEMP/h/src" && cd "$RUNNER_TEMP/h"
+          printf '[package]\nname="hello"\nversion="0.0.0"\nedition="2021"\n' > Cargo.toml
+          printf 'fn main(){ let v: Vec<u64> = (1..=10).collect(); println!("hello from wasm: {}", v.iter().sum::<u64>()); eprintln!("stderr ok"); }\n' > src/main.rs
+          cargo build --release --target wasm32-wasip1 2>&1 | tail -2
+          ls -l target/wasm32-wasip1/release/hello.wasm
+          cd "$RUNNER_TEMP" && git clone --depth 1 https://github.com/swiftwasm/WasmKit.git wk
+          cd wk && swift build -c release --product wasmkit-cli 2>&1 | tail -5
+          .build/release/wasmkit-cli run "$RUNNER_TEMP/h/target/wasm32-wasip1/release/hello.wasm" 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/wasmkit-run.txt"
+          cd "$GITHUB_WORKSPACE" && git -C "$RUNNER_TEMP/wk" rev-parse HEAD | tee ci-out/wasmkit-rev.txt
+      - name: Publish logs
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "wasm-spike-${{ github.run_id }}"
