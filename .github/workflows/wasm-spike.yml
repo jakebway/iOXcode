@@ -53,8 +53,13 @@ jobs:
           cargo build --release --target wasm32-wasip1 2>&1 | tail -2
           ls -l target/wasm32-wasip1/release/hello.wasm
           cd "$RUNNER_TEMP" && git clone --depth 1 https://github.com/swiftwasm/WasmKit.git wk
-          cd wk && swift build -c release --product wasmkit-cli 2>&1 | tail -5
-          .build/release/wasmkit-cli run "$RUNNER_TEMP/h/target/wasm32-wasip1/release/hello.wasm" 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/wasmkit-run.txt"
+          cd wk && grep -n "executable" Package.swift | head -10 | tee "$GITHUB_WORKSPACE/ci-out/wasmkit-products.txt"
+          swift package describe 2>&1 | grep -iE "^Name|Type: executable" | head -20 | tee -a "$GITHUB_WORKSPACE/ci-out/wasmkit-products.txt"
+          swift build -c release 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/wasmkit-build.txt" | tail -5
+          ls .build/release | grep -v "\.build$\|\.swiftmodule\|\.o$" | head -30 | tee -a "$GITHUB_WORKSPACE/ci-out/wasmkit-products.txt"
+          BIN=$(ls .build/release/wasmkit* 2>/dev/null | grep -v "\.\(build\|swiftmodule\|o\|json\)$" | head -1)
+          echo "binary: $BIN"
+          "$BIN" run "$RUNNER_TEMP/h/target/wasm32-wasip1/release/hello.wasm" 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/wasmkit-run.txt"
           cd "$GITHUB_WORKSPACE" && git -C "$RUNNER_TEMP/wk" rev-parse HEAD | tee ci-out/wasmkit-rev.txt
       - name: Publish logs
         if: always()
