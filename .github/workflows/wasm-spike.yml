@@ -52,14 +52,19 @@ jobs:
           printf 'fn main(){ let v: Vec<u64> = (1..=10).collect(); println!("hello from wasm: {}", v.iter().sum::<u64>()); eprintln!("stderr ok"); }\n' > src/main.rs
           cargo build --release --target wasm32-wasip1 2>&1 | tail -2
           ls -l target/wasm32-wasip1/release/hello.wasm
-          cd "$RUNNER_TEMP" && git clone --depth 1 https://github.com/swiftwasm/WasmKit.git wk
-          cd wk && grep -n "executable" Package.swift | head -10 | tee "$GITHUB_WORKSPACE/ci-out/wasmkit-products.txt"
-          swift package describe 2>&1 | grep -iE "^Name|Type: executable" | head -20 | tee -a "$GITHUB_WORKSPACE/ci-out/wasmkit-products.txt"
-          swift build -c release 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/wasmkit-build.txt" | tail -5
-          ls .build/release | grep -v "\.build$\|\.swiftmodule\|\.o$" | head -30 | tee -a "$GITHUB_WORKSPACE/ci-out/wasmkit-products.txt"
-          BIN=$(ls .build/release/wasmkit* 2>/dev/null | grep -v "\.\(build\|swiftmodule\|o\|json\)$" | head -1)
-          echo "binary: $BIN"
-          "$BIN" run "$RUNNER_TEMP/h/target/wasm32-wasip1/release/hello.wasm" 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/wasmkit-run.txt"
+          cd "$RUNNER_TEMP" && git clone -q https://github.com/swiftwasm/WasmKit.git wk && cd wk
+          swift --version 2>&1 | head -2 | tee "$GITHUB_WORKSPACE/ci-out/wasmkit-products.txt"
+          # the newest WasmKit whose manifest this runner's Swift can read
+          for t in $(git tag --sort=-v:refname | head -40); do
+            git checkout -q "$t" 2>/dev/null || continue
+            v=$(head -1 Package.swift | sed -E 's/.*swift-tools-version: *//')
+            echo "tag $t tools $v" >> "$GITHUB_WORKSPACE/ci-out/wasmkit-products.txt"
+            if swift package dump-package > /dev/null 2>&1; then echo "USING $t" | tee -a "$GITHUB_WORKSPACE/ci-out/wasmkit-products.txt"; break; fi
+          done
+          swift build -c release --product wasmkit-cli 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/wasmkit-build.txt" | tail -5
+          BIN=.build/release/wasmkit-cli
+          ls -l $BIN | tee -a "$GITHUB_WORKSPACE/ci-out/wasmkit-products.txt"
+          $BIN run "$RUNNER_TEMP/h/target/wasm32-wasip1/release/hello.wasm" 2>&1 | tee "$GITHUB_WORKSPACE/ci-out/wasmkit-run.txt"
           cd "$GITHUB_WORKSPACE" && git -C "$RUNNER_TEMP/wk" rev-parse HEAD | tee ci-out/wasmkit-rev.txt
       - name: Publish logs
         if: always()
