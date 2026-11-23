@@ -150,3 +150,15 @@ def main(a, out, err, stdin_text=""):
     env = dict(os.environ)
     env.update(env_extra)
     return run(rest[0], rest[1:], env=env, dirs=(dirs or None), stdin_text=stdin_text, out=out, err=err)
+
+
+def link(args):
+    """Runs the in-process linker (lld). args[0] names the flavor ("wasm-ld", "ld64.lld"). Returns (code, messages)."""
+    addr = os.environ.get("IOX_LINK_ENTRY")
+    if not addr:
+        return 1, "no in-process linker in this build of iOXcode"
+    proto = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_char_p), ctypes.c_char_p, ctypes.c_int)
+    fn = proto(int(addr))
+    buf = ctypes.create_string_buffer(1 << 16)
+    code = fn(len(args), _cstrings(list(args)), buf, len(buf))
+    return code, buf.value.decode("utf-8", "replace")

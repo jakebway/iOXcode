@@ -731,25 +731,84 @@ def rustc_library():
 def sysroot(log):
     """The Rust standard library for iPhone, unpacked once from the copy inside the app."""
     root = os.path.join(cache_dir(), "sysroot")
-    archive = os.environ.get("IOX_RUST_SYSROOT_ARCHIVE") or ""
+    archives = [a for a in (os.environ.get("IOX_RUST_SYSROOT_ARCHIVE") or "", os.environ.get("IOX_RUST_WASM_ARCHIVE") or "")
+                if os.path.isfile(a)]
     stamp = os.path.join(root, ".from")
-    if os.path.isfile(archive):
-        sig = "%s %d" % (archive, os.path.getsize(archive))
+    if archives:
+        sig = " ".join("%s %d" % (a, os.path.getsize(a)) for a in archives)
         if not (os.path.isfile(stamp) and open(stamp).read() == sig):
             log("    Unpacking the Rust standard library (first Rust build)")
             shutil.rmtree(root, ignore_errors=True)
             dest = os.path.join(root, "lib", "rustlib")
             os.makedirs(dest)
-            with tarfile.open(archive, "r:gz") as t:
-                t.extractall(dest, filter="data") if hasattr(tarfile, "data_filter") else t.extractall(dest)
+            for archive in archives:
+                with tarfile.open(archive, "r:gz") as t:
+                    t.extractall(dest, filter="data") if hasattr(tarfile, "data_filter") else t.extractall(dest)
             with open(stamp, "w") as f:
                 f.write(sig)
     return root
 
 
-def run_rustc(args, err):
+WASM_LINKER_NAME = "iox-wasm-ld"
+
+
+def _target_of(args):
+    for i, a in enumerate(args):
+        if a == "--target" and i + 1 < len(args):
+            return args[i + 1]
+        if a.startswith("--target="):
+            return a.split("=", 1)[1]
+    return ""
+
+
+def _links_wasm_program(args):
+    if not _target_of(args).startswith("wasm"):
+        return False
+    types = [args[i + 1] for i, a in enumerate(args[:-1]) if a == "--crate-type"]
+    types += [a.split("=", 1)[1] for a in args if a.startswith("--crate-type=")]
+    return any(t in ("bin", "cdylib") for t in types)
+
+
+def _unquote_debug_args(line):
+    out = []
+    for m in re.finditer(r'"((?:[^"\\]|\\.)*)"', line):
+        out.append(re.sub(r"\\(.)", r"\1", m.group(1)))
+    return out
+
+
+def _run_rustc_wasm_link(args, err):
+    """A WebAssembly program: rustc compiles it, then asks for a linker, which iOS can't start as a program.
+    So rustc is told to print the linker command line it would run (and keep its object files), and the link runs
+    in-process with wasm-ld (lld, WebAssembly flavor) inside the compiler library."""
+    import ioxwasm
+    buf = io.StringIO()
+    code = run_rustc(list(args) + ["-C", "linker=" + WASM_LINKER_NAME, "-C", "linker-flavor=wasm-ld",
+                                   "-C", "save-temps", "-Z", "print-link-args"], buf, _nolink=True)
+    text = buf.getvalue()
+    link = None
+    for line in text.splitlines():
+        if '"%s"' % WASM_LINKER_NAME in line:
+            link = _unquote_debug_args(line)
+            break
+    if link is None:
+        err.write(text)
+        return code if code else 1
+    cut = text.find("error: linker")
+    kept = text[:cut] if cut >= 0 else text
+    kept = "\n".join(l for l in kept.splitlines() if '"%s"' % WASM_LINKER_NAME not in l)
+    if kept.strip():
+        err.write(kept + "\n")
+    rc, msg = ioxwasm.link(["wasm-ld"] + link[1:])
+    if msg.strip():
+        err.write(msg if msg.endswith("\n") else msg + "\n")
+    return rc
+
+
+def run_rustc(args, err, _nolink=False):
     """One rustc command line, in-process. Diagnostics go to err.
     (On a Mac/CI, IOX_RUSTC_EXE names a rustc program to run instead; iOXcode uses that to build its own parts.)"""
+    if not _nolink and not os.environ.get("IOX_RUSTC_EXE") and _links_wasm_program(args):
+        return _run_rustc_wasm_link(args, err)
     exe = os.environ.get("IOX_RUSTC_EXE")
     if exe:
         import subprocess
@@ -971,7 +1030,7 @@ def build(argv, out, err):
             types = ["proc-macro"]
             ext = ".dylib" if "apple" in out_triple else (".dll" if "windows" in out_triple else ".so")
             rlib = os.path.join(deps_dir, "lib%s-%s%s" % (p.lib_name, h, ext))
-        if any(t in ("bin", "cdylib", "dylib") for t in types) and not os.environ.get("IOX_RUSTC_EXE"):
+        if any(t in ("bin", "cdylib", "dylib") for t in types) and not os.environ.get("IOX_RUSTC_EXE") and not (out_triple.startswith("wasm") and any(t in ("bin", "cdylib") for t in types)):
             log("warning: %s: crate-type %s needs a linker, which iOXcode doesn't have for Rust; building the others"
                 % (p.name, ", ".join(t for t in types if t in ("bin", "cdylib", "dylib"))))
             types = [t for t in types if t not in ("bin", "cdylib", "dylib")] or ["lib"]

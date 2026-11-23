@@ -78,3 +78,27 @@ enum WasmRunner {
         String(UInt(bitPattern: unsafeBitCast(entry, to: UnsafeRawPointer.self)))
     }
 }
+
+/// The in-process linker (lld) for Python: Rust and C build steps that need a WebAssembly link call it
+/// (IOX_LINK_ENTRY). `argv[0]` picks the flavor: "wasm-ld" or "ld64.lld".
+enum NativeLinker {
+    typealias Entry = @convention(c) (Int32, UnsafePointer<UnsafePointer<CChar>?>, UnsafeMutablePointer<CChar>, Int32) -> Int32
+
+    static let entry: Entry = { argc, argv, buffer, capacity in
+        let result = ioxc_link(argc, argv)
+        var text = ""
+        if let m = result.message, result.messageLength > 0 {
+            text = String(decoding: UnsafeBufferPointer(start: UnsafeRawPointer(m).assumingMemoryBound(to: UInt8.self),
+                                                        count: result.messageLength), as: UTF8.self)
+        }
+        ioxc_release(result.message)
+        let bytes = Array(text.utf8.prefix(max(0, Int(capacity) - 1)))
+        for (i, b) in bytes.enumerated() { buffer[i] = CChar(bitPattern: b) }
+        buffer[bytes.count] = 0
+        return result.exitCode
+    }
+
+    static var pointerForPython: String {
+        String(UInt(bitPattern: unsafeBitCast(entry, to: UnsafeRawPointer.self)))
+    }
+}

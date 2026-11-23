@@ -39,6 +39,7 @@ enum Paths {
         let rust = (Bundle.main.bundlePath as NSString).appendingPathComponent("Rust")
         e["IOX_RUSTC_LIB"] = lib
         e["IOX_RUST_SYSROOT_ARCHIVE"] = (rust as NSString).appendingPathComponent("rustlib-aarch64-apple-ios.tar.gz")
+        e["IOX_RUST_WASM_ARCHIVE"] = (rust as NSString).appendingPathComponent("rustlib-wasm32-wasip1.tar.gz")
         e["IOX_RUST_PROC_MACROS"] = fw
         e["IOX_RUST_PROC_MACROS_INDEX"] = (rust as NSString).appendingPathComponent("macros")
         return e
