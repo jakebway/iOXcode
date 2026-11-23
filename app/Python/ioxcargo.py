@@ -778,12 +778,12 @@ def _unquote_debug_args(line):
 
 def _run_rustc_wasm_link(args, err):
     """A WebAssembly program: rustc compiles it, then asks for a linker, which iOS can't start as a program.
-    So rustc is told to print the linker command line it would run (and keep its object files), and the link runs
+    So rustc is told (--print link-args) to print the linker command line it would run (and keep its object files), and the link runs
     in-process with wasm-ld (lld, WebAssembly flavor) inside the compiler library."""
     import ioxwasm
     buf = io.StringIO()
     code = run_rustc(list(args) + ["-C", "linker=" + WASM_LINKER_NAME, "-C", "linker-flavor=wasm-ld",
-                                   "-C", "save-temps", "-Z", "print-link-args"], buf, _nolink=True)
+                                   "-C", "save-temps", "--print", "link-args"], buf, _nolink=True)
     text = buf.getvalue()
     link = None
     for line in text.splitlines():

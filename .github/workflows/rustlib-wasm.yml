@@ -76,7 +76,7 @@ jobs:
           T="$RUNNER_TEMP/t"; mkdir -p "$T/sys/lib/rustlib"; cp -R "$D" "$T/sys/lib/rustlib/"
           cp "$RUNNER_TEMP/b/src/main.rs" "$T/main.rs"
           "$RUNNER_TEMP/rt/bin/rustc" --sysroot "$T/sys" --target wasm32-wasip1 -C panic=abort -O -C linker="$S/bin/wasm-ld" -C linker-flavor=wasm-ld \
-            -Z print-link-args "$T/main.rs" -o "$T/main.wasm" 2>&1 | tee ci-out/rustc-link.txt | tail -20
+            --print link-args "$T/main.rs" -o "$T/main.wasm" 2>&1 | tee ci-out/rustc-link.txt | tail -20
           ls -l "$T/main.wasm" && node --no-warnings -e '
           const {WASI}=require("node:wasi");const fs=require("fs");const w=new WASI({version:"preview1"});
           WebAssembly.instantiate(fs.readFileSync(process.argv[1]),w.getImportObject()).then(r=>{console.log("exit",w.start(r.instance))})' "$T/main.wasm" 2>&1 | tee ci-out/run.txt
