@@ -64,6 +64,8 @@ jobs:
             otool -l "$D" | grep -A4 -E "LC_BUILD_VERSION|LC_VERSION_MIN" | head -8
             echo "--- exported compiler entry points"
             nm -gU "$D" 2>/dev/null | grep -E "swift_compiler_" | head -12
+            echo "--- WebAssembly support (target backend and linker): matches found"
+            echo "wasm32: $(strings -a "$D" | grep -c wasm32) / wasm-ld: $(strings -a "$D" | grep -c 'wasm-ld') / WebAssembly: $(strings -a "$D" | grep -c WebAssembly)"
             echo "--- libraries it needs"
             otool -L "$D" | head -20
             echo '```'
