@@ -224,7 +224,7 @@ final class BuildPipeline {
         sourcesForCompile.append(shim)
         var fe: [String] = ["-c"] + sourcesForCompile.map { $0.path }
         fe += ["-target", target, "-sdk", layout.sdk.path,
-               "-module-name", m.name, "-parse-as-library", "-swift-version", m.swiftVersion,
+               "-module-name", m.name, "-swift-version", m.swiftVersion,
                "-resource-dir", resourceDir.path,
                "-module-cache-path", moduleCache.path,
                "-enable-objc-interop", "-no-color-diagnostics",
@@ -232,6 +232,8 @@ final class BuildPipeline {
                "-no-auto-bridging-header-chaining", "-enable-cross-import-overlays",
                "-target-sdk-version", sdkVersion(layout.sdk), "-target-sdk-name", "iphoneos" + sdkVersion(layout.sdk),
                "-o", obj.path]
+        // like Xcode: a file named main.swift has top-level code and is the entry point; otherwise every file is a library file
+        if !sourcesForCompile.contains(where: { $0.lastPathComponent == "main.swift" }) { fe += ["-parse-as-library"] }
         switch m.optimization {
         case "speed": fe += ["-O"]
         case "size": fe += ["-Osize"]
@@ -285,6 +287,7 @@ final class BuildPipeline {
             let r = src.lastPathComponent
             let ext = src.pathExtension.lowercased()
             if ext == "xcassets" { appCatalogs.append(src); continue }
+            if ext == "xcstrings" { StringCatalog.compile(src, into: app, log: log); continue }
             if ["storyboard", "xib"].contains(ext) { log.log("note: \(src.lastPathComponent) is not compiled yet (no interface compiler on device)"); continue }
             let dst = app.appendingPathComponent(src.lastPathComponent)
             try? fm.removeItem(at: dst)
@@ -316,6 +319,7 @@ final class BuildPipeline {
                 for item in items {
                     if item.pathExtension.lowercased() == "xcassets" { bundleCatalogs.append(item); continue }
                     if item.lastPathComponent.hasPrefix(".") { continue }
+                    if item.pathExtension.lowercased() == "xcstrings" { StringCatalog.compile(item, into: dir, log: log); continue }
                     let dst = dir.appendingPathComponent(item.lastPathComponent)
                     try? fm.removeItem(at: dst)
                     try? fm.copyItem(at: item, to: dst)

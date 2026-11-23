@@ -197,7 +197,10 @@ enum XcodeProjectReader {
             if let s = v as? String, !s.isEmpty { m.infoPlist[key] = expand(s) }
             else if let a = v as? [String] { m.infoPlist[key] = a.map(expand).joined(separator: " ") }
         }
-        m.swiftFlags = (str("OTHER_SWIFT_FLAGS") ?? "").split(separator: " ").map(String.init).filter { !$0.hasPrefix("$") && !$0.isEmpty }
+        var swiftSettings: [String: String] = [:]
+        for k in bs.keys where k.hasPrefix("SWIFT_") { if let v = str(k) { swiftSettings[k] = v } }
+        m.swiftFlags = SwiftSettings.flags(swiftSettings)
+        m.swiftFlags += (str("OTHER_SWIFT_FLAGS") ?? "").split(separator: " ").map(String.init).filter { !$0.hasPrefix("$") && !$0.isEmpty }
         m.linkerFlags = []
         // OTHER_LDFLAGS: -lname, -framework Name, everything else is passed through
         var extraLibs: [String] = [], extraFrameworks: [String] = []

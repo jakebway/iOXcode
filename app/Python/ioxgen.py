@@ -69,6 +69,43 @@ def _str(v):
     return "" if v is None else str(v)
 
 
+_FEATURE_NAMES = {
+    "BARE_SLASH_REGEX_LITERALS": "BareSlashRegexLiterals", "IMPORT_OBJC_FORWARD_DECLS": "ImportObjcForwardDeclarations",
+    "DISABLE_OUTWARD_ACTOR_ISOLATION": "DisableOutwardActorInference", "DISABLE_OUTWARD_ACTOR_INFERENCE": "DisableOutwardActorInference",
+    "INFER_SENDABLE_FROM_CAPTURES": "InferSendableFromCaptures", "NONFROZEN_ENUM_EXHAUSTIVITY": "NonfrozenEnumExhaustivity",
+    "GLOBAL_ACTOR_ISOLATED_TYPES_USABILITY": "GlobalActorIsolatedTypesUsability",
+}
+_APPROACHABLE = ["NonisolatedNonsendingByDefault", "InferIsolatedConformances", "DisableOutwardActorInference",
+                 "GlobalActorIsolatedTypesUsability", "InferSendableFromCaptures"]
+
+
+def _swift_setting_flags(s):
+    """Xcode's Swift build settings as compiler flags (mirrors SwiftSettings.swift in the app)."""
+    out = []
+    for t in (s.get("SWIFT_ACTIVE_COMPILATION_CONDITIONS") or "").split():
+        if "$" not in t:
+            out += ["-D", t]
+    if s.get("SWIFT_STRICT_CONCURRENCY") in ("minimal", "targeted", "complete"):
+        out.append("-strict-concurrency=" + s["SWIFT_STRICT_CONCURRENCY"])
+    on = lambda v: v in ("YES", "true", "TRUE")
+    feats = list(_APPROACHABLE) if on(s.get("SWIFT_APPROACHABLE_CONCURRENCY")) else []
+    for k in sorted(s):
+        if k.startswith("SWIFT_UPCOMING_FEATURE_") and on(s[k]):
+            raw = k[len("SWIFT_UPCOMING_FEATURE_"):]
+            feats.append(_FEATURE_NAMES.get(raw) or "".join(w.capitalize() for w in raw.split("_")))
+    seen = set()
+    for f in feats:
+        if f not in seen:
+            seen.add(f)
+            out += ["-enable-upcoming-feature", f]
+    if s.get("SWIFT_DEFAULT_ACTOR_ISOLATION") in ("MainActor", "nonisolated"):
+        out += ["-default-isolation", s["SWIFT_DEFAULT_ACTOR_ISOLATION"]]
+    if on(s.get("SWIFT_STRICT_MEMORY_SAFETY")):
+        out.append("-strict-memory-safety")
+    return out
+
+
+
 def _settings(block, config="Release"):
     """Flatten an XcodeGen settings block (base + configs[Release] or a plain dict)."""
     if not isinstance(block, dict):
@@ -284,7 +321,8 @@ def manifest_from_spec(spec_path):
         i += 1
     m["libraries"], m["frameworks"], m["libraryDirs"], m["linkerFlags"] = libs, fws, sorted(set(libdirs)), ld
     m["packages"] = pkgs
-    sf = [t for t in _str(s.get("OTHER_SWIFT_FLAGS")).split() if not t.startswith("$(")]
+    sf = _swift_setting_flags({k: _str(v) for k, v in s.items() if k.startswith("SWIFT_")})
+    sf += [t for t in _str(s.get("OTHER_SWIFT_FLAGS")).split() if not t.startswith("$(")]
     if sf:
         m["swiftFlags"] = sf
 
