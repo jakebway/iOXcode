@@ -841,11 +841,9 @@ MAC_ONLY = {
     "brew": "is not needed on iPhone; skipping",
     "sudo": "is not available on iPhone",
     "xcodebuild": "is iOXcode's job on iPhone; skipping",
-    "xcrun": "is not available on iPhone",
     "xcode-select": "is not needed on iPhone; skipping",
     "codesign": "is not needed (FlareStore signs the app); skipping",
     "security": "is not needed on iPhone; skipping",
-    "plutil": "is not available on iPhone",
     "swiftlint": "is not available on iPhone",
     "swiftformat": "is not available on iPhone",
     "pod": "(CocoaPods) is not available on iPhone",
@@ -2029,6 +2027,13 @@ def _git(sh, a, i):
     sh.err.write("git %s is not available on iPhone\n" % cmd)
     return 1
 
+
+# ---------------------------------------------------------------- more Mac tools (plutil, PlistBuddy, awk, cut, ...)
+try:
+    import ioxtools
+    ioxtools.register(BUILTINS)
+except Exception as _e:        # a problem there must not stop the shell
+    sys.stderr.write("note: extra tools unavailable: %s\n" % _e)
 
 # ---------------------------------------------------------------- entry
 
