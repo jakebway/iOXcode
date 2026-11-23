@@ -1655,16 +1655,49 @@ def _unzip(sh, a, i):
 
 @builtin("zip")
 def _zip(sh, a, i):
-    import zipfile
-    o, rest = _opts(a, "rqyX9")
+    import zipfile, fnmatch
+    flags, rest, excludes, k, mode = "", [], [], 0, "files"
+    while k < len(a):
+        x = a[k]
+        if x == "-x" or x == "--exclude":
+            mode = "x"
+        elif x == "-i" or x == "--include":
+            mode = "i"
+        elif x.startswith("-") and len(x) > 1 and not (mode == "x" and not x[1:].isalpha()):
+            flags += x.lstrip("-")
+            mode = "files"
+        elif mode == "x":
+            excludes.append(x)
+        elif mode == "i":
+            pass
+        else:
+            rest.append(x)
+        k += 1
+    if not rest:
+        sh.err.write("zip error: Nothing to do!\n")
+        return 15
     target = rest[0] if rest[0].endswith(".zip") else rest[0] + ".zip"
+    junk = "j" in flags
+
+    def skipped(path):
+        p = path.replace(os.sep, "/")
+        return any(fnmatch.fnmatch(p, e) or fnmatch.fnmatch(os.path.basename(p), e) or
+                   fnmatch.fnmatch("./" + p.lstrip("./"), e) or (e.endswith("/*") and p.startswith(e[:-1]))
+                   for e in excludes)
+
     with zipfile.ZipFile(target, "a", zipfile.ZIP_DEFLATED) as z:
         for p in rest[1:]:
             if os.path.isdir(p):
-                for dp, _, fs in os.walk(p):
-                    for f in fs: z.write(os.path.join(dp, f))
-            else:
-                z.write(p)
+                for dp, ds, fs in os.walk(p):
+                    ds.sort()
+                    for f in sorted(fs):
+                        full = os.path.join(dp, f)
+                        if not skipped(full):
+                            z.write(full, f if junk else full)
+            elif not skipped(p):
+                z.write(p, os.path.basename(p) if junk else p)
+    return 0
+
 
 @builtin("tar")
 def _tar(sh, a, i):

@@ -1018,6 +1018,19 @@ def build(argv, out, err):
                                  "plug-ins signed with the app, and this version isn't one of those built into iOXcode "
                                  "(it has: %s)." % (p.name, vstr(p.version), _who_needs(r, pid), versions))
             carried_artifacts[pid] = have
+            # A crate that was compiled against the macro (serde against serde_derive) records it as a dependency,
+            # and rustc looks it up by name in the -L dependency folder when anything uses that crate. The macros
+            # live inside the app, so link them into the folder under the name rustc expects.
+            link = os.path.join(deps_dir, "lib%s-%s.dylib" % (p.lib_name, vstr(p.version)))
+            try:
+                if os.path.islink(link) or os.path.exists(link):
+                    os.remove(link)
+                os.symlink(have, link)
+            except OSError:
+                try:
+                    shutil.copy2(have, link)
+                except OSError:
+                    pass
 
     sr = os.environ.get("IOX_RUST_SYSROOT") or sysroot(log)
     flags_extra = _rustflags()
@@ -1085,8 +1098,19 @@ def build(argv, out, err):
                 args += ["--cap-lints", "allow"]
             if p.proc_macro:
                 args += ["--extern", "proc_macro"]
-            for alias, cid in sorted(r.edges.get(pid, {}).items()):
+            direct = r.edges.get(pid, {})
+            for alias, cid in sorted(direct.items()):
                 args += ["--extern", "%s=%s" % (alias, artifacts[cid])]
+            # macros further down the tree (serde's serde_derive): rustc needs them to read the crates built with them
+            seen_t, todo = set(), list(direct.values())
+            while todo:
+                c = todo.pop()
+                if c in seen_t:
+                    continue
+                seen_t.add(c)
+                if c in carried_artifacts and c not in direct.values():
+                    args += ["--extern", "%s=%s" % (r.pkgs[c].lib_name, carried_artifacts[c])]
+                todo.extend(r.edges.get(c, {}).values())
             args += flags_extra
             code = run_rustc(args, err)
         finally:
