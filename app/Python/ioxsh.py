@@ -1728,6 +1728,11 @@ def _env_files():
     os.environ.setdefault("CI", "true")
     os.environ.setdefault("GITHUB_ACTIONS", "true")
     os.environ.setdefault("GITHUB_WORKSPACE", os.getcwd())
+    for k, v in (("GITHUB_EVENT_NAME", "workflow_dispatch"), ("GITHUB_REF", "refs/heads/main"), ("GITHUB_REF_NAME", "main"),
+                 ("GITHUB_SHA", "0" * 40), ("GITHUB_RUN_ID", "1"), ("GITHUB_RUN_NUMBER", "1"), ("GITHUB_RUN_ATTEMPT", "1")):
+        os.environ.setdefault(k, v)
+    if os.environ.get("GITHUB_REPOSITORY"):
+        os.environ.setdefault("GITHUB_ACTOR", os.environ["GITHUB_REPOSITORY"].split("/")[0])
     for var, name in (("GITHUB_ENV", "env"), ("GITHUB_PATH", "path"), ("GITHUB_OUTPUT", "output"), ("GITHUB_STEP_SUMMARY", "summary.md")):
         if not os.environ.get(var):
             path = os.path.join(tmp, name)
@@ -1735,37 +1740,61 @@ def _env_files():
             os.environ[var] = path
 
 
-def _load_env_file(path):
-    try:
-        with open(path, encoding="utf-8", errors="replace") as f:
-            lines = f.read().split("\n")
-    except OSError:
-        return
-    k = 0
+def _parse_env_text(text):
+    """The GITHUB_ENV / GITHUB_OUTPUT file format: NAME=value, or NAME<<DELIM ... DELIM for several lines."""
+    out, lines, k = {}, text.split("\n"), 0
     while k < len(lines):
         line = lines[k]
-        m = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)<<(.+)$", line)
+        m = re.match(r"^([A-Za-z_][A-Za-z0-9_-]*)<<(.+)$", line)
         if m:
             name, delim, body = m.group(1), m.group(2), []
             k += 1
             while k < len(lines) and lines[k] != delim:
                 body.append(lines[k]); k += 1
-            os.environ[name] = "\n".join(body)
+            out[name] = "\n".join(body)
         elif "=" in line:
             name, _, value = line.partition("=")
-            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
-                os.environ[name] = value
+            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", name):
+                out[name] = value
         k += 1
+    return out
+
+
+def _take_env_file(path):
+    """Reads and empties one of the runner's files."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            text = f.read()
+    except OSError:
+        return {}
     open(path, "w").close()
+    return _parse_env_text(text)
+
+
+def _load_env_file(path):
+    for k, v in _take_env_file(path).items():
+        os.environ[k] = v
+
+
+_STEP_RESULTS = {}      # id -> {"outputs": {...}, "outcome": "success", "conclusion": "success"}
 
 
 @builtin("ioxcode-step")
 def _ioxcode_step(sh, a, i):
     """ioxcode-step NAME WORKDIR 'K=V ...' BASE64SCRIPT: one GitHub workflow `run:` step."""
-    import base64
+    import base64, ioxexpr
     name, wd, senv, b64 = a[0], a[1], a[2], a[3]
+    step_id = a[4] if len(a) > 4 else ""
+    cond = base64.b64decode(a[5]).decode("utf-8") if len(a) > 5 and a[5] else ""
     _env_files()
-    text = base64.b64decode(b64).decode("utf-8")
+    ctx = ioxexpr.runtime_context(steps=_STEP_RESULTS)
+    if cond and ioxexpr.condition(cond, ctx) is False:
+        sh.out.write("-- step skipped (if: %s): %s\n" % (cond.strip(), name))
+        if step_id:
+            _STEP_RESULTS[step_id] = {"outputs": {}, "outcome": "skipped", "conclusion": "skipped"}
+        return 0
+    text = ioxexpr.interpolate(base64.b64decode(b64).decode("utf-8"), ctx, keep_unresolved=False)
+    senv = ioxexpr.interpolate(senv, ctx, keep_unresolved=False)
     sh.out.write("-- step: %s\n" % name)
     ws = os.environ.get("GITHUB_WORKSPACE") or os.getcwd()
     cwd, saved = os.getcwd(), dict(os.environ)
@@ -1790,6 +1819,10 @@ def _ioxcode_step(sh, a, i):
         keep = {k: os.environ[k] for k in ("GITHUB_ENV", "GITHUB_PATH", "GITHUB_OUTPUT", "GITHUB_STEP_SUMMARY", "RUNNER_TEMP")}
         os.environ.clear(); os.environ.update(saved); os.environ.update(keep)
         _load_env_file(os.environ["GITHUB_ENV"])
+        outs = _take_env_file(os.environ["GITHUB_OUTPUT"])
+        if step_id:
+            _STEP_RESULTS[step_id] = {"outputs": outs, "outcome": "failure" if code else "success",
+                                      "conclusion": "failure" if code else "success"}
     if code:
         sh.err.write("warning: step '%s' failed (exit %d). On GitHub the job would stop here; iOXcode keeps going.\n" % (name, code))
     return 0

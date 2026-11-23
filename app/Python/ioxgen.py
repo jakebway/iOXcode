@@ -342,36 +342,26 @@ def manifest_from_spec(spec_path):
 
 # ---------------------------------------------------------------- GitHub workflows
 
+def _gen_context(ctx):
+    """What an expression can see while the script is being written. Values the shell knows at run time stay shell variables."""
+    import ioxexpr
+    c = ioxexpr.runtime_context({})
+    c["github"].update({"workspace": "$GITHUB_WORKSPACE", "repository": ctx.get("repo") or "$GITHUB_REPOSITORY", "sha": "$GITHUB_SHA",
+                        "run_id": "$GITHUB_RUN_ID", "run_number": "$GITHUB_RUN_NUMBER", "run_attempt": "$GITHUB_RUN_ATTEMPT"})
+    c["runner"]["temp"] = "$RUNNER_TEMP"
+    c["matrix"] = ctx.get("matrix", {})
+    c["inputs"] = ctx.get("inputs", {})
+    c["github"]["event"] = {"inputs": ctx.get("inputs", {})}
+    c["env"] = {k: "${%s}" % k for k in ctx.get("env_names", [])}
+    return c
+
+
 def _expr(text, ctx):
-    """Replace ${{ ... }} with what it would be on a runner, as far as we can know."""
-    def sub(mt):
-        e = mt.group(1).strip()
-        if e.startswith("secrets."):
-            return ""
-        if e in ("github.workspace",):
-            return "$GITHUB_WORKSPACE"
-        if e.startswith("env."):
-            return "${%s}" % e[4:]
-        if e.startswith("runner.temp"):
-            return "$RUNNER_TEMP"
-        if e.startswith("runner.os"):
-            return "macOS"
-        if e.startswith("matrix."):
-            return str(ctx.get("matrix", {}).get(e[7:], ""))
-        if e.startswith("inputs.") or e.startswith("github.event.inputs."):
-            return str(ctx.get("inputs", {}).get(e.split(".")[-1], ""))
-        if e in ("github.ref_name", "github.head_ref"):
-            return "main"
-        if e == "github.repository":
-            return ctx.get("repo", "")
-        if e in ("github.run_number", "github.run_id", "github.run_attempt"):
-            return "1"
-        if e == "github.sha":
-            return "0000000"
-        if e.startswith("steps."):
-            return ""
-        return ""
-    return re.sub(r"\$\{\{(.*?)\}\}", sub, text or "")
+    """Replace ${{ ... }} with what it would be on a runner, as far as we can know before the job runs.
+    References to steps/job/needs stay as written; iOXcode fills them in when the step runs."""
+    import ioxexpr
+    text = re.sub(r"\$\{\{\s*env\.([A-Za-z_]\w*)\s*\}\}", lambda m: "${%s}" % m.group(1), text or "")
+    return ioxexpr.interpolate(text, _gen_context(ctx), keep_unresolved=True)
 
 
 def _job_score(job_id, job, wf_name):
@@ -408,11 +398,15 @@ def workflow_script(repo_dir):
     if best is None:
         return None
     _, f, wf, job_id, job = best
-    ctx = {"matrix": {}, "inputs": {}}
+    ctx = {"matrix": {}, "inputs": {}, "env_names": []}
     strat = (job.get("strategy") or {}).get("matrix") or {}
     for k, v in strat.items():
         if isinstance(v, list) and v and not isinstance(v[0], dict):
             ctx["matrix"][k] = v[0]
+    inc = strat.get("include")
+    if isinstance(inc, list) and inc and isinstance(inc[0], dict):
+        for k, v in inc[0].items():
+            ctx["matrix"].setdefault(k, v)
     on = wf.get("on") or wf.get(True) or {}
     if isinstance(on, dict):
         for k, v in ((on.get("workflow_dispatch") or {}) or {}).get("inputs", {}).items() if isinstance(on.get("workflow_dispatch"), dict) else []:
@@ -422,6 +416,7 @@ def workflow_script(repo_dir):
     env = {}
     env.update(wf.get("env") or {})
     env.update(job.get("env") or {})
+    ctx["env_names"] = list(env)
     for k, v in env.items():
         lines.append("export %s=%s" % (k, _shq(_expr(_str(v), ctx))))
     defaults = ((job.get("defaults") or wf.get("defaults") or {}).get("run") or {})
@@ -433,6 +428,16 @@ def workflow_script(repo_dir):
         cond = _str(st.get("if"))
         if "failure()" in cond or "cancelled()" in cond:
             continue
+        keep_if = ""
+        if cond.strip():
+            import ioxexpr
+            gctx = _gen_context(ctx)
+            gctx["env"] = dict(env)
+            verdict = ioxexpr.condition(_expr(cond, ctx) if "${{" in cond else cond, gctx)
+            if verdict is False:
+                continue
+            if verdict is None:
+                keep_if = cond
         if "uses" in st:
             u = st["uses"]
             if u.startswith("actions/checkout"):
@@ -452,7 +457,10 @@ def workflow_script(repo_dir):
             run = "python3 - <<'IOXCODE_PY'\n%s\nIOXCODE_PY\n" % run
         senv = " ".join("%s=%s" % (k, _shq(_expr(_str(v), ctx))) for k, v in (st.get("env") or {}).items())
         b64 = base64.b64encode(run.encode("utf-8")).decode("ascii")
-        lines.append("ioxcode-step %s %s %s %s" % (_shq(name), _shq(wd), _shq(senv), b64))
+        extra = ""
+        if st.get("id") or keep_if:
+            extra = " %s %s" % (_shq(_str(st.get("id"))), base64.b64encode(keep_if.encode("utf-8")).decode("ascii") if keep_if else "''")
+        lines.append("ioxcode-step %s %s %s %s%s" % (_shq(name), _shq(wd), _shq(senv), b64, extra))
         step_count += 1
     if step_count == 0:
         return None
