@@ -17,7 +17,7 @@ enum WasmRunner {
             _ = data.withUnsafeBytes { write(stderrFd, $0.baseAddress, $0.count) }
         }
         do {
-            let module = try parseWasm(filePath: path)
+            let module = try parseWasm(bytes: Array(try Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe)))
             let wasi = try WASIBridgeToHost(
                 args: args,
                 environment: environment,
