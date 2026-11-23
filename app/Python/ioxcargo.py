@@ -788,7 +788,14 @@ def _run_rustc_wasm_link(args, err):
     link = None
     for line in text.splitlines():
         if '"%s"' % WASM_LINKER_NAME in line:
-            link = _unquote_debug_args(line)
+            # rustc prints `VAR="x" ... "linker" "arg" ...`: the arguments are the quoted words after the linker
+            words = _unquote_debug_args(line)
+            at = words.index(WASM_LINKER_NAME)
+            link = [WASM_LINKER_NAME] + words[at + 1:]
+            for i in range(len(link) - 1):          # wasm-ld is called by name, so rustc's "-flavor wasm" is dropped
+                if link[i] == "-flavor":
+                    del link[i:i + 2]
+                    break
             break
     if link is None:
         err.write(text)
