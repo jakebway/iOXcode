@@ -120,10 +120,15 @@ struct RepoHomeView: View {
 
     private var actions: some View {
         VStack(spacing: 10) {
-            Button { model.build(project) } label: {
-                Label(model.building ? "Building…" : "Build IPA", systemImage: "hammer.fill").frame(maxWidth: .infinity)
+            if project.buildsIPA {
+                Button { model.build(project) } label: {
+                    Label(model.building ? "Building…" : "Build IPA", systemImage: "hammer.fill").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent).controlSize(.large).disabled(model.building)
+            } else {
+                Label("No iPhone app in this repo, so there is nothing to build into an IPA.", systemImage: "info.circle")
+                    .font(.footnote).foregroundColor(.secondary).frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.borderedProminent).controlSize(.large).disabled(model.building)
 
             HStack(spacing: 10) {
                 NavigationLink(destination: FileBrowserView(folder: project.url, projectRoot: project.url, title: project.name)) {

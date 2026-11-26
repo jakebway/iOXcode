@@ -63,8 +63,10 @@ struct ProjectsView: View {
                             }
                         }
                         HStack {
-                            Button("Build IPA") { model.build(p) }
-                                .buttonStyle(.borderedProminent).disabled(model.building)
+                            if p.buildsIPA {
+                                Button("Build IPA") { model.build(p) }
+                                    .buttonStyle(.borderedProminent).disabled(model.building)
+                            }
                             Button { ShowInFiles.open(p.url) } label: { Image(systemName: "folder") }.buttonStyle(.bordered)
                             Button("Delete", role: .destructive) { model.delete(p) }.buttonStyle(.bordered)
                         }

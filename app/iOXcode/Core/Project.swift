@@ -163,6 +163,56 @@ struct Project: Identifiable, Hashable {
     }
     var isXcodeProject: Bool { XcodeProjectReader.findProject(in: url) != nil }
 
+    /// Whether this repo is meant to produce an iPhone app. iOXcode only offers "Build IPA" for those: a documentation
+    /// repo, a Python tool, a Swift package that is only a library or a macOS-only app has nothing to build.
+    /// Decided the way Xcode and the CI would: an explicit ioxcode.json, an Xcode project or XcodeGen spec with an iOS
+    /// application target, a workflow that builds one, a Swift package that declares an iOS application product, or -
+    /// for a bare folder of Swift files - a SwiftUI/UIKit app entry point.
+    var buildsIPA: Bool {
+        let fm = FileManager.default
+        let stamp = ((try? fm.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date) ?? .distantPast
+        let generatedStamp = ((try? fm.attributesOfItem(atPath: url.appendingPathComponent(".ioxcode/generated.json").path))?[.modificationDate] as? Date) ?? .distantPast
+        let key = url.path + "|\(stamp.timeIntervalSince1970)|\(generatedStamp.timeIntervalSince1970)"
+        if let hit = Project.kindCache[key] { return hit }
+        let result = computeBuildsIPA()
+        Project.kindCache[key] = result
+        return result
+    }
+    private static var kindCache: [String: Bool] = [:]
+
+    private func computeBuildsIPA() -> Bool {
+        let fm = FileManager.default
+        func exists(_ name: String) -> Bool { fm.fileExists(atPath: url.appendingPathComponent(name).path) }
+        if exists("ioxcode.json") { return true }
+        if XcodeProjectReader.read(projectDir: url) != nil { return true }          // an iOS application target
+        if let g = Generated.load(url), g.manifest != nil { return true }           // project.yml / workflow with an iOS app
+        let top = (try? fm.contentsOfDirectory(atPath: url.path)) ?? []
+        if exists("Package.swift") {
+            let text = (try? String(contentsOf: url.appendingPathComponent("Package.swift"), encoding: .utf8)) ?? ""
+            return text.contains(".iOSApplication(") || text.contains("iOSApplication(")
+        }
+        // another kind of project definition that did not describe an iOS app (a macOS-only Xcode project, a library spec)
+        if top.contains(where: { $0.hasSuffix(".xcodeproj") || $0.hasSuffix(".xcworkspace") }) || exists("project.yml") || exists("project.yaml") {
+            return false
+        }
+        // a bare folder of Swift files: is there an app entry point?
+        var scanned = 0
+        if let en = fm.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]) {
+            for case let u as URL in en {
+                let name = u.lastPathComponent
+                if name == "Pods" || name == "Carthage" || name == "node_modules" || name == "build" { en.skipDescendants(); continue }
+                guard u.pathExtension == "swift" || u.pathExtension == "m" else { continue }
+                scanned += 1
+                if scanned > 400 { break }
+                if let size = try? u.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > 512 * 1024 { continue }
+                guard let text = try? String(contentsOf: u, encoding: .utf8) else { continue }
+                if text.contains("@UIApplicationMain") || text.contains("UIApplicationMain(") || text.contains("UIApplicationDelegate") { return true }
+                if text.contains("@main"), text.range(of: #":\s*App\b"#, options: .regularExpression) != nil { return true }
+            }
+        }
+        return false
+    }
+
     static func all() -> [Project] {
         let fm = FileManager.default
         let items = (try? fm.contentsOfDirectory(at: Paths.projects, includingPropertiesForKeys: nil)) ?? []
