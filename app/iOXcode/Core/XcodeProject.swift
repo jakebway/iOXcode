@@ -156,6 +156,7 @@ enum XcodeProjectReader {
             return ($0.value["name"] as? String ?? "") < ($1.value["name"] as? String ?? "")
         }
         guard let appTarget = ordered.first else { return nil }
+        guard isIOS(appTarget.value) else { return nil }      // a macOS-only app has no IPA to build
         if appTargets.count > 1 { warnings.append("This project has \(appTargets.count) app targets; building \(appTarget.value["name"] as? String ?? "App").") }
         /// One target's Manifest from its build settings, phases and packages.
         func buildManifest(_ target: (key: String, value: [String: Any])) -> Manifest {
