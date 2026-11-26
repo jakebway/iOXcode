@@ -46,14 +46,16 @@ jobs:
           echo "sdk id: $SDKID"
           sed -i "s/exact: \"604.0.0\"/exact: \"${{ inputs.syntax || '604.0.0' }}\"/" Package.swift
           swift build -c release --swift-sdk "$SDKID" --product StringifyMacros 2>&1 | tail -40 | tee ../../ci-out/spm-build.txt
-          find .build -maxdepth 3 -name "*.wasm" | tee ../../ci-out/spm-products.txt
-          ls .build/*/release | head -80 > ../../ci-out/spm-release-ls.txt
-          ls .build/*/release/Modules 2>/dev/null | head -80 >> ../../ci-out/spm-release-ls.txt
+          BIN=$(swift build -c release --swift-sdk "$SDKID" --show-bin-path 2>/dev/null | tail -1)
+          echo "$BIN" | tee ../../ci-out/spm-bin.txt; echo "$BIN" > /tmp/spm-bin
+          ls "$BIN" | head -100 > ../../ci-out/spm-release-ls.txt
+          ls "$BIN/Modules" 2>/dev/null | head -100 >> ../../ci-out/spm-release-ls.txt
+          find / -name "StringifyMacros*" -not -path "/proc/*" 2>/dev/null | head -20 >> ../../ci-out/spm-release-ls.txt
       - name: Harvest modules and static libraries
         run: |
           set +e
           cd tests/swiftmacro
-          B=$(ls -d .build/*wasi*/release | head -1)
+          B=$(cat /tmp/spm-bin)
           OUT=/tmp/pack/swiftsyntax-wasm; mkdir -p $OUT/modules $OUT/lib
           cp -R $B/Modules/*.swiftmodule $OUT/modules/ 2>/dev/null || cp $B/*.swiftmodule $OUT/modules/ 2>/dev/null
           for d in $B/*.build; do
@@ -115,6 +117,7 @@ jobs:
         run: |
           V="${{ inputs.syntax || '604.0.0' }}"
           [ -f /tmp/swiftsyntax-wasm.tar.gz ] || exit 0
+          apt-get install -y -qq gh >/dev/null 2>&1 || true
           gh release view swiftsyntax-wasm-$V >/dev/null 2>&1 || gh release create swiftsyntax-wasm-$V --title "SwiftSyntax $V for wasm32-wasip1" --notes "SwiftSyntax $V built with swift.org 6.4.0 for wasm32-wasip1: modules + static libraries. Used by the app to build Swift macros on the phone."
           gh release upload swiftsyntax-wasm-$V /tmp/swiftsyntax-wasm.tar.gz --clobber
       - name: Publish logs
