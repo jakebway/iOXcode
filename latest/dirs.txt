@@ -1,6 +1,0 @@
-.
-./swift-6.4.0-RELEASE_wasm.artifactbundle
-./swift-6.4.0-RELEASE_wasm.artifactbundle/swift-6.4.0-RELEASE_wasm
-./swift-6.4.0-RELEASE_wasm.artifactbundle/swift-6.4.0-RELEASE_wasm/wasm32-unknown-wasip1
-./swift-6.4.0-RELEASE_wasm.artifactbundle/swift-6.4.0-RELEASE_wasm/wasm32-unknown-wasip1/WASI.sdk
-./swift-6.4.0-RELEASE_wasm.artifactbundle/swift-6.4.0-RELEASE_wasm/wasm32-unknown-wasip1/swift.xctoolchain
