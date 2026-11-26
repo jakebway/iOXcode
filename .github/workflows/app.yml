@@ -228,5 +228,16 @@ jobs:
           name: iOXcode-ipa
           path: iOXcode.ipa
           retention-days: 30
+
+      # exactly one release IPA at all times: every run deletes the old release (and its tag) and publishes the new one
+      - name: Replace the release IPA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete ipa --cleanup-tag --yes 2>/dev/null || true
+          gh release create ipa iOXcode.ipa --target "$GITHUB_SHA" --latest \
+            --title "iOXcode IPA" \
+            --notes "Latest build of the iOXcode app (commit ${GITHUB_SHA:0:7}, run $GITHUB_RUN_ID). Replaced by every run of the app workflow."
+          gh release list --limit 20
 # rebuilt with the full compiler bundle
 # with matching clang headers
