@@ -451,6 +451,16 @@ final class BuildPipeline {
             throw BuildError.message("Could not resolve the Swift packages: \(r.message.suffix(600))")
         }
         for n in (obj["notes"] as? [String]) ?? [] { log.log("  \(n)") }
+        // Swift macros of the packages: built as WebAssembly plugins and given to the compiler
+        MacroPlugins.wasm = []
+        if let macros = obj["macros"] as? [[String: Any]], !macros.isEmpty {
+            let outDir = work.appendingPathComponent("macros", isDirectory: true)
+            let pkg = work.appendingPathComponent("packages.json").path
+            let mr = PythonHost.shared.run(.shell("python3 -c 'import ioxswiftwasm; ioxswiftwasm.build_macros(\"\(pkg)\", \"\(outDir.path)\")'"), cwd: work, log: log)
+            guard mr.exitCode == 0 else { throw BuildError.message("Swift macros could not be built: \(mr.message.suffix(800))") }
+            if let d = try? Data(contentsOf: outDir.appendingPathComponent("plugins.json")),
+               let list = try? JSONSerialization.jsonObject(with: d) as? [String] { MacroPlugins.wasm = list }
+        }
         var objects: [URL] = []
         var cModuleIncludes: [String: [String]] = [:]
         var cModuleDeps: [String: [String]] = [:]
@@ -794,7 +804,16 @@ enum Generator {
 /// Swift macros (@Observable, @TaskLocal, @OptionSet ...) are expanded by plugin libraries that ship inside
 /// the app as frameworks and are loaded in-process through the plugin server.
 enum MacroPlugins {
+    /// `<path>.wasm#<Module>` of the macros built from the project's packages (see buildPackages).
+    static var wasm: [String] = []
+
     static func arguments(log: LogSink) -> [String] {
+        var out = bundledArguments(log: log)
+        for p in wasm { out += ["-load-plugin-executable", p] }
+        return out
+    }
+
+    private static func bundledArguments(log: LogSink) -> [String] {
         guard let fw = Bundle.main.privateFrameworksURL else { return [] }
         let fm = FileManager.default
         func binary(_ name: String) -> String? {

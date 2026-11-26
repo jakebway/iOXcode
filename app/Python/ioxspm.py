@@ -754,6 +754,7 @@ def resolve(request_path):
             modules[(key, td["name"])] = td
 
     wanted = []      # module ids to build (ordered, deps first)
+    macro_wanted = []   # macro targets reached from the requested products: built as wasm plugins, not linked into the app
     state = {}
 
     def key_for_url(url):
@@ -783,7 +784,12 @@ def resolve(request_path):
         state[mid] = 1
         k, name = mid
         td = modules[mid]
-        if td["kind"] in ("macro", "plugin", "testTarget", "executableTarget", "systemLibrary", "binaryTarget"):
+        if td["kind"] == "macro":
+            # a Swift macro: its implementation runs inside the compiler as a WebAssembly plugin built from this target
+            macro_wanted.append(mid)
+            state[mid] = 2
+            return
+        if td["kind"] in ("plugin", "testTarget", "executableTarget", "systemLibrary", "binaryTarget"):
             # not built on iPhone; its own dependencies (swift-syntax for macros) are not needed either
             notes.append("%s (%s) is a %s target; not built on iPhone yet" % (name, packages[k]["manifest"]["name"], td["kind"]))
             state[mid] = 2
@@ -857,7 +863,16 @@ def resolve(request_path):
                     "cStd": p["manifest"].get("cStd"), "cxxStd": p["manifest"].get("cxxStd"),
                     "headerSearch": [os.path.normpath(os.path.join(root, h)) for h in td.get("headerSearch", [])],
                     "includeDir": os.path.join(root, td.get("publicHeadersPath") or "include") if cfiles else None})
-    result = {"modules": out, "notes": notes}
+    macros = []
+    for mid in macro_wanted:
+        k, name = mid
+        p = packages[k]
+        td = modules[mid]
+        root, swift, cfiles, resources = target_sources(p["dir"], td)
+        if swift:
+            macros.append({"name": name, "package": p["manifest"]["name"], "dir": root, "files": swift,
+                           "flags": td["flags"], "defines": [d for d in td["defines"] if not d.startswith("C:")]})
+    result = {"modules": out, "macros": macros, "notes": notes}
     with open(os.path.join(work, "packages.json"), "w") as f:
         json.dump(result, f, indent=1)
     return result

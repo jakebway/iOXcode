@@ -198,3 +198,62 @@ def swiftc_wasm(sh, a, i):
     if msg:
         sh.err.write(msg + "\n")
     return code
+
+
+def syntax_root(log=lambda s: None):
+    """Directory of the prebuilt SwiftSyntax for wasm (modules/, include/, lib/), unpacked once from the app."""
+    direct = os.environ.get("IOX_SWIFTSYNTAX_WASM")
+    if direct and os.path.isdir(os.path.join(direct, "modules")):
+        return direct
+    archive = os.environ.get("IOX_SWIFTSYNTAX_WASM_ARCHIVE") or ""
+    if not os.path.isfile(archive):
+        return ""
+    base = os.environ.get("IOX_CACHES") or os.path.join(os.path.expanduser("~"), "Library", "Caches", "iOXcode")
+    dest = os.path.join(base, "swiftsyntax-wasm")
+    stamp = os.path.join(dest, ".from")
+    sig = "%s %d" % (archive, os.path.getsize(archive))
+    root = os.path.join(dest, "swiftsyntax-wasm")
+    if not (os.path.isfile(stamp) and open(stamp).read() == sig and os.path.isdir(root)):
+        log("    Unpacking SwiftSyntax for macros (first use)")
+        shutil.rmtree(dest, ignore_errors=True)
+        os.makedirs(dest)
+        with tarfile.open(archive, "r:gz") as t:
+            t.extractall(dest, filter="data") if hasattr(tarfile, "data_filter") else t.extractall(dest)
+        with open(stamp, "w") as f:
+            f.write(sig)
+    return root
+
+
+def build_macros(packages_json, out_dir, log=print):
+    """Builds every macro target listed in packages.json as a wasm plugin. Returns ['<wasm>#<Module>', ...] for
+    `-load-plugin-executable`; the list is also written to out_dir/plugins.json."""
+    import json
+    import ioxwasm
+    data = json.load(open(packages_json))
+    macros = data.get("macros") or []
+    plugins = []
+    if not macros:
+        return plugins
+    root = syntax_root(log)
+    if not root:
+        log("note: this build of iOXcode has no SwiftSyntax for macros; %d macro target(s) are skipped" % len(macros))
+        return plugins
+    os.makedirs(out_dir, exist_ok=True)
+    for m in macros:
+        module = re.sub(r"\W", "_", m["name"])
+        out = os.path.join(out_dir, module + ".wasm")
+        log("-- macro %s (%d files) as WebAssembly" % (m["name"], len(m["files"])))
+        extra = []
+        for d in m.get("defines") or []:
+            extra += ["-D", d]
+        code, msg = compile(m["files"], out, module, ioxwasm.frontend, ioxwasm.link, opt="none", swift_version="5",
+                            extra=extra, modules=prebuilt_modules(root), libdirs=[os.path.join(root, "lib")],
+                            work=os.path.join(out_dir, ".work-" + module))
+        if msg.strip():
+            log(msg.strip())
+        if code != 0:
+            raise SystemExit("macro %s failed to compile (exit %d)" % (m["name"], code))
+        plugins.append("%s#%s" % (out, module))
+    with open(os.path.join(out_dir, "plugins.json"), "w") as f:
+        json.dump(plugins, f)
+    return plugins

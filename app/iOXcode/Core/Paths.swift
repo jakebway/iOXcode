@@ -41,6 +41,7 @@ enum Paths {
         e["IOX_RUST_SYSROOT_ARCHIVE"] = (rust as NSString).appendingPathComponent("rustlib-aarch64-apple-ios.tar.gz")
         e["IOX_RUST_WASM_ARCHIVE"] = (rust as NSString).appendingPathComponent("rustlib-wasm32-wasip1.tar.gz")
         e["IOX_SWIFT_WASM_ARCHIVE"] = (rust as NSString).appendingPathComponent("swift-wasm-sdk-6.4.0.tar.gz")
+        e["IOX_SWIFTSYNTAX_WASM_ARCHIVE"] = (rust as NSString).appendingPathComponent("swiftsyntax-wasm-604.0.0.tar.gz")
         e["IOX_RUST_PROC_MACROS"] = fw
         e["IOX_RUST_PROC_MACROS_INDEX"] = (rust as NSString).appendingPathComponent("macros")
         return e
