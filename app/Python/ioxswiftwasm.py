@@ -120,7 +120,7 @@ def link_args(obj, out, sdk, stack_size=8 * 1024 * 1024):
             "-o", out,
             os.path.join(wasi, "crt1-command.o"), os.path.join(static, "wasi", "wasm32", "swiftrt.o"), obj,
             "-L" + os.path.join(static, "wasi"), "-L" + wasi,
-            "--start-group"] + libs + _static_args(sdk) + ["-lc", builtins, "--end-group"]
+            ] + libs + _static_args(sdk) + ["-lc", builtins]
     return args
 
 
