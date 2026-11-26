@@ -11,7 +11,7 @@ enum WasmRunner {
     /// (the reason is written to `stderrFd`).
     static func run(path: String, args: [String], environment: [String: String],
                     preopens: [(guest: String, host: String)],
-                    stdinFd: Int32, stdoutFd: Int32, stderrFd: Int32) -> Int32 {
+                    stdinFd: Int32, stdoutFd: Int32, stderrFd: Int32, macroPlugin: Bool = false) -> Int32 {
         func complain(_ text: String) {
             let data = Array((text + "\n").utf8)
             _ = data.withUnsafeBytes { write(stderrFd, $0.baseAddress, $0.count) }
@@ -29,11 +29,32 @@ enum WasmRunner {
                 var imports = Imports()
                 wasi.link(to: &imports, store: store)
                 let instance = try module.instantiate(store: store, imports: imports)
-                return Int32(truncatingIfNeeded: try wasi.start(instance))
+                let code = Int32(truncatingIfNeeded: try wasi.start(instance))
+                if macroPlugin, code == 0 { pumpMacroPlugin(instance, stdinFd: stdinFd) }
+                return code
             }
         } catch {
             complain("wasm: \(error)")
             return -1
+        }
+    }
+
+    /// swift-syntax's wasm plugins are reactors: `main` only registers a handler, and the host calls the exported
+    /// `swift_wasm_macro_v1_pump` each time the compiler has written something to the plugin's stdin (the plugin then
+    /// reads exactly one message and answers on stdout). Returns when the compiler closes the pipe or the plugin traps.
+    static func pumpMacroPlugin(_ instance: Instance, stdinFd: Int32) {
+        guard let pump = instance.exports[function: "swift_wasm_macro_v1_pump"] else { return }
+        while true {
+            var p = pollfd(fd: stdinFd, events: Int16(POLLIN), revents: 0)
+            let r = poll(&p, 1, -1)
+            if r < 0 { if errno == EINTR { continue }; return }
+            var available: Int32 = 0
+            _ = ioctl(stdinFd, UInt(FIONREAD), &available)
+            if available > 0 {
+                do { _ = try pump() } catch { return }
+            } else if p.revents != 0 {
+                return      // end of input: the compiler is done with this plugin
+            }
         }
     }
 
@@ -151,7 +172,7 @@ enum WasmPlugins {
         let errFd = open("/dev/null", O_WRONLY)
         let thread = Thread {
             _ = WasmRunner.run(path: program, args: [program], environment: [:], preopens: [],
-                               stdinFd: stdinFd, stdoutFd: stdoutFd, stderrFd: errFd)
+                               stdinFd: stdinFd, stdoutFd: stdoutFd, stderrFd: errFd, macroPlugin: true)
             // the interpreter may already have closed its descriptors; closing twice could hit a reused number
             for fd in [stdinFd, stdoutFd, errFd] where fcntl(fd, F_GETFD) != -1 { close(fd) }
         }

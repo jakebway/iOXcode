@@ -88,6 +88,8 @@ jobs:
           set +e
           export IOX_SWIFT_WASM_SDK=/tmp/appsdk/swift-wasm-sdk
           P=/tmp/pack/swiftsyntax-wasm
+          cp tests/swiftmacro/plugin-host.js /tmp/plugin-host.js
+          # a normal WASI command runner for the finished client program
           cat > /tmp/run.js <<'JS'
           const {WASI}=require('wasi');const fs=require('fs');
           const w=new WASI({version:'preview1',args:[process.argv[2]],env:{},returnOnExit:true,stdin:0,stdout:1,stderr:2});
@@ -109,7 +111,7 @@ jobs:
           sys.exit(code)
           PY
           ls -l /tmp/StringifyMacros.wasm | tee -a ci-out/recipe.txt
-          printf '#!/bin/sh\nexec node --no-warnings /tmp/run.js /tmp/StringifyMacros.wasm 2>>/tmp/plugin-stderr.txt\n' > /tmp/plugin.sh; chmod +x /tmp/plugin.sh
+          printf '#!/bin/sh\nexec node --no-warnings /tmp/plugin-host.js /tmp/StringifyMacros.wasm 2>>/tmp/plugin-stderr.txt\n' > /tmp/plugin.sh; chmod +x /tmp/plugin.sh
           python3 -I tests/swiftmacro/probe.py /tmp/StringifyMacros.wasm 2>&1 | tee -a ci-out/recipe.txt
           python3 -I tests/swiftmacro/probe.py "$(cat /tmp/spm-bin)/StringifyMacros.wasm" 2>&1 | tee -a ci-out/recipe.txt
           python3 -I - <<'PY' 2>&1 | tee -a ci-out/recipe.txt

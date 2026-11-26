@@ -2,7 +2,7 @@
 import json, struct, subprocess, sys
 
 wasm = sys.argv[1]
-p = subprocess.Popen(["node", "--no-warnings", "/tmp/run.js", wasm], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+p = subprocess.Popen(["node", "--no-warnings", "/tmp/plugin-host.js", wasm], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 msg = json.dumps({"getCapability": {}}).encode()
 p.stdin.write(struct.pack("<Q", len(msg)) + msg)
 p.stdin.flush()
