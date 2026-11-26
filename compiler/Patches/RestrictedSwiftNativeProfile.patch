@@ -125,7 +125,7 @@
  
  llvm::Error LoadedExecutablePlugin::spawnIfNeeded() {
 +#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
-+  if (!getPath().ends_with(".wasm"))
++  if (!llvm::StringRef(getPath().data()).ends_with(".wasm"))
 +    return llvm::createStringError(std::errc::operation_not_permitted,
 +                                   "Executable plugins are unavailable in the embedded compiler.");
 +#endif
