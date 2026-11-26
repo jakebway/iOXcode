@@ -1,8 +1,0 @@
-CoreFoundation
-_FoundationCShims
-_foundation_unicode
-apinotes
-clang
-embedded
-shims
-wasi
