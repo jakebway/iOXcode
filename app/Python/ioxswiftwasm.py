@@ -91,6 +91,15 @@ def _static_args(sdk):
     return words
 
 
+def prebuilt_modules(root):
+    """-I directories of a prebuilt package (swiftsyntax-wasm): its swiftmodules and C module directories."""
+    out = [os.path.join(root, "modules")]
+    inc = os.path.join(root, "include")
+    if os.path.isdir(inc):
+        out += [os.path.join(inc, d) for d in sorted(os.listdir(inc))]
+    return out
+
+
 def library_args(libdirs):
     """-L for each directory of prebuilt static libraries and -l for every lib*.a in them (wasm-ld pulls members lazily)."""
     out = []

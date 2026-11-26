@@ -58,6 +58,14 @@ jobs:
           B=$(cat /tmp/spm-bin)
           OUT=/tmp/pack/swiftsyntax-wasm; mkdir -p $OUT/modules $OUT/lib
           cp -R $B/*.swiftmodule $OUT/modules/
+          INC=$(find / -type d -path '*Sources/_SwiftSyntaxCShims/include' -not -path '/proc/*' 2>/dev/null | head -1)
+          echo "cshims include: $INC" | tee ../../ci-out/cshims.txt
+          if [ -n "$INC" ]; then
+            mkdir -p $OUT/include/_SwiftSyntaxCShims; cp -R $INC/. $OUT/include/_SwiftSyntaxCShims/
+            ls -la $OUT/include/_SwiftSyntaxCShims | tee -a ../../ci-out/cshims.txt
+            [ -f $OUT/include/_SwiftSyntaxCShims/module.modulemap ] || printf 'module _SwiftSyntaxCShims {\n  umbrella "."\n  export *\n}\n' > $OUT/include/_SwiftSyntaxCShims/module.modulemap
+            cat $OUT/include/_SwiftSyntaxCShims/module.modulemap | tee -a ../../ci-out/cshims.txt
+          fi
           file "$B/SwiftSyntax.objlib" | tee ../../ci-out/objlib-type.txt
           ls -la "$B/SwiftSyntax.objlib" | head -5 | tee -a ../../ci-out/objlib-type.txt
           for d in $B/*.objlib; do
@@ -96,7 +104,7 @@ jobs:
           P = '/tmp/pack/swiftsyntax-wasm'
           src = os.path.abspath('tests/swiftmacro/Sources/StringifyMacros/StringifyMacro.swift')
           code, msg = w.compile([src], '/tmp/StringifyMacros.wasm', 'StringifyMacros', fe, ld, opt='none', swift_version='5',
-                                modules=[P + '/modules'], libdirs=[P + '/lib'], work='/tmp/work-plugin')
+                                modules=w.prebuilt_modules(P), libdirs=[P + '/lib'], work='/tmp/work-plugin')
           print('plugin build exit', code); print(msg[:3000])
           sys.exit(code)
           PY
