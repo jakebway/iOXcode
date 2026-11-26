@@ -14,7 +14,7 @@ permissions:
 jobs:
   recipe:
     runs-on: ubuntu-latest
-    container: swift:6.4
+    container: swift:6.4.0
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -49,7 +49,7 @@ jobs:
               print('LINK:', ' '.join(args))
               p = subprocess.run(args, capture_output=True, text=True)
               return p.returncode, p.stdout + p.stderr
-          code, msg = w.compile([os.path.abspath('hello.swift')], os.path.abspath('hello.wasm'), 'hello', fe, ld, opt='none')
+          code, msg = w.compile([os.path.abspath('main.swift')], os.path.abspath('hello.wasm'), 'hello', fe, ld, opt='none')
           print('exit', code); print(msg)
           sys.exit(code)
           " 2>&1 | tee ../../ci-out/compile.txt
