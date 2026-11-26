@@ -1,14 +1,18 @@
 --- a/lib/Basic/Program.cpp
 +++ b/lib/Basic/Program.cpp
-@@ -22,6 +22,7 @@
+@@ -22,6 +22,11 @@
  #include "llvm/Support/Windows/WindowsSupport.h"
  #endif
  
 +#include <cerrno>
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++#include "SwiftToolchainPluginPolicy.h"
++#include <string>
++#endif
  #include <memory>
  #include <system_error>
  
-@@ -43,7 +44,13 @@
+@@ -43,7 +48,13 @@ using namespace swift;
  
  int swift::ExecuteInPlace(const char *Program, const char **args,
                            const char **env) {
@@ -23,21 +27,32 @@
    int result;
    if (env)
      result = execve(Program, const_cast<char **>(args),
-@@ -64,6 +71,13 @@
+@@ -64,6 +75,24 @@ int swift::ExecuteInPlace(const char *Program, const char **args,
  #endif
  }
  
 +#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
 +llvm::ErrorOr<swift::ChildProcessInfo>
-+swift::ExecuteWithPipe(llvm::StringRef, llvm::ArrayRef<llvm::StringRef>,
++swift::ExecuteWithPipe(llvm::StringRef program, llvm::ArrayRef<llvm::StringRef>,
 +                       std::optional<llvm::ArrayRef<llvm::StringRef>>) {
++  // No subprocesses on this platform. A WebAssembly plugin is the one exception: the app runs it on a thread of this
++  // process and hands back the two pipe ends (our write end feeds its stdin, our read end drains its stdout).
++  if (program.ends_with(".wasm")) {
++    const std::string path = program.str();
++    int toPlugin = -1, fromPlugin = -1;
++    if (swift_toolchain_launch_wasm_plugin(path.c_str(), &toPlugin, &fromPlugin) == 0) {
++      llvm::sys::ProcessInfo info;
++      info.Pid = 0;
++      return swift::ChildProcessInfo(info, toPlugin, fromPlugin);
++    }
++  }
 +  return std::errc::operation_not_permitted;
 +}
 +#else
  static const char **
  toNullTerminatedCStringArray(ArrayRef<StringRef> array,
                               llvm::BumpPtrAllocator &Alloc) {
-@@ -302,3 +316,5 @@
+@@ -302,3 +331,5 @@ swift::ExecuteWithPipe(llvm::StringRef program,
  }
  
  #endif
@@ -57,7 +72,7 @@
  
  #if defined(_WIN32)
  #define WIN32_LEAN_AND_MEAN
-@@ -46,8 +51,18 @@
+@@ -46,8 +51,18 @@ void *swift::getAddressOfSymbol(void *handle, const char *symbol) {
  
  #else
  void *swift::loadLibrary(const char *path, std::string *err) {
@@ -79,46 +94,71 @@
  }
 --- a/lib/AST/PluginRegistry.cpp
 +++ b/lib/AST/PluginRegistry.cpp
-@@ -129,6 +129,12 @@
+@@ -129,6 +129,12 @@ PluginRegistry::getInProcessPlugins(llvm::StringRef serverPath) {
  
  llvm::Expected<CompilerPlugin *>
  PluginRegistry::loadExecutablePlugin(StringRef path, bool disableSandbox) {
 +#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
-+  (void)path;
-+  (void)disableSandbox;
-+  return llvm::createStringError(std::errc::operation_not_permitted,
-+                                 "Executable plugins are unavailable in the embedded compiler.");
-+#else
++  // Only WebAssembly programs, which the app interprets in-process.
++  if (!path.ends_with(".wasm"))
++    return llvm::createStringError(std::errc::operation_not_permitted,
++                                   "Executable plugins are unavailable in the embedded compiler.");
++#endif
    llvm::sys::fs::file_status stat;
    if (auto err = llvm::sys::fs::status(path, stat)) {
      return llvm::errorCodeToError(err);
-@@ -170,6 +176,7 @@
+@@ -152,10 +158,12 @@ PluginRegistry::loadExecutablePlugin(StringRef path, bool disableSandbox) {
+                                    "not found");
+   }
  
-   storage = std::move(plugin);
-   return storage.get();
++#if !defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
+   if (!llvm::sys::fs::can_execute(path)) {
+     return llvm::createStringError(std::errc::permission_denied,
+                                    "not executable");
+   }
 +#endif
- }
  
- LoadedExecutablePlugin::~LoadedExecutablePlugin() {
-@@ -183,6 +190,10 @@
+   auto plugin = std::make_unique<LoadedExecutablePlugin>(
+       path, stat.getLastModificationTime(), disableSandbox);
+@@ -183,6 +191,11 @@ LoadedExecutablePlugin::~LoadedExecutablePlugin() {
  }
  
  llvm::Error LoadedExecutablePlugin::spawnIfNeeded() {
 +#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
-+  return llvm::createStringError(std::errc::operation_not_permitted,
-+                                 "Executable plugins are unavailable in the embedded compiler.");
-+#else
++  if (!getPath().ends_with(".wasm"))
++    return llvm::createStringError(std::errc::operation_not_permitted,
++                                   "Executable plugins are unavailable in the embedded compiler.");
++#endif
    if (Process) {
      // NOTE: We don't check the mtime here because 'stat(2)' call is too heavy.
      // PluginRegistry::loadExecutablePlugin() checks it and replace this object
-@@ -214,6 +225,7 @@
+@@ -195,9 +208,11 @@ llvm::Error LoadedExecutablePlugin::spawnIfNeeded() {
+ 
+   // Apply sandboxing.
+   llvm::BumpPtrAllocator Allocator;
++#if !defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
+   if (!disableSandbox) {
+     Sandbox::apply(command, Allocator);
    }
- 
-   return llvm::Error::success();
 +#endif
- }
  
- LoadedExecutablePlugin::PluginProcess::~PluginProcess() {
+   // Launch.
+   auto childInfo = ExecuteWithPipe(command[0], command);
+@@ -223,8 +238,14 @@ LoadedExecutablePlugin::PluginProcess::~PluginProcess() {
+ #else
+   close(input);
+   close(output);
++#if !defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
+   kill(process.Pid, SIGTERM);
+ #endif
++#endif
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++  // The plugin is an interpreted WebAssembly program on a thread of this process: it ends when it reads EOF.
++  return;
++#endif
+ 
+   // Set `SecondsToWait` non-zero so it waits for the timeout and kill it after
+   // that. Usually when the pipe is closed above, the plugin detects the EOF in
 --- a/lib/Frontend/CompilerInvocation.cpp
 +++ b/lib/Frontend/CompilerInvocation.cpp
 @@ -41,6 +41,11 @@
@@ -133,7 +173,7 @@
  
  using namespace swift;
  using namespace llvm::opt;
-@@ -2466,8 +2471,20 @@
+@@ -2466,8 +2471,20 @@ static bool ParseSearchPathArgs(SearchPathOptions &Opts, ArgList &Args,
    }
    Opts.setFrameworkSearchPaths(FrameworkSearchPaths);
  
@@ -155,15 +195,21 @@
  
    // All plugin search options, i.e. '-load-plugin-library',
    // '-load-plugin-executable', '-plugin-path', and  '-external-plugin-path'
-@@ -2475,10 +2492,29 @@
+@@ -2475,10 +2492,35 @@ static bool ParseSearchPathArgs(SearchPathOptions &Opts, ArgList &Args,
    // e.g. For '-plugin-path A -load-plugin-library B/libModule.dylib', if
    // 'A/libModule.dylib' exists, it's used.
    for (const Arg *A : Args.filtered(OPT_plugin_search_Group)) {
 +#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
-+    if (A->getOption().getID() != OPT_load_plugin_library &&
-+        A->getOption().getID() != OPT_load_resolved_plugin) {
-+      Diags.diagnose(SourceLoc(), diag::error_embedded_plugin_option, A->getSpelling());
-+      return true;
++    {
++      // WebAssembly plugins ('<path>.wasm#Module') run in the app's interpreter, never as native code.
++      bool wasmExecutable = false;
++      if (A->getOption().getID() == OPT_load_plugin_executable)
++        wasmExecutable = StringRef(A->getValue()).rsplit('#').first.ends_with(".wasm");
++      if (A->getOption().getID() != OPT_load_plugin_library &&
++          A->getOption().getID() != OPT_load_resolved_plugin && !wasmExecutable) {
++        Diags.diagnose(SourceLoc(), diag::error_embedded_plugin_option, A->getSpelling());
++        return true;
++      }
 +    }
 +#endif
      switch (A->getOption().getID()) {
@@ -185,7 +231,7 @@
        break;
      }
      case OPT_load_plugin_executable: {
-@@ -2527,7 +2563,24 @@
+@@ -2527,7 +2569,24 @@ static bool ParseSearchPathArgs(SearchPathOptions &Opts, ArgList &Args,
            (libraryPath.empty() && executablePath.empty())) {
          Diags.diagnose(SourceLoc(), diag::error_load_resolved_plugin,
                         A->getValue());

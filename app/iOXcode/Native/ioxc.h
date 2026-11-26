@@ -17,6 +17,9 @@ SwiftCompilerResult ioxc_link(int32_t count, const char *const *arguments);
 /// Clang arguments are a normal command line (argv[0] is "clang") for one compile step. Needs ABI 4.
 int ioxc_has_clang(void);
 SwiftCompilerResult ioxc_clang(int32_t count, const char *const *arguments);
+/// Registers the runner for WebAssembly macro plugins (`-load-plugin-executable x.wasm#Module`). Returns 0 when this
+/// compiler build is too old to have the hook (ABI below 5).
+int ioxc_set_wasm_plugin_launcher(int (*launcher)(const char *wasmPath, int *toPluginFd, int *fromPluginFd));
 void ioxc_release(char *message);
 
 /// Bytes the process may still allocate (os_proc_available_memory), or 0 if unknown.

@@ -65,3 +65,21 @@ char *swift_toolchain_copy_bundled_plugin_path(const char *path) {
   return nullptr;
 #endif
 }
+
+static swift_toolchain_wasm_plugin_launcher_t wasmPluginLauncher = nullptr;
+
+void swift_toolchain_set_wasm_plugin_launcher(swift_toolchain_wasm_plugin_launcher_t launcher) {
+  wasmPluginLauncher = launcher;
+}
+
+int swift_toolchain_launch_wasm_plugin(const char *path, int *toPluginFd, int *fromPluginFd) {
+  if (wasmPluginLauncher == nullptr || path == nullptr) {
+    return 1;
+  }
+  return wasmPluginLauncher(path, toPluginFd, fromPluginFd);
+}
+
+extern "C" __attribute__((visibility("default"))) void
+swift_compiler_set_wasm_plugin_launcher(swift_toolchain_wasm_plugin_launcher_t launcher) {
+  swift_toolchain_set_wasm_plugin_launcher(launcher);
+}

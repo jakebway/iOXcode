@@ -135,3 +135,31 @@ extension WasmRunner {
                                                   : "WebAssembly interpreter FAILED self-test (exit \(code)) \(o) \(e)"
     }
 }
+
+/// Swift macros built as WebAssembly. The compiler asks for a plugin (`-load-plugin-executable x.wasm#Module`); we
+/// interpret the program on its own thread and hand the compiler the two pipe ends, exactly as if it had spawned a
+/// process: its stdin gets the compiler's requests and what it writes to stdout is the compiler's answer.
+enum WasmPlugins {
+    typealias Launcher = @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<Int32>, UnsafeMutablePointer<Int32>) -> Int32
+
+    static let launcher: Launcher = { path, toPlugin, fromPlugin in
+        var down: [Int32] = [0, 0]   // compiler -> plugin stdin
+        var up: [Int32] = [0, 0]     // plugin stdout -> compiler
+        guard pipe(&down) == 0, pipe(&up) == 0 else { return 1 }
+        let program = String(cString: path)
+        let stdinFd = down[0], stdoutFd = up[1]
+        let errFd = open("/dev/null", O_WRONLY)
+        let thread = Thread {
+            _ = WasmRunner.run(path: program, args: [program], environment: [:], preopens: [],
+                               stdinFd: stdinFd, stdoutFd: stdoutFd, stderrFd: errFd)
+            // the interpreter may already have closed its descriptors; closing twice could hit a reused number
+            for fd in [stdinFd, stdoutFd, errFd] where fcntl(fd, F_GETFD) != -1 { close(fd) }
+        }
+        thread.stackSize = 512 * 1024 * 1024
+        thread.qualityOfService = .userInitiated
+        thread.start()
+        toPlugin.pointee = down[1]
+        fromPlugin.pointee = up[0]
+        return 0
+    }
+}

@@ -14,6 +14,9 @@ static run_fn frontendFn;
 static run_fn linkFn;
 static run_fn clangFn;
 static release_fn releaseFn;
+typedef int (*wasm_plugin_launcher_fn)(const char *, int *, int *);
+typedef void (*set_launcher_fn)(wasm_plugin_launcher_fn);
+static set_launcher_fn setLauncherFn;
 
 static void setError(char *error, size_t length, const char *text) {
   if (error && length) {
@@ -36,6 +39,7 @@ int ioxc_load(const char *path, char *error, size_t errorLength) {
   linkFn = (run_fn)dlsym(h, "swift_compiler_link");
   clangFn = (run_fn)dlsym(h, "swift_compiler_clang");   // ABI 4; older libraries have no C compiler
   releaseFn = (release_fn)dlsym(h, "swift_compiler_release");
+  setLauncherFn = (set_launcher_fn)dlsym(h, "swift_compiler_set_wasm_plugin_launcher");   // ABI 5
   if (!abiFn || !frontendFn || !linkFn || !releaseFn) {
     setError(error, errorLength, "the library is missing swift_compiler_* symbols");
     dlclose(h);
@@ -73,6 +77,12 @@ SwiftCompilerResult ioxc_clang(int32_t count, const char *const *arguments) {
     return r;
   }
   return clangFn(count, arguments);
+}
+
+int ioxc_set_wasm_plugin_launcher(int (*launcher)(const char *, int *, int *)) {
+  if (!setLauncherFn) return 0;
+  setLauncherFn(launcher);
+  return 1;
 }
 
 void ioxc_release(char *message) {

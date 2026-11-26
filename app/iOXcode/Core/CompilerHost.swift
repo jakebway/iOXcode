@@ -21,6 +21,7 @@ final class CompilerHost {
         var buffer = [CChar](repeating: 0, count: 2048)
         let rc = ioxc_load(url.path, &buffer, buffer.count)
         if rc != 0 { return "Could not load the compiler: " + String(cString: buffer) }
+        _ = ioxc_set_wasm_plugin_launcher(WasmPlugins.launcher)
         return nil
     }
 

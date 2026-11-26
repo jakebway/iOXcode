@@ -7,8 +7,9 @@
 /// Consumers compare this version before exchanging result storage with the library.
 ///
 /// Version 2 adds semantic completion and version 3 adds semantic annotation. The layouts of the
-/// earlier operations are unchanged. Version 4 adds swift_compiler_clang.
-#define SWIFT_COMPILER_BRIDGE_ABI_VERSION 4u
+/// earlier operations are unchanged. Version 4 adds swift_compiler_clang. Version 5 adds
+/// swift_compiler_set_wasm_plugin_launcher.
+#define SWIFT_COMPILER_BRIDGE_ABI_VERSION 5u
 
 /// The exit code of a completion or an annotation that swift_compiler_cancel_completion stopped.
 #define SWIFT_COMPILER_COMPLETION_CANCELLED 2
@@ -58,6 +59,12 @@ swift_compiler_autolink(int32_t count, const char *const *arguments) SWIFT_COMPI
 /// annotation call.
 __attribute__((visibility("default"))) SwiftCompilerResult
 swift_compiler_link(int32_t count, const char *const *arguments) SWIFT_COMPILER_NOEXCEPT;
+
+/// Registers the function that runs a WebAssembly macro plugin for '-load-plugin-executable <path>.wasm#Module'.
+/// The launcher interprets the program on its own thread and returns the two pipe ends that carry the plugin
+/// protocol (see SwiftToolchainPluginPolicy.h). Native executable plugins stay unavailable.
+__attribute__((visibility("default"))) void swift_compiler_set_wasm_plugin_launcher(
+    int (*launcher)(const char *wasmPath, int *toPluginFd, int *fromPluginFd));
 
 /// Compiles one C, Objective-C or C++ file. The arguments are a clang command line (argv[0] is "clang") that
 /// ends in a single compile step such as `-c file.m -o file.o`; the work runs in this process.

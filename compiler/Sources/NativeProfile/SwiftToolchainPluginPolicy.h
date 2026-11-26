@@ -16,6 +16,19 @@ extern "C" {
 __attribute__((visibility("default"))) char *
 swift_toolchain_copy_bundled_plugin_path(const char *path);
 
+/// Starts a WebAssembly macro plugin. The embedding application interprets the program on a thread of this process.
+/// `*toPluginFd` receives the write end of a pipe wired to the program's stdin and `*fromPluginFd` the read end of
+/// a pipe wired to its stdout; the plugin ends when it reads end-of-file. Returns zero on success.
+typedef int (*swift_toolchain_wasm_plugin_launcher_t)(const char *wasmPath, int *toPluginFd, int *fromPluginFd);
+
+/// The application registers its launcher once (swift_compiler_set_wasm_plugin_launcher forwards here).
+__attribute__((visibility("default"))) void
+swift_toolchain_set_wasm_plugin_launcher(swift_toolchain_wasm_plugin_launcher_t launcher);
+
+/// Called by the compiler for a '-load-plugin-executable <path>.wasm#Module' plugin. Fails (nonzero) without a launcher.
+__attribute__((visibility("default"))) int
+swift_toolchain_launch_wasm_plugin(const char *path, int *toPluginFd, int *fromPluginFd);
+
 #ifdef __cplusplus
 }
 #endif
