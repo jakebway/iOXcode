@@ -1653,7 +1653,6 @@ def _unzip(sh, a, i):
     with zipfile.ZipFile(files[0]) as z:
         z.extractall(dest)
 
-@builtin("zip")
 def _zname(path):
     """Info-ZIP stores `./a/b` as `a/b`."""
     n = path.replace(os.sep, "/")
@@ -1662,6 +1661,7 @@ def _zname(path):
     return n
 
 
+@builtin("zip")
 def _zip(sh, a, i):
     import zipfile, fnmatch
     flags, rest, excludes, k, mode = "", [], [], 0, "files"
