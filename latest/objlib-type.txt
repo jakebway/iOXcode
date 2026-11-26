@@ -1,0 +1,6 @@
+/__w/iOXcode/iOXcode/tests/swiftmacro/.build/out/Products/Release-webassembly-wasm32/SwiftSyntax.objlib: directory
+total 38144
+drwxr-xr-x   2 root root    4096 Nov 26 22:22 .
+drwxr-xr-x+ 42 root root    4096 Nov 26 22:23 ..
+-rw-r--r--   1 root root   26768 Nov 26 22:22 absoluteposition.o
+-rw-r--r--   1 root root    5921 Nov 26 22:22 absolutesyntaxinfo.o
