@@ -110,19 +110,8 @@ jobs:
           PY
           ls -l /tmp/StringifyMacros.wasm | tee -a ci-out/recipe.txt
           printf '#!/bin/sh\nexec node --no-warnings /tmp/run.js /tmp/StringifyMacros.wasm 2>>/tmp/plugin-stderr.txt\n' > /tmp/plugin.sh; chmod +x /tmp/plugin.sh
-          python3 -I - <<'PY' 2>&1 | tee -a ci-out/recipe.txt
-          import subprocess, struct, json
-          p = subprocess.Popen(['/tmp/plugin.sh'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-          msg = json.dumps({"getCapability": {}}).encode()
-          p.stdin.write(struct.pack('<Q', len(msg)) + msg); p.stdin.flush()
-          head = p.stdout.read(8)
-          print('reply header', head)
-          if len(head) == 8:
-              n = struct.unpack('<Q', head)[0]; print('reply', p.stdout.read(n)[:300])
-          p.stdin.close(); p.wait(timeout=20)
-          print('plugin exit', p.returncode)
-          PY
-          echo "--- plugin stderr"; cat /tmp/plugin-stderr.txt 2>&1 | head -30 | tee -a ci-out/recipe.txt
+          python3 -I tests/swiftmacro/probe.py /tmp/StringifyMacros.wasm 2>&1 | tee -a ci-out/recipe.txt
+          python3 -I tests/swiftmacro/probe.py "$(cat /tmp/spm-bin)/StringifyMacros.wasm" 2>&1 | tee -a ci-out/recipe.txt
           python3 -I - <<'PY' 2>&1 | tee -a ci-out/recipe.txt
           import sys, subprocess, os
           sys.path.insert(0, 'app/Python')
