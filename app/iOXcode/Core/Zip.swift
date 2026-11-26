@@ -3,7 +3,7 @@ import Compression
 
 enum ZipError: Error { case bad(String) }
 
-/// Minimal ZIP reader (stored + deflate) and writer (stored only). No Zip64.
+/// Minimal ZIP reader (stored + deflate) and writer (deflate). No Zip64.
 enum Zip {
     private static func u16(_ d: Data, _ o: Int) -> Int { Int(d[o]) | Int(d[o + 1]) << 8 }
     private static func u32(_ d: Data, _ o: Int) -> Int {
@@ -90,7 +90,7 @@ enum Zip {
         return out
     }
 
-    // MARK: writer (stored)
+    // MARK: writer (deflate, or stored when that does not shrink the file)
 
     private static let crcTable: [UInt32] = (0..<256).map { i -> UInt32 in
         var c = UInt32(i)
@@ -130,22 +130,36 @@ enum Zip {
             let nameData = Data(name.utf8)
             let body = isDir ? Data() : try Data(contentsOf: url, options: .mappedIfSafe)
             let crc = crc32(body)
+            // deflate like `zip` does (Apple's COMPRESSION_ZLIB is raw deflate); keep the file stored when that does not help
+            var stored = body
+            var method: UInt16 = 0
+            if !isDir && body.count > 64 {
+                var packed = Data(count: body.count)
+                let n = packed.withUnsafeMutableBytes { (dst: UnsafeMutableRawBufferPointer) -> Int in
+                    body.withUnsafeBytes { (src: UnsafeRawBufferPointer) -> Int in
+                        compression_encode_buffer(dst.bindMemory(to: UInt8.self).baseAddress!, body.count,
+                                                  src.bindMemory(to: UInt8.self).baseAddress!, body.count,
+                                                  nil, COMPRESSION_ZLIB)
+                    }
+                }
+                if n > 0 && n < body.count { stored = packed.prefix(n); method = 8 }
+            }
             let exec = (!isDir && fm.isExecutableFile(atPath: url.path))
             let unixMode: UInt32 = isDir ? 0o040755 : (exec ? 0o100755 : 0o100644)
             var local = Data()
-            local += le32(0x04034b50); local += le16(20); local += le16(0x0800); local += le16(0)
+            local += le32(0x04034b50); local += le16(20); local += le16(0x0800); local += le16(method)
             local += le16(0); local += le16(0x21); local += le32(crc)
-            local += le32(UInt32(body.count)); local += le32(UInt32(body.count))
+            local += le32(UInt32(stored.count)); local += le32(UInt32(body.count))
             local += le16(UInt16(nameData.count)); local += le16(0); local += nameData
             try out.write(contentsOf: local)
-            try out.write(contentsOf: body)
+            try out.write(contentsOf: stored)
             central += le32(0x02014b50); central += le16(0x031E); central += le16(20); central += le16(0x0800)
-            central += le16(0); central += le16(0); central += le16(0x21); central += le32(crc)
-            central += le32(UInt32(body.count)); central += le32(UInt32(body.count))
+            central += le16(method); central += le16(0); central += le16(0x21); central += le32(crc)
+            central += le32(UInt32(stored.count)); central += le32(UInt32(body.count))
             central += le16(UInt16(nameData.count)); central += le16(0); central += le16(0)
             central += le16(0); central += le16(0); central += le32(unixMode << 16)
             central += le32(offset); central += nameData
-            offset += UInt32(local.count + body.count)
+            offset += UInt32(local.count + stored.count)
         }
         try out.write(contentsOf: central)
         var end = Data()
