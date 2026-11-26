@@ -1,0 +1,49 @@
+name: Swift wasm SDK probe
+
+# The compiler inside iOXcode is Swift 6.4.0 (swift-6.4-RELEASE). If swift.org's WebAssembly SDK for the same release
+# can be used as is, no Swift standard library for WebAssembly has to be built: this lists what is inside.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "swift.org release directory/name, e.g. 6.4 or 6.4.3"
+        default: "6.4"
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and list
+        run: |
+          mkdir -p ci-out sdk && cd sdk
+          V="${{ inputs.version || '6.4' }}"
+          for u in \
+            "https://download.swift.org/swift-$V-release/wasm-sdk/swift-$V-RELEASE/swift-$V-RELEASE_wasm.artifactbundle.tar.gz" \
+            "https://download.swift.org/swift-$V.0-release/wasm-sdk/swift-$V.0-RELEASE/swift-$V.0-RELEASE_wasm.artifactbundle.tar.gz"; do
+            echo "try $u" | tee -a ../ci-out/probe.txt
+            if curl -fsSL "$u" -o bundle.tgz; then echo "got it" | tee -a ../ci-out/probe.txt; break; fi
+          done
+          ls -l bundle.tgz | tee -a ../ci-out/probe.txt
+          sha256sum bundle.tgz | tee -a ../ci-out/probe.txt
+          tar -xzf bundle.tgz
+          du -sh . | tee -a ../ci-out/probe.txt
+          find . -maxdepth 4 -type d | head -60 | tee ../ci-out/dirs.txt
+          find . -name '*.swiftinterface' | head -20 | tee ../ci-out/swiftinterfaces.txt
+          find . -name '*.swiftmodule' | head -20 | tee ../ci-out/swiftmodules.txt
+          find . -name 'libswiftCore.a' -o -name 'libc.a' -o -name 'libc++.a' -o -name 'crt1*.o' | tee ../ci-out/libs.txt
+          find . -name '*.json' -maxdepth 3 | head; cat */swift-sdk.json 2>/dev/null | head -50 | tee ../ci-out/sdk-json.txt
+          find . -name 'toolset.json' -o -name 'swift-sdk.json' | head | xargs -I{} sh -c 'echo == {}; cat {}' | tee -a ../ci-out/sdk-json.txt
+          for d in $(find . -type d -name 'wasi-sysroot' | head -2); do du -sh $d/*; done | tee ../ci-out/sysroot.txt
+          for d in $(find . -type d -path '*swift.swiftmodule*' | head -3); do ls $d | head; done | tee ../ci-out/stdlib-module.txt
+          head -c 600 $(find . -name 'Swift.swiftmodule' -type d | head -1)/*.swiftinterface 2>/dev/null | tee ../ci-out/interface-head.txt
+      - name: Publish logs
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "swift-wasm-probe-${{ github.run_id }}"
