@@ -1,0 +1,14 @@
+plugin build exit 0
+
+-rwxr-xr-x 1 root root 39235702 Nov 26 22:53 /tmp/StringifyMacros.wasm
+/tmp/StringifyMacros.wasm reply header: b'J\x00\x00\x00\x00\x00\x00\x00'
+reply: b'{"getCapabilityResult":{"capability":{"features":[],"protocolVersion":8}}}'
+exit code: 0
+stderr: 
+/__w/iOXcode/iOXcode/tests/swiftmacro/.build/out/Products/Release-webassembly-wasm32/StringifyMacros.wasm reply header: b'J\x00\x00\x00\x00\x00\x00\x00'
+reply: b'{"getCapabilityResult":{"capability":{"features":[],"protocolVersion":8}}}'
+exit code: 0
+stderr: 
+client build exit 0
+
+macro says: 5 from "2 + 3"
