@@ -1,0 +1,126 @@
+name: Swift macros as wasm
+
+# Builds SwiftSyntax (the library every Swift macro needs) for wasm32-wasip1 with swift.org's own toolchain and wasm SDK
+# and publishes modules + static libraries so the app can build macro plugins on the phone with its own compiler.
+# Proves the whole chain here first: a macro plugin built with the app's recipe runs as a WASI program speaking the
+# compiler's plugin protocol, and a client compiled against it is expanded by that plugin.
+
+on:
+  workflow_dispatch:
+    inputs:
+      syntax:
+        description: "swift-syntax version"
+        default: "604.0.0"
+  push:
+    paths: ["tests/swiftmacro/**", ".github/workflows/swift-macros-wasm.yml", "app/Python/ioxswiftwasm.py"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: swift:6.4.0
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools and SDK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p ci-out
+          apt-get update -qq && apt-get install -y -qq curl python3 nodejs git ca-certificates binutils >/dev/null 2>&1
+          curl -fsSL "https://download.swift.org/swift-6.4-release/wasm-sdk/swift-6.4-RELEASE/swift-6.4-RELEASE_wasm.artifactbundle.tar.gz" -o /tmp/wasm.tgz \
+            || curl -fsSL "https://download.swift.org/swift-6.4.0-release/wasm-sdk/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE_wasm.artifactbundle.tar.gz" -o /tmp/wasm.tgz
+          SUM=$(swift package compute-checksum /tmp/wasm.tgz)
+          swift sdk install /tmp/wasm.tgz --checksum "$SUM" 2>&1 | tail -3
+          swift sdk list | tee ci-out/sdk-list.txt
+          # the trimmed SDK the app carries (same archive the recipe test uses)
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -L "https://github.com/${{ github.repository }}/releases/download/swift-wasm-sdk-6.4.0/swift-wasm-sdk-6.4.0.tar.gz" -o /tmp/sdk.tgz
+          mkdir -p /tmp/appsdk && tar -xzf /tmp/sdk.tgz -C /tmp/appsdk
+      - name: Build SwiftSyntax + the macro with SwiftPM (reference)
+        run: |
+          set +e
+          cd tests/swiftmacro
+          SDKID=$(swift sdk list | grep -i wasm | head -1)
+          echo "sdk id: $SDKID"
+          sed -i "s/exact: \"604.0.0\"/exact: \"${{ inputs.syntax || '604.0.0' }}\"/" Package.swift
+          swift build -c release --swift-sdk "$SDKID" --product StringifyMacros 2>&1 | tail -40 | tee ../../ci-out/spm-build.txt
+          find .build -maxdepth 3 -name "*.wasm" | tee ../../ci-out/spm-products.txt
+          ls .build/*/release | head -80 > ../../ci-out/spm-release-ls.txt
+          ls .build/*/release/Modules 2>/dev/null | head -80 >> ../../ci-out/spm-release-ls.txt
+      - name: Harvest modules and static libraries
+        run: |
+          set +e
+          cd tests/swiftmacro
+          B=$(ls -d .build/*wasi*/release | head -1)
+          OUT=/tmp/pack/swiftsyntax-wasm; mkdir -p $OUT/modules $OUT/lib
+          cp -R $B/Modules/*.swiftmodule $OUT/modules/ 2>/dev/null || cp $B/*.swiftmodule $OUT/modules/ 2>/dev/null
+          for d in $B/*.build; do
+            n=$(basename $d .build)
+            case "$n" in StringifyMacros|StringifyMacros_*|Plugin*) continue;; esac
+            objs=$(find "$d" -name '*.o' | sort)
+            [ -z "$objs" ] && continue
+            llvm-ar rcs "$OUT/lib/lib$n.a" $objs 2>&1 || ar rcs "$OUT/lib/lib$n.a" $objs
+          done
+          ls -l $OUT/modules $OUT/lib | tee ../../ci-out/harvest.txt
+          du -sh $OUT | tee -a ../../ci-out/harvest.txt
+          echo "${{ inputs.syntax || '604.0.0' }}" > $OUT/VERSION
+          tar -C /tmp/pack -czf /tmp/swiftsyntax-wasm.tar.gz swiftsyntax-wasm
+          ls -l /tmp/swiftsyntax-wasm.tar.gz | tee -a ../../ci-out/harvest.txt
+      - name: Recipe check (plugin built with the app's recipe, expanded by the compiler)
+        run: |
+          set +e
+          export IOX_SWIFT_WASM_SDK=/tmp/appsdk/swift-wasm-sdk
+          P=/tmp/pack/swiftsyntax-wasm
+          cat > /tmp/run.js <<'JS'
+          const {WASI}=require('wasi');const fs=require('fs');
+          const w=new WASI({version:'preview1',args:[process.argv[2]],env:{},returnOnExit:true,stdin:0,stdout:1,stderr:2});
+          WebAssembly.instantiate(fs.readFileSync(process.argv[2]),w.getImportObject()).then(({instance})=>{process.exit(w.start(instance))});
+          JS
+          python3 -I - <<'PY' 2>&1 | tee ci-out/recipe.txt
+          import sys, subprocess, os
+          sys.path.insert(0, 'app/Python')
+          import ioxswiftwasm as w
+          def fe(args):
+              p = subprocess.run(['swift-frontend', '-frontend'] + args, capture_output=True, text=True); return p.returncode, p.stdout + p.stderr
+          def ld(args):
+              p = subprocess.run(args, capture_output=True, text=True); return p.returncode, p.stdout + p.stderr
+          P = '/tmp/pack/swiftsyntax-wasm'
+          src = os.path.abspath('tests/swiftmacro/Sources/StringifyMacros/StringifyMacro.swift')
+          code, msg = w.compile([src], '/tmp/StringifyMacros.wasm', 'StringifyMacros', fe, ld, opt='none', swift_version='5',
+                                modules=[P + '/modules'], libdirs=[P + '/lib'], work='/tmp/work-plugin')
+          print('plugin build exit', code); print(msg[:3000])
+          sys.exit(code)
+          PY
+          ls -l /tmp/StringifyMacros.wasm | tee -a ci-out/recipe.txt
+          printf '#!/bin/sh\nexec node --no-warnings /tmp/run.js /tmp/StringifyMacros.wasm\n' > /tmp/plugin.sh; chmod +x /tmp/plugin.sh
+          python3 -I - <<'PY' 2>&1 | tee -a ci-out/recipe.txt
+          import sys, subprocess, os
+          sys.path.insert(0, 'app/Python')
+          import ioxswiftwasm as w
+          def fe(args):
+              p = subprocess.run(['swift-frontend', '-frontend'] + args, capture_output=True, text=True); return p.returncode, p.stdout + p.stderr
+          def ld(args):
+              p = subprocess.run(args, capture_output=True, text=True); return p.returncode, p.stdout + p.stderr
+          src = os.path.abspath('tests/swiftmacro/client/main.swift')
+          code, msg = w.compile([src], '/tmp/client.wasm', 'client', fe, ld, extra=['-load-plugin-executable', '/tmp/plugin.sh#StringifyMacros'], work='/tmp/work-client')
+          print('client build exit', code); print(msg[:3000])
+          sys.exit(code)
+          PY
+          node --no-warnings /tmp/run.js /tmp/client.wasm 2>&1 | tee -a ci-out/recipe.txt
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ inputs.syntax || '604.0.0' }}"
+          [ -f /tmp/swiftsyntax-wasm.tar.gz ] || exit 0
+          gh release view swiftsyntax-wasm-$V >/dev/null 2>&1 || gh release create swiftsyntax-wasm-$V --title "SwiftSyntax $V for wasm32-wasip1" --notes "SwiftSyntax $V built with swift.org 6.4.0 for wasm32-wasip1: modules + static libraries. Used by the app to build Swift macros on the phone."
+          gh release upload swiftsyntax-wasm-$V /tmp/swiftsyntax-wasm.tar.gz --clobber
+      - name: Publish logs
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          scripts/ci/push-logs.sh ci-out "swift-macros-wasm-${{ github.run_id }}"

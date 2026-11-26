@@ -91,6 +91,18 @@ def _static_args(sdk):
     return words
 
 
+def library_args(libdirs):
+    """-L for each directory of prebuilt static libraries and -l for every lib*.a in them (wasm-ld pulls members lazily)."""
+    out = []
+    for d in libdirs:
+        out.append("-L" + d)
+    for d in libdirs:
+        for f in sorted(os.listdir(d)):
+            if f.startswith("lib") and f.endswith(".a"):
+                out.append("-l" + f[3:-2])
+    return out
+
+
 def frontend_args(sources, obj, name, sdk, cache, opt="none", swift_version="5", parse_as_library=None, extra=()):
     static = os.path.join(sdk, "usr", "lib", "swift_static")
     if parse_as_library is None:
@@ -105,7 +117,7 @@ def frontend_args(sources, obj, name, sdk, cache, opt="none", swift_version="5",
     return a + list(extra)
 
 
-def link_args(obj, out, sdk, stack_size=8 * 1024 * 1024):
+def link_args(obj, out, sdk, stack_size=8 * 1024 * 1024, extra=()):
     static = os.path.join(sdk, "usr", "lib", "swift_static")
     wasi = os.path.join(sdk, "WASI.sdk", "lib", "wasm32-wasip1")
     libs = []
@@ -120,11 +132,12 @@ def link_args(obj, out, sdk, stack_size=8 * 1024 * 1024):
             "-o", out,
             os.path.join(wasi, "crt1-command.o"), os.path.join(static, "wasi", "wasm32", "swiftrt.o"), obj,
             "-L" + os.path.join(static, "wasi"), "-L" + wasi,
-            ] + libs + _static_args(sdk) + ["-lc", builtins]
+            ] + list(extra) + libs + _static_args(sdk) + ["-lc", builtins]
     return args
 
 
-def compile(sources, out, name, frontend, link, log=lambda s: None, opt="none", swift_version="5", extra=(), work=None):
+def compile(sources, out, name, frontend, link, log=lambda s: None, opt="none", swift_version="5", extra=(), work=None,
+            modules=(), libdirs=()):
     """Swift sources -> out (a wasm32-wasip1 command). Returns (exit code, messages)."""
     sdk = sdk_root(log)
     if not sdk:
@@ -133,10 +146,13 @@ def compile(sources, out, name, frontend, link, log=lambda s: None, opt="none", 
     os.makedirs(work, exist_ok=True)
     cache = os.path.join(work, "modulecache")
     obj = os.path.join(work, name + ".o")
-    code, msg = frontend(frontend_args(sources, obj, name, sdk, cache, opt, swift_version, extra=extra))
+    inc = []
+    for d in modules:
+        inc += ["-I", d]
+    code, msg = frontend(frontend_args(sources, obj, name, sdk, cache, opt, swift_version, extra=list(extra) + inc))
     if code != 0:
         return code, msg
-    code2, msg2 = link(link_args(obj, out, sdk))
+    code2, msg2 = link(link_args(obj, out, sdk, extra=library_args(libdirs)))
     return code2, (msg + "\n" + msg2).strip()
 
 
