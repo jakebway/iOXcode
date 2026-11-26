@@ -30,10 +30,10 @@ jobs:
         run: |
           mkdir -p ci-out
           apt-get update -qq && apt-get install -y -qq curl python3 nodejs git ca-certificates binutils >/dev/null 2>&1
-          curl -fsSL "https://download.swift.org/swift-6.4-release/wasm-sdk/swift-6.4-RELEASE/swift-6.4-RELEASE_wasm.artifactbundle.tar.gz" -o /tmp/wasm.tgz \
-            || curl -fsSL "https://download.swift.org/swift-6.4.0-release/wasm-sdk/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE_wasm.artifactbundle.tar.gz" -o /tmp/wasm.tgz
-          SUM=$(swift package compute-checksum /tmp/wasm.tgz)
-          swift sdk install /tmp/wasm.tgz --checksum "$SUM" 2>&1 | tail -3
+          curl -fsSL "https://download.swift.org/swift-6.4-release/wasm-sdk/swift-6.4-RELEASE/swift-6.4-RELEASE_wasm.artifactbundle.tar.gz" -o /tmp/wasm.tar.gz \
+            || curl -fsSL "https://download.swift.org/swift-6.4.0-release/wasm-sdk/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE_wasm.artifactbundle.tar.gz" -o /tmp/wasm.tar.gz
+          SUM=$(swift package compute-checksum /tmp/wasm.tar.gz)
+          swift sdk install /tmp/wasm.tar.gz --checksum "$SUM" 2>&1 | tail -3
           swift sdk list | tee ci-out/sdk-list.txt
           # the trimmed SDK the app carries (same archive the recipe test uses)
           curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -L "https://github.com/${{ github.repository }}/releases/download/swift-wasm-sdk-6.4.0/swift-wasm-sdk-6.4.0.tar.gz" -o /tmp/sdk.tgz
