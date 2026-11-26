@@ -1654,6 +1654,14 @@ def _unzip(sh, a, i):
         z.extractall(dest)
 
 @builtin("zip")
+def _zname(path):
+    """Info-ZIP stores `./a/b` as `a/b`."""
+    n = path.replace(os.sep, "/")
+    while n.startswith("./"):
+        n = n[2:]
+    return n
+
+
 def _zip(sh, a, i):
     import zipfile, fnmatch
     flags, rest, excludes, k, mode = "", [], [], 0, "files"
@@ -1693,9 +1701,9 @@ def _zip(sh, a, i):
                 for f in sorted(fs):
                     full = os.path.join(dp, f)
                     if not skipped(full):
-                        entries.append((f if junk else full.replace(os.sep, "/"), full))
+                        entries.append((f if junk else _zname(full), full))
         elif not skipped(p):
-            entries.append((os.path.basename(p) if junk else p.replace(os.sep, "/"), p))
+            entries.append((os.path.basename(p) if junk else _zname(p), p))
     # like Info-ZIP: adding to an existing archive replaces entries of the same name instead of duplicating them
     keep = []
     if os.path.isfile(target):

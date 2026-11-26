@@ -120,7 +120,7 @@ final class BuildPipeline {
         if !isExtension {
             log.log(WasmRunner.selfTest())
             let sdk = (Bundle.main.bundlePath as NSString).appendingPathComponent("Rust/swift-wasm-sdk-6.4.0.tar.gz")
-            let size = (try? FileManager.default.attributesOfItem(atPath: sdk)[.size] as? Int) ?? nil
+            let size = (try? FileManager.default.attributesOfItem(atPath: sdk))?[.size].flatMap { ($0 as? NSNumber)?.intValue }
             log.log(size.map { "Swift WebAssembly SDK: embedded (\($0 / 1_048_576) MB)" } ?? "Swift WebAssembly SDK: not in this build")
         }
 
