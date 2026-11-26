@@ -1,0 +1,7 @@
+/tmp/pack/swiftsyntax-wasm/lib:
+total 0
+
+/tmp/pack/swiftsyntax-wasm/modules:
+total 0
+12K	/tmp/pack/swiftsyntax-wasm
+-rw-r--r-- 1 root root 211 Nov 26 21:54 /tmp/swiftsyntax-wasm.tar.gz
