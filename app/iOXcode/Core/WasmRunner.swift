@@ -49,7 +49,7 @@ enum WasmRunner {
             let r = poll(&p, 1, -1)
             if r < 0 { if errno == EINTR { continue }; return }
             var available: Int32 = 0
-            _ = ioctl(stdinFd, UInt(FIONREAD), &available)
+            _ = ioctl(stdinFd, UInt(0x4004667F /* FIONREAD */), &available)
             if available > 0 {
                 do { _ = try pump() } catch { return }
             } else if p.revents != 0 {
@@ -161,12 +161,12 @@ extension WasmRunner {
 /// interpret the program on its own thread and hand the compiler the two pipe ends, exactly as if it had spawned a
 /// process: its stdin gets the compiler's requests and what it writes to stdout is the compiler's answer.
 enum WasmPlugins {
-    typealias Launcher = @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<Int32>, UnsafeMutablePointer<Int32>) -> Int32
+    typealias Launcher = @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<Int32>?, UnsafeMutablePointer<Int32>?) -> Int32
 
     static let launcher: Launcher = { path, toPlugin, fromPlugin in
         var down: [Int32] = [0, 0]   // compiler -> plugin stdin
         var up: [Int32] = [0, 0]     // plugin stdout -> compiler
-        guard pipe(&down) == 0, pipe(&up) == 0 else { return 1 }
+        guard let path, let toPlugin, let fromPlugin, pipe(&down) == 0, pipe(&up) == 0 else { return 1 }
         let program = String(cString: path)
         let stdinFd = down[0], stdoutFd = up[1]
         let errFd = open("/dev/null", O_WRONLY)
