@@ -1,0 +1,46 @@
+/tmp/pack/swiftsyntax-wasm/lib:
+total 67712
+-rw-r--r-- 1 root root   650194 Nov 26 22:17 libSwiftBasicFormat.a
+-rw-r--r-- 1 root root    36978 Nov 26 22:17 libSwiftCompilerPlugin.a
+-rw-r--r-- 1 root root  2804384 Nov 26 22:17 libSwiftCompilerPluginMessageHandling.a
+-rw-r--r-- 1 root root   744292 Nov 26 22:17 libSwiftDiagnostics.a
+-rw-r--r-- 1 root root  1531580 Nov 26 22:17 libSwiftIfConfig.a
+-rw-r--r-- 1 root root   790814 Nov 26 22:17 libSwiftOperators.a
+-rw-r--r-- 1 root root 10130892 Nov 26 22:17 libSwiftParser.a
+-rw-r--r-- 1 root root  3534076 Nov 26 22:17 libSwiftParserDiagnostics.a
+-rw-r--r-- 1 root root 44210182 Nov 26 22:17 libSwiftSyntax.a
+-rw-r--r-- 1 root root     2828 Nov 26 22:17 libSwiftSyntax509.a
+-rw-r--r-- 1 root root     2828 Nov 26 22:17 libSwiftSyntax510.a
+-rw-r--r-- 1 root root     2828 Nov 26 22:17 libSwiftSyntax600.a
+-rw-r--r-- 1 root root     2828 Nov 26 22:17 libSwiftSyntax601.a
+-rw-r--r-- 1 root root     2828 Nov 26 22:17 libSwiftSyntax602.a
+-rw-r--r-- 1 root root     2828 Nov 26 22:17 libSwiftSyntax603.a
+-rw-r--r-- 1 root root     2828 Nov 26 22:17 libSwiftSyntax604.a
+-rw-r--r-- 1 root root  2946166 Nov 26 22:17 libSwiftSyntaxBuilder.a
+-rw-r--r-- 1 root root  1585726 Nov 26 22:17 libSwiftSyntaxMacroExpansion.a
+-rw-r--r-- 1 root root   314924 Nov 26 22:17 libSwiftSyntaxMacros.a
+-rw-r--r-- 1 root root     2318 Nov 26 22:17 lib_SwiftSyntaxCShims.a
+
+/tmp/pack/swiftsyntax-wasm/modules:
+total 76
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftBasicFormat.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftCompilerPlugin.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftCompilerPluginMessageHandling.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftDiagnostics.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftIfConfig.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftOperators.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftParser.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftParserDiagnostics.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftSyntax.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftSyntax509.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftSyntax510.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftSyntax600.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftSyntax601.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftSyntax602.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftSyntax603.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftSyntax604.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftSyntaxBuilder.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftSyntaxMacroExpansion.swiftmodule
+drwxr-xr-x 2 root root 4096 Nov 26 22:17 SwiftSyntaxMacros.swiftmodule
+84M	/tmp/pack/swiftsyntax-wasm
+-rw-r--r-- 1 root root 22825644 Nov 26 22:17 /tmp/swiftsyntax-wasm.tar.gz
