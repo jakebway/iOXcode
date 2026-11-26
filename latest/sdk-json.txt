@@ -1,0 +1,23 @@
+== swift-sdk.json
+{
+  "schemaVersion" : "4.0",
+  "targetTriples" : {
+    "wasm32-unknown-wasip1" : {
+      "sdkRootPath" : "WASI.sdk",
+      "swiftResourcesPath" : "swift.xctoolchain/usr/lib/swift_static",
+      "swiftStaticResourcesPath" : "swift.xctoolchain/usr/lib/swift_static",
+      "toolsetPaths" : [
+        "toolset.json"
+      ]
+    }
+  }
+}== toolset.json
+{
+  "rootPath" : "swift.xctoolchain/usr/bin",
+  "schemaVersion" : "1.0",
+  "swiftCompiler" : {
+    "extraCLIOptions" : [
+      "-static-stdlib"
+    ]
+  }
+}

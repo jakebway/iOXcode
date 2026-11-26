@@ -1,4 +1,4 @@
 from https://download.swift.org/swift-6.4.0-release/wasm-sdk/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE_wasm.artifactbundle.tar.gz
 sdk dir: swift-6.4.0-RELEASE_wasm.artifactbundle/swift-6.4.0-RELEASE_wasm/wasm32-unknown-wasip1
 248M	../out/swift-wasm-sdk
--rw-r--r-- 1 runner runner 63322521 Nov 26 02:42 ../out/swift-wasm-sdk-6.4.0.tar.gz
+-rw-r--r-- 1 runner runner 63322856 Nov 26 02:44 ../out/swift-wasm-sdk-6.4.0.tar.gz
