@@ -84,6 +84,7 @@ jobs:
             if nm -gU /tmp/rust/librustc_driver.dylib | grep -q ioxrustc_main; then echo "rustc entry point: ok"; else echo "::warning::this rustc build has no ioxrustc_main yet"; fi
             gh release download rust-macros-1.90.0 -p 'rust-macros.tar.gz' -D /tmp/rust --clobber && tar -xzf /tmp/rust/rust-macros.tar.gz -C /tmp/rust || echo "no procedural macros published yet"
             gh release download rustc-ios-1.90.0 -p rustlib-wasm32-wasip1.tar.gz -D /tmp/rust --clobber || echo "no wasm standard library published yet"
+            gh release download swift-wasm-sdk-6.4.0 -p swift-wasm-sdk-6.4.0.tar.gz -D /tmp/rust --clobber || echo "no Swift wasm SDK published yet"
             ls -lh /tmp/rust
           else
             echo "::warning::No rustc-ios release yet. Building the app WITHOUT Rust."
@@ -185,6 +186,7 @@ jobs:
             cp "$RUST_DIR/librustc_driver.dylib" "$APP/Frameworks/"
             cp "$RUST_DIR/rustlib-aarch64-apple-ios.tar.gz" "$APP/Rust/"
             [ -f "$RUST_DIR/rustlib-wasm32-wasip1.tar.gz" ] && cp "$RUST_DIR/rustlib-wasm32-wasip1.tar.gz" "$APP/Rust/" || true
+            [ -f "$RUST_DIR/swift-wasm-sdk-6.4.0.tar.gz" ] && cp "$RUST_DIR/swift-wasm-sdk-6.4.0.tar.gz" "$APP/Rust/" || true
             if [ -d "$RUST_DIR/macros" ]; then
               mkdir -p "$APP/Rust/macros"
               cp "$RUST_DIR"/macros/*.dylib "$APP/Frameworks/"

@@ -1,0 +1,69 @@
+name: Swift wasm recipe check
+
+# Proves the exact compile+link recipe the app uses (app/Python/ioxswiftwasm.py) with swift.org's own tools, using the
+# very archive that is embedded in the app: Swift -> wasm32-wasip1 with -resource-dir swift_static + wasm-ld, then runs it.
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ["app/Python/ioxswiftwasm.py", ".github/workflows/swift-wasm-recipe.yml", "tests/swiftwasm/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  recipe:
+    runs-on: ubuntu-latest
+    container: swift:6.4
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch SDK, compile, link, run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          mkdir -p ci-out sdk
+          swift --version 2>&1 | tee ci-out/version.txt
+          which wasm-ld lld swift-frontend python3 node 2>&1 | tee ci-out/tools.txt
+          apt-get update -qq && apt-get install -y -qq curl python3 nodejs ca-certificates >/dev/null 2>&1
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -L "https://github.com/${{ github.repository }}/releases/download/swift-wasm-sdk-6.4.0/swift-wasm-sdk-6.4.0.tar.gz" -o sdk.tgz || \
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" "$(curl -s -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/releases/tags/swift-wasm-sdk-6.4.0 | python3 -c 'import sys,json;print(json.load(sys.stdin)["assets"][0]["url"])')" -o sdk.tgz
+          ls -l sdk.tgz | tee -a ci-out/tools.txt
+          tar -xzf sdk.tgz -C sdk
+          export IOX_SWIFT_WASM_SDK=$PWD/sdk/swift-wasm-sdk
+          cd tests/swiftwasm
+          python3 -I -c "
+          import sys, subprocess, os
+          sys.path.insert(0, '../../app/Python')
+          import ioxswiftwasm as w
+          def run(prog):
+              def f(args):
+                  p = subprocess.run([prog] + (['-frontend'] if prog.endswith('swiftc') else []) + args, capture_output=True, text=True)
+                  return p.returncode, p.stdout + p.stderr
+              return f
+          def fe(args):
+              p = subprocess.run(['swift-frontend', '-frontend'] + args, capture_output=True, text=True)
+              return p.returncode, p.stdout + p.stderr
+          def ld(args):
+              print('LINK:', ' '.join(args))
+              p = subprocess.run(args, capture_output=True, text=True)
+              return p.returncode, p.stdout + p.stderr
+          code, msg = w.compile([os.path.abspath('hello.swift')], os.path.abspath('hello.wasm'), 'hello', fe, ld, opt='none')
+          print('exit', code); print(msg)
+          sys.exit(code)
+          " 2>&1 | tee ../../ci-out/compile.txt
+          ls -l hello.wasm 2>&1 | tee -a ../../ci-out/compile.txt
+          node --experimental-wasi-unstable-preview1 -e "
+          const {WASI}=require('wasi');const fs=require('fs');
+          const w=new WASI({version:'preview1',args:['hello.wasm'],env:{},preopens:{'.':'.'}});
+          WebAssembly.instantiate(fs.readFileSync('hello.wasm'),w.getImportObject()).then(({instance})=>{w.start(instance)});
+          " 2>&1 | tee ../../ci-out/run.txt
+      - name: Publish logs
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          apt-get install -y -qq git >/dev/null 2>&1
+          scripts/ci/push-logs.sh ci-out "swift-wasm-recipe-${{ github.run_id }}"

@@ -26,7 +26,9 @@ final class PythonHost {
         setenv("PYTHONDONTWRITEBYTECODE", "1", 1)
         setenv("PYTHONUNBUFFERED", "1", 1)
         setenv("IOX_WASM_ENTRY", WasmRunner.pointerForPython, 1)
-        setenv("IOX_LINK_ENTRY", NativeLinker.pointerForPython, 1)
+        setenv("IOX_LINK_ENTRY", NativeTools.linkPointer, 1)
+        setenv("IOX_FRONTEND_ENTRY", NativeTools.frontendPointer, 1)
+        setenv("IOX_CLANG_ENTRY", NativeTools.clangPointer, 1)
         let setup = "import sys, os\nsys.dont_write_bytecode = True\nimport ioxc_run\n"
         var buffer = [CChar](repeating: 0, count: 1024)
         let rc = ioxc_py_start(frameworkBinary.path, setup, &buffer, buffer.count)

@@ -152,13 +152,27 @@ def main(a, out, err, stdin_text=""):
     return run(rest[0], rest[1:], env=env, dirs=(dirs or None), stdin_text=stdin_text, out=out, err=err)
 
 
-def link(args):
-    """Runs the in-process linker (lld). args[0] names the flavor ("wasm-ld", "ld64.lld"). Returns (code, messages)."""
-    addr = os.environ.get("IOX_LINK_ENTRY")
+def _native(env_name, args, size=1 << 17):
+    addr = os.environ.get(env_name)
     if not addr:
-        return 1, "no in-process linker in this build of iOXcode"
+        return 1, "this build of iOXcode has no in-process compiler tool (%s)" % env_name
     proto = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_char_p), ctypes.c_char_p, ctypes.c_int)
     fn = proto(int(addr))
-    buf = ctypes.create_string_buffer(1 << 16)
+    buf = ctypes.create_string_buffer(size)
     code = fn(len(args), _cstrings(list(args)), buf, len(buf))
     return code, buf.value.decode("utf-8", "replace")
+
+
+def link(args):
+    """Runs the in-process linker (lld). args[0] names the flavor ("wasm-ld", "ld64.lld"). Returns (code, messages)."""
+    return _native("IOX_LINK_ENTRY", args)
+
+
+def frontend(args):
+    """Runs the in-process Swift frontend (no program name in args). Returns (code, messages)."""
+    return _native("IOX_FRONTEND_ENTRY", args)
+
+
+def clang(args):
+    """Runs the in-process clang; args[0] is "clang". Returns (code, messages)."""
+    return _native("IOX_CLANG_ENTRY", args)

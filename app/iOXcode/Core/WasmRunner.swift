@@ -79,28 +79,37 @@ enum WasmRunner {
     }
 }
 
-/// The in-process linker (lld) for Python: Rust and C build steps that need a WebAssembly link call it
-/// (IOX_LINK_ENTRY). `argv[0]` picks the flavor: "wasm-ld" or "ld64.lld".
-enum NativeLinker {
+/// The compiler's three in-process tools for Python (build scripts run them through ctypes): the Swift frontend, clang
+/// and lld. Every call goes through `CompilerHost`, which serializes them, gives them a big stack and captures stderr.
+/// `argv[0]` of the link entry picks the flavor: "wasm-ld" or "ld64.lld".
+enum NativeTools {
     typealias Entry = @convention(c) (Int32, UnsafePointer<UnsafePointer<CChar>?>, UnsafeMutablePointer<CChar>, Int32) -> Int32
 
-    static let entry: Entry = { argc, argv, buffer, capacity in
-        let result = ioxc_link(argc, argv)
-        var text = ""
-        if let m = result.message, result.messageLength > 0 {
-            text = String(decoding: UnsafeBufferPointer(start: UnsafeRawPointer(m).assumingMemoryBound(to: UInt8.self),
-                                                        count: result.messageLength), as: UTF8.self)
-        }
-        ioxc_release(result.message)
-        let bytes = Array(text.utf8.prefix(max(0, Int(capacity) - 1)))
+    private static func respond(_ r: ToolResult, _ buffer: UnsafeMutablePointer<CChar>, _ capacity: Int32) -> Int32 {
+        let bytes = Array(r.message.utf8.prefix(max(0, Int(capacity) - 1)))
         for (i, b) in bytes.enumerated() { buffer[i] = CChar(bitPattern: b) }
         buffer[bytes.count] = 0
-        return result.exitCode
+        return r.exitCode
     }
 
-    static var pointerForPython: String {
-        String(UInt(bitPattern: unsafeBitCast(entry, to: UnsafeRawPointer.self)))
+    private static func strings(_ argc: Int32, _ argv: UnsafePointer<UnsafePointer<CChar>?>) -> [String] {
+        (0..<Int(argc)).compactMap { argv[$0].map { String(cString: $0) } }
     }
+
+    static let link: Entry = { argc, argv, buffer, capacity in
+        respond(CompilerHost.shared.link(strings(argc, argv)), buffer, capacity)
+    }
+    static let frontend: Entry = { argc, argv, buffer, capacity in
+        respond(CompilerHost.shared.frontend(strings(argc, argv)), buffer, capacity)
+    }
+    static let clang: Entry = { argc, argv, buffer, capacity in
+        respond(CompilerHost.shared.clang(strings(argc, argv)), buffer, capacity)
+    }
+
+    static func pointer(_ e: Entry) -> String { String(UInt(bitPattern: unsafeBitCast(e, to: UnsafeRawPointer.self))) }
+    static var linkPointer: String { pointer(link) }
+    static var frontendPointer: String { pointer(frontend) }
+    static var clangPointer: String { pointer(clang) }
 }
 
 extension WasmRunner {

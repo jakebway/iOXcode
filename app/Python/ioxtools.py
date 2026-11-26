@@ -828,7 +828,13 @@ def wasm(sh, a, i):
     return ioxwasm.main(a, sh.out, sh.err, i or "")
 
 
+def swiftc_wasm(sh, a, i):
+    import ioxswiftwasm
+    return ioxswiftwasm.swiftc_wasm(sh, a, i)
+
+
 def register(table):
+    table.update({"swiftc-wasm": swiftc_wasm, "swift-wasm": swiftc_wasm})
     table.update({"wasm": wasm, "wasmtime": wasm, "wasmer": wasm, "wasmkit": wasm, "wasmkit-cli": wasm})
     table.update({"plutil": plutil, "PlistBuddy": plistbuddy, "defaults": defaults, "xcrun": xcrun, "sw_vers": sw_vers,
                   "cut": cut, "tee": tee, "diff": diff, "stat": stat, "du": du, "base64": base64, "printenv": printenv,
