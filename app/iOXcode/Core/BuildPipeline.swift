@@ -117,7 +117,12 @@ final class BuildPipeline {
         let t0 = Date()
         log.log(isExtension ? "== Building extension \(m.name) (\(m.bundleId))" : "== Building \(m.name) (\(m.bundleId))")
         log.log("memory available: \(CompilerHost.shared.availableMemoryMB) MB")
-        if !isExtension { log.log(WasmRunner.selfTest()) }
+        if !isExtension {
+            log.log(WasmRunner.selfTest())
+            let sdk = (Bundle.main.bundlePath as NSString).appendingPathComponent("Rust/swift-wasm-sdk-6.4.0.tar.gz")
+            let size = (try? FileManager.default.attributesOfItem(atPath: sdk)[.size] as? Int) ?? nil
+            log.log(size.map { "Swift WebAssembly SDK: embedded (\($0 / 1_048_576) MB)" } ?? "Swift WebAssembly SDK: not in this build")
+        }
 
         if let err = CompilerHost.shared.load() { throw BuildError.message(err) }
         guard let layout = SDKLayout.locate() else {
