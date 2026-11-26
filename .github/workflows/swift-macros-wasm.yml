@@ -29,7 +29,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p ci-out
-          apt-get update -qq && apt-get install -y -qq curl python3 nodejs git ca-certificates binutils >/dev/null 2>&1
+          apt-get update -qq && apt-get install -y -qq curl python3 nodejs git ca-certificates binutils file >/dev/null 2>&1
           curl -fsSL "https://download.swift.org/swift-6.4-release/wasm-sdk/swift-6.4-RELEASE/swift-6.4-RELEASE_wasm.artifactbundle.tar.gz" -o /tmp/wasm.tar.gz \
             || curl -fsSL "https://download.swift.org/swift-6.4.0-release/wasm-sdk/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE_wasm.artifactbundle.tar.gz" -o /tmp/wasm.tar.gz
           SUM=$(swift package compute-checksum /tmp/wasm.tar.gz)
@@ -57,13 +57,18 @@ jobs:
           cd tests/swiftmacro
           B=$(cat /tmp/spm-bin)
           OUT=/tmp/pack/swiftsyntax-wasm; mkdir -p $OUT/modules $OUT/lib
-          cp -R $B/Modules/*.swiftmodule $OUT/modules/ 2>/dev/null || cp $B/*.swiftmodule $OUT/modules/ 2>/dev/null
-          for d in $B/*.build; do
-            n=$(basename $d .build)
-            case "$n" in StringifyMacros|StringifyMacros_*|Plugin*) continue;; esac
-            objs=$(find "$d" -name '*.o' | sort)
-            [ -z "$objs" ] && continue
-            llvm-ar rcs "$OUT/lib/lib$n.a" $objs 2>&1 || ar rcs "$OUT/lib/lib$n.a" $objs
+          cp -R $B/*.swiftmodule $OUT/modules/
+          file "$B/SwiftSyntax.objlib" | tee ../../ci-out/objlib-type.txt
+          ls -la "$B/SwiftSyntax.objlib" | head -5 | tee -a ../../ci-out/objlib-type.txt
+          for d in $B/*.objlib; do
+            n=$(basename $d .objlib)
+            case "$n" in StringifyMacros|StringifyMacros_*) continue;; esac
+            if [ -d "$d" ]; then
+              objs=$(find "$d" -name '*.o' | sort)
+              [ -n "$objs" ] && llvm-ar rcs "$OUT/lib/lib$n.a" $objs
+            else
+              cp "$d" "$OUT/lib/lib$n.a"
+            fi
           done
           ls -l $OUT/modules $OUT/lib | tee ../../ci-out/harvest.txt
           du -sh $OUT | tee -a ../../ci-out/harvest.txt
