@@ -134,6 +134,7 @@ jobs:
         run: |
           V="${{ inputs.syntax || '604.0.0' }}"
           [ -f /tmp/swiftsyntax-wasm.tar.gz ] || exit 0
+          git config --global --add safe.directory "$PWD"
           apt-get install -y -qq gh >/dev/null 2>&1 || true
           gh release view swiftsyntax-wasm-$V >/dev/null 2>&1 || gh release create swiftsyntax-wasm-$V --title "SwiftSyntax $V for wasm32-wasip1" --notes "SwiftSyntax $V built with swift.org 6.4.0 for wasm32-wasip1: modules + static libraries. Used by the app to build Swift macros on the phone."
           gh release upload swiftsyntax-wasm-$V /tmp/swiftsyntax-wasm.tar.gz --clobber
