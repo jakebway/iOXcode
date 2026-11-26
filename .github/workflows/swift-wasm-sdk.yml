@@ -1,0 +1,63 @@
+name: Swift wasm SDK for the app
+
+# Repackages swift.org's WebAssembly SDK for the SAME Swift release as the compiler inside iOXcode (6.4.0), without the
+# host tools and the Embedded Swift variants, so the app can carry it. The app compiles Swift to wasm32-wasip1 with
+# its own compiler (the wasm backend and wasm-ld are in it) against this SDK and runs the result in the interpreter.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "swift.org release (same as the in-app compiler)"
+        default: "6.4"
+
+permissions:
+  contents: write
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download, trim, publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p ci-out dl out && cd dl
+          V="${{ inputs.version || '6.4' }}"
+          for u in \
+            "https://download.swift.org/swift-$V-release/wasm-sdk/swift-$V-RELEASE/swift-$V-RELEASE_wasm.artifactbundle.tar.gz" \
+            "https://download.swift.org/swift-$V.0-release/wasm-sdk/swift-$V.0-RELEASE/swift-$V.0-RELEASE_wasm.artifactbundle.tar.gz"; do
+            if curl -fsSL "$u" -o bundle.tgz; then echo "from $u" | tee ../ci-out/pack.txt; break; fi
+          done
+          tar -xzf bundle.tgz
+          S=$(ls -d */*/wasm32-unknown-wasip1 | head -1)
+          echo "sdk dir: $S" | tee -a ../ci-out/pack.txt
+          du -sh "$S"/* "$S"/swift.xctoolchain/usr/* "$S"/swift.xctoolchain/usr/lib/* "$S"/swift.xctoolchain/usr/lib/swift_static/* "$S"/swift.xctoolchain/usr/lib/swift/* "$S"/WASI.sdk/* "$S"/WASI.sdk/lib/* "$S"/WASI.sdk/include/* 2>/dev/null | tee ../ci-out/sizes.txt
+          R=../out/swift-wasm-sdk
+          mkdir -p "$R/usr/lib"
+          cp -R "$S/WASI.sdk" "$R/WASI.sdk"
+          cp -R "$S/swift.xctoolchain/usr/lib/swift_static" "$R/usr/lib/swift_static"
+          mkdir -p "$R/usr/lib/swift"
+          for d in "$S"/swift.xctoolchain/usr/lib/swift/*; do
+            case "$(basename "$d")" in embedded|clang) ;; *) cp -R "$d" "$R/usr/lib/swift/" ;; esac
+          done
+          # the wasm WASI.sdk may carry libraries for other wasm flavors (threads); the app only uses wasm32-wasip1
+          find "$R/WASI.sdk" -maxdepth 3 -type d | head -40 | tee ../ci-out/trimmed-dirs.txt
+          du -sh "$R" | tee -a ../ci-out/pack.txt
+          cat "$S/swift.xctoolchain/usr/lib/swift_static/wasi/static-stdlib-args.lnk" 2>/dev/null | tee ../ci-out/static-stdlib-args.txt
+          ls "$S/swift.xctoolchain/usr/lib/swift_static/wasi" | head -80 | tee ../ci-out/static-wasi-ls.txt
+          ls "$S/swift.xctoolchain/usr/lib/swift_static" | head -40 | tee ../ci-out/static-ls.txt
+          ls "$S/swift.xctoolchain/usr/lib/swift_static/clang" 2>/dev/null | head | tee ../ci-out/clang-ls.txt
+          echo "6.4.0" > "$R/VERSION"
+          tar -C ../out -czf ../out/swift-wasm-sdk-6.4.0.tar.gz swift-wasm-sdk
+          ls -l ../out/swift-wasm-sdk-6.4.0.tar.gz | tee -a ../ci-out/pack.txt
+          cd ..
+          gh release view swift-wasm-sdk-6.4.0 >/dev/null 2>&1 || gh release create swift-wasm-sdk-6.4.0 --title "Swift 6.4.0 WebAssembly SDK for iOXcode" --notes "swift.org's wasm32-wasip1 SDK for Swift 6.4.0, trimmed. Embedded in the app."
+          gh release upload swift-wasm-sdk-6.4.0 out/swift-wasm-sdk-6.4.0.tar.gz --clobber
+      - name: Publish logs
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/push-logs.sh ci-out "swift-wasm-sdk-${{ github.run_id }}"
