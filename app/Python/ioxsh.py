@@ -1685,17 +1685,32 @@ def _zip(sh, a, i):
                    fnmatch.fnmatch("./" + p.lstrip("./"), e) or (e.endswith("/*") and p.startswith(e[:-1]))
                    for e in excludes)
 
-    with zipfile.ZipFile(target, "a", zipfile.ZIP_DEFLATED) as z:
-        for p in rest[1:]:
-            if os.path.isdir(p):
-                for dp, ds, fs in os.walk(p):
-                    ds.sort()
-                    for f in sorted(fs):
-                        full = os.path.join(dp, f)
-                        if not skipped(full):
-                            z.write(full, f if junk else full)
-            elif not skipped(p):
-                z.write(p, os.path.basename(p) if junk else p)
+    entries = []          # (name in the archive, file on disk), in order
+    for p in rest[1:]:
+        if os.path.isdir(p):
+            for dp, ds, fs in os.walk(p):
+                ds.sort()
+                for f in sorted(fs):
+                    full = os.path.join(dp, f)
+                    if not skipped(full):
+                        entries.append((f if junk else full.replace(os.sep, "/"), full))
+        elif not skipped(p):
+            entries.append((os.path.basename(p) if junk else p.replace(os.sep, "/"), p))
+    # like Info-ZIP: adding to an existing archive replaces entries of the same name instead of duplicating them
+    keep = []
+    if os.path.isfile(target):
+        names = {n for n, _ in entries}
+        with zipfile.ZipFile(target) as old:
+            for info in old.infolist():
+                if info.filename not in names:
+                    keep.append((info, old.read(info.filename)))
+    tmp = target + ".iox-tmp"
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
+        for info, data in keep:
+            z.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED)
+        for name, full in entries:
+            z.write(full, name)
+    os.replace(tmp, target)
     return 0
 
 

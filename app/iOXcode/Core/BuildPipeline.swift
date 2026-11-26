@@ -128,6 +128,13 @@ final class BuildPipeline {
         try? fm.removeItem(at: work)
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
         let app = work.appendingPathComponent("Payload/\(m.name).\(isExtension ? "appex" : "app")", isDirectory: true)
+        var fresh: FreshWorkspace? = nil
+        if !isExtension && !m.scripts.isEmpty {
+            var f = FreshWorkspace(root: project.url, name: project.url.lastPathComponent)
+            f.begin(log: log)
+            fresh = f
+        }
+        defer { fresh?.end() }
         try runScripts(m.scripts.filter { !$0.afterCompile }, m: m, app: app, work: work, layout: layout)
 
         let files = project.swiftFiles(for: m)
