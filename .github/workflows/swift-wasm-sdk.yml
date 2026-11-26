@@ -50,6 +50,10 @@ jobs:
           ls "$S/swift.xctoolchain/usr/lib/swift_static/wasi" | head -80 | tee ../ci-out/static-wasi-ls.txt
           ls "$S/swift.xctoolchain/usr/lib/swift_static" | head -40 | tee ../ci-out/static-ls.txt
           ls "$S/swift.xctoolchain/usr/lib/swift_static/clang" 2>/dev/null | head | tee ../ci-out/clang-ls.txt
+          for f in swift-sdk.json toolset.json; do echo "== $f"; cat "$S/$f"; done > ../ci-out/sdk-json.txt
+          cat "$S/swift.xctoolchain/usr/lib/swift_static/wasi/static-executable-args.lnk" > ../ci-out/static-executable-args.txt
+          ls "$S/swift.xctoolchain/usr/lib/swift_static/wasi/wasm32" "$S/WASI.sdk/lib/wasm32-wasip1" "$S/swift.xctoolchain/usr/lib/swift_static/clang" "$S/swift.xctoolchain/usr/lib/swift/clang" 2>&1 | head -80 > ../ci-out/libs-ls.txt
+          find "$S/swift.xctoolchain/usr/lib/swift_static/clang" -maxdepth 3 | head -30 >> ../ci-out/libs-ls.txt
           echo "6.4.0" > "$R/VERSION"
           tar -C ../out -czf ../out/swift-wasm-sdk-6.4.0.tar.gz swift-wasm-sdk
           ls -l ../out/swift-wasm-sdk-6.4.0.tar.gz | tee -a ../ci-out/pack.txt
