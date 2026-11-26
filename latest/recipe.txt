@@ -1,9 +1,5 @@
 plugin build exit 1
-/__w/iOXcode/iOXcode/tests/swiftmacro/Sources/StringifyMacros/StringifyMacro.swift:1:8: error: no such module 'SwiftCompilerPlugin'
- 1 | import SwiftCompilerPlugin
-   |        `- error: no such module 'SwiftCompilerPlugin'
- 2 | import SwiftSyntax
- 3 | import SwiftSyntaxBuilder
+<unknown>:0: error: missing required module '_SwiftSyntaxCShims'
 
 client build exit 1
 node:fs:560
