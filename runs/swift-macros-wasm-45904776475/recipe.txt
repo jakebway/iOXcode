@@ -1,33 +1,13 @@
-plugin build exit 1
-/__w/iOXcode/iOXcode/tests/swiftmacro/Sources/StringifyMacros/StringifyMacro.swift:1:8: error: no such module 'SwiftCompilerPlugin'
- 1 | import SwiftCompilerPlugin
-   |        `- error: no such module 'SwiftCompilerPlugin'
- 2 | import SwiftSyntax
- 3 | import SwiftSyntaxBuilder
+plugin build exit 0
 
+-rwxr-xr-x 1 root root 39235702 Nov 26 22:33 /tmp/StringifyMacros.wasm
+/tmp/StringifyMacros.wasm reply header: b''
+exit code: 0
+stderr: 
+/__w/iOXcode/iOXcode/tests/swiftmacro/.build/out/Products/Release-webassembly-wasm32/StringifyMacros.wasm reply header: b''
+exit code: 0
+stderr: 
 client build exit 1
-node:fs:560
-  return binding.open(
-                 ^
-
-Error: ENOENT: no such file or directory, open '/tmp/StringifyMacros.wasm'
-    at Object.openSync (node:fs:560:18)
-    at Object.readFileSync (node:fs:444:35)
-    at Object.<anonymous> (/tmp/run.js:3:28)
-    at Module._compile (node:internal/modules/cjs/loader:1705:14)
-    at Module._extensions..js (node:internal/modules/cjs/loader:1838:10)
-    at Module.load (node:internal/modules/cjs/loader:1441:32)
-    at Module._load (node:internal/modules/cjs/loader:1263:12)
-    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
-    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5) {
-  errno: -2,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: '/tmp/StringifyMacros.wasm'
-}
-
-Node.js v22.22.1
 /__w/iOXcode/iOXcode/tests/swiftmacro/client/main.swift:2:7: warning: external macro implementation type 'StringifyMacros.StringifyMacro' could not be found for macro 'stringify'; '/tmp/plugin.sh' produced malformed response
 1 | @freestanding(expression)
 2 | macro stringify<T>(_ value: T) -> (T, String) = #externalMacro(module: "StringifyMacros", type: "StringifyMacro")

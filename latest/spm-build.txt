@@ -1,20 +1,22 @@
 Fetching https://github.com/swiftlang/swift-syntax.git
 [1/82392] Fetching swift-syntax
-Fetched https://github.com/swiftlang/swift-syntax.git (3.00s)
+Fetched https://github.com/swiftlang/swift-syntax.git (4.29s)
 Computing version for https://github.com/swiftlang/swift-syntax.git
-Computed https://github.com/swiftlang/swift-syntax.git at 604.0.0 (3.96s)
+Computed https://github.com/swiftlang/swift-syntax.git at 604.0.0 (5.85s)
 Computed https://github.com/swiftlang/swift-syntax.git at 604.0.0 (0.00s)
 Creating working copy for https://github.com/swiftlang/swift-syntax.git
 Working copy of https://github.com/swiftlang/swift-syntax.git resolved at 604.0.0
 Building for production...
 [Computing dependencies]
-[Constructing description]
+[Provisioning 2 / 23]
 [Pre-planning 1 / 619]
 [Planning deferred tasks]
-[64 / 230] SwiftSyntax
-[146 / 240] SwiftSyntax600
+[1 / 230]
+[122 / 236]
+[154 / 244] SwiftSyntax510
 [172 / 246] SwiftSyntax
-[186 / 252] SwiftDiagnostics
+[186 / 252] SwiftBasicFormat
+[191 / 252] SwiftDiagnostics
 [196 / 252] SwiftParser
 [207 / 256] SwiftOperators
 [212 / 256] SwiftParserDiagnostics
@@ -26,4 +28,4 @@ Building for production...
 [260 / 268] SwiftCompilerPlugin
 [268 / 270] StringifyMacros-product
 [270 / 270] StringifyMacros-product
-Build complete! (256.59 secs)
+Build complete! (348.48 secs)
