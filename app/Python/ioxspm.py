@@ -870,6 +870,8 @@ def resolve(request_path):
                     visit((k, d["name"]))
             elif d["kind"] in ("product", "byName"):
                 pk, tgts = find_product(d["name"], d.get("package"), k)
+                if not tgts:
+                    notes.append("%s: dependency %s (package %s) was not found" % (name, d["name"], d.get("package")))
                 for t in tgts:
                     if (pk, t) in modules:
                         visit((pk, t))
