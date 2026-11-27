@@ -29,7 +29,6 @@ jobs:
           for d in shims iphoneos clang; do [ -e "$TC/lib/swift/$d" ] && cp -R "$TC/lib/swift/$d" "$P/usr/lib/swift/$d"; done
           mkdir -p $P/usr/lib/swift-5.0 && [ -d "$TC/lib/swift-5.0/iphoneos" ] && cp -R "$TC/lib/swift-5.0/iphoneos" "$P/usr/lib/swift-5.0/iphoneos" || true
           cp -R "$TC/lib/clang/"* "$P/usr/lib/clang/"
-          echo "Xcode: $(xcodebuild -version | tr '\n' ' ')" > $P/PACK-INFO.txt
           du -sh $P; (cd $P && zip -qry ../sdk-pack.zip .); ls -lh sdk-pack.zip
 
       - name: Publish as a release

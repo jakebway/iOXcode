@@ -152,11 +152,13 @@ final class BuildPipeline {
             throw BuildError.message("No .swift files and no .xcodeproj found. The imported folder contains: \(kids.isEmpty ? "nothing" : shown). Import the folder that holds your Swift files or the .xcodeproj.")
         }
         log.log("\(files.count) Swift files, SDK \(layout.sdk.lastPathComponent)")
-        let packInfo = Paths.sdkRoot.appendingPathComponent("PACK-INFO.txt")
-        if let info = try? String(contentsOf: packInfo, encoding: .utf8) {
-            log.log("SDK pack: " + info.trimmingCharacters(in: .whitespacesAndNewlines))
-            if !info.contains("Xcode 27") {
-                log.log("warning: this SDK pack is older than the compiler (Swift 6.4). Packages that gate APIs on the compiler version (RevenueCat, others) will fail to build. Rebuild the pack with Xcode 27 and import it again.")
+        // the SDK's own settings say which Xcode generation it belongs to (no extra files in the pack needed)
+        if let data = try? Data(contentsOf: layout.sdk.appendingPathComponent("SDKSettings.json")),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let version = json["Version"] as? String ?? "?"
+            log.log("SDK version: iOS \(version)")
+            if let major = Int(version.split(separator: ".").first ?? ""), major < 27 {
+                log.log("warning: this SDK (iOS \(version)) is older than the compiler (Swift 6.4). Packages that gate APIs on the compiler version (RevenueCat, others) will fail to build. Build the pack with Xcode 27 and import it again.")
             }
         }
         for w in project.warnings { log.log("note: \(w)") }
