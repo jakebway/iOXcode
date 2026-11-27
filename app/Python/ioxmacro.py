@@ -353,6 +353,194 @@ def expand_state(src):
     return "".join(out) + "\n\n%stypealias %s<Value> = SwiftUI.State<Value>\n" % (access, alias)
 
 
+# ---------------------------------------------------------------- FoundationModels @Generable / @Guide
+
+_GEN_HEAD = re.compile(
+    r"((?:\s*(?:@\w+(?:\([^)]*\))?|" + _ACCESS + r"|final|nonisolated|indirect))*)\s*(struct|enum)\s+(\w+)")
+
+
+def _flat_mask_deep(text):
+    """Like _flat_mask, but the delimiters of nested groups go too: only the outermost ( ) [ ] { } stay."""
+    out = list(text)
+    depth = 0
+    for k, c in enumerate(text):
+        if c in "([{":
+            depth += 1
+            if depth > 1:
+                out[k] = " "
+        elif c in ")]}":
+            if depth > 1:
+                out[k] = " "
+            depth -= 1
+        elif depth > 0:
+            out[k] = " "
+    return "".join(out)
+
+
+def _enclosing_path(clean, pos):
+    """Names of the types/extensions whose braces enclose clean[pos], outermost first (for a nested type's extension)."""
+    stack, boundary = [], 0
+    for k in range(pos):
+        c = clean[k]
+        if c == "{":
+            m = None
+            for m in re.finditer(r"\b(?:struct|class|enum|actor|extension)\s+([A-Za-z_][\w.]*)", clean[boundary:k]):
+                pass
+            stack.append(m.group(1) if m else None)
+            boundary = k + 1
+        elif c == "}":
+            if stack:
+                stack.pop()
+            boundary = k + 1
+        elif c == ";":
+            boundary = k + 1
+    return [n for n in stack if n]
+
+
+def _split_top(clean, src, a, b):
+    """Splits src[a:b] at commas outside brackets (clean has strings blanked)."""
+    parts, depth, start = [], 0, a
+    for k in range(a, b):
+        c = clean[k]
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif c == "," and depth == 0:
+            parts.append(src[start:k].strip())
+            start = k + 1
+    tail = src[start:b].strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def _guide_args(clean, src, open_i, close_i):
+    """-> (description literal or None, [guide expressions])"""
+    desc, guides = None, []
+    for part in _split_top(clean, src, open_i + 1, close_i):
+        m = re.match(r"description\s*:\s*(\"(?:\\.|[^\"\\])*\")\s*$", part, re.S)
+        if m:
+            desc = m.group(1)
+        else:
+            guides.append(part)
+    return desc, guides
+
+
+def expand_generable(src):
+    """`@Generable` is a macro whose plugin (FoundationModelsMacros) only exists as a macOS dylib. Write what it writes:
+    the Generable conformance with the schema, the conversion to and from GeneratedContent. `@Guide` only carries
+    descriptions and constraints for that schema."""
+    if "@Generable" not in src:
+        return None
+    clean = _blank_literals(src)
+    edits = []
+    appended = []
+    done_any = False
+    for gm in re.finditer(r"@Generable\b", clean):
+        a = gm.start()
+        k = gm.end()
+        while k < len(clean) and clean[k] in " \t":
+            k += 1
+        tdesc = None
+        attr_end = gm.end()
+        if k < len(clean) and clean[k] == "(":
+            close = _find_close(src, k)
+            if close < 0:
+                continue
+            tdesc, _g = _guide_args(clean, src, k, close)
+            attr_end = close + 1
+        brace = clean.find("{", attr_end)
+        if brace < 0:
+            continue
+        hm = _GEN_HEAD.match(clean[attr_end:brace])
+        if not hm:
+            continue
+        mods, kind, name = hm.group(1), hm.group(2), hm.group(3)
+        pub = "public " if re.search(r"\b(?:public|open)\b", mods) else ("package " if re.search(r"\bpackage\b", mods) else "")
+        end = _find_brace(clean, brace)
+        if end < 0:
+            continue
+        body_s, body_e = brace + 1, end
+        flat = _flat_mask_deep(clean[body_s:body_e])
+        desc_text = tdesc if tdesc else "nil"
+        members = []
+        FM = "FoundationModels."
+        if kind == "struct":
+            props = []
+            for pm in _PROP_RE.finditer(flat):
+                if pm.group(4) or not pm.group(7):
+                    continue
+                after = flat[pm.end():].lstrip(" \t")
+                if after.startswith("{"):
+                    continue                       # computed property
+                has_init = after.startswith("=")
+                if has_init and pm.group(5) == "let":
+                    continue
+                pname = pm.group(6)
+                ptype = src[body_s + pm.start(7) + 1:body_s + pm.end(7)].strip()
+                if not ptype:
+                    continue
+                pdesc, pguides = None, []
+                gs = body_s + pm.start(2)
+                ge = body_s + pm.end(2)
+                for gg in re.finditer(r"@Guide\b", clean[gs:ge]):
+                    gi = gs + gg.start()
+                    gp = gi + len("@Guide")
+                    if gp < len(src) and src[gp] == "(":
+                        gc = _find_close(src, gp)
+                        if gc > 0:
+                            pdesc, pguides = _guide_args(clean, src, gp, gc)
+                            edits.append((gi, gc + 1, ""))
+                    else:
+                        edits.append((gi, gp, ""))
+                props.append((pname, ptype, pdesc, pguides))
+            plist = []
+            for pname, ptype, pdesc, pguides in props:
+                args = 'name: "%s", description: %s, type: %s.self' % (pname, pdesc or "nil", "(" + ptype + ")")
+                if pguides:
+                    args += ", guides: [%s]" % ", ".join(pguides)
+                plist.append("            %sGenerationSchema.Property(%s)," % (FM, args))
+            kv = ", ".join('"%s": self.%s' % (n, n) for n, _t, _d, _g in props)
+            members.append("    nonisolated %sstatic var generationSchema: %sGenerationSchema {\n        %sGenerationSchema(type: Self.self, description: %s, properties: [\n%s\n        ])\n    }" % (pub, FM, FM, desc_text, "\n".join(plist)))
+            members.append("    nonisolated %svar generatedContent: %sGeneratedContent {\n        %sGeneratedContent(properties: [%s])\n    }" % (pub, FM, FM, kv if kv else ":"))
+            inits = "\n".join('        self.%s = try content.value(forProperty: "%s")' % (n, n) for n, _t, _d, _g in props)
+            members.append("    nonisolated %sinit(_ content: %sGeneratedContent) throws {\n%s\n    }" % (pub, FM, inits))
+        else:
+            cases = []
+            simple = True
+            for em in re.finditer(r"(?m)^[ \t]*case\s+([^\n]*)", flat):
+                for c in em.group(1).split(","):
+                    c = c.strip()
+                    if not c:
+                        continue
+                    if not re.fullmatch(r"\w+", c):
+                        simple = False
+                    else:
+                        cases.append(c)
+            if not simple or not cases:
+                continue
+            lits = ", ".join('"%s"' % c for c in cases)
+            members.append("    nonisolated %sstatic var generationSchema: %sGenerationSchema {\n        %sGenerationSchema(type: Self.self, description: %s, anyOf: [%s])\n    }" % (pub, FM, FM, desc_text, lits))
+            sw = "\n".join('        case .%s: return %sGeneratedContent("%s")' % (c, FM, c) for c in cases)
+            members.append("    nonisolated %svar generatedContent: %sGeneratedContent {\n        switch self {\n%s\n        }\n    }" % (pub, FM, sw))
+            sw2 = "\n".join('        case "%s": self = .%s' % (c, c) for c in cases)
+            members.append("    nonisolated %sinit(_ content: %sGeneratedContent) throws {\n        switch try content.value(String.self) {\n%s\n        default: throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: \"unknown case of %s\"))\n        }\n    }" % (pub, FM, sw2, name))
+        # an extension (like the real macro writes), so the type keeps its memberwise initializer; a nested type
+        # needs the full path of its enclosing types
+        path = ".".join(_enclosing_path(clean, a) + [name])
+        appended.append("@available(iOS 26.0, *)\nextension %s: %sGenerable {\n%s\n}\n" % (path, FM, "\n\n".join(members)))
+        edits.append((a, attr_end, ""))
+        done_any = True
+    if not done_any:
+        return None
+    edits.sort(key=lambda e: (e[0], e[1]), reverse=True)
+    out = src
+    for a, b, text in edits:
+        out = out[:a] + text + out[b:]
+    return out + "\n\n" + "\n".join(appended)
+
+
 # ---------------------------------------------------------------- SwiftUI @Entry
 _ENTRY_KEYS = {
     "EnvironmentValues": "SwiftUI.EnvironmentKey",
@@ -821,6 +1009,9 @@ def expand_source(src):
     st = expand_state(src)
     if st is not None:
         src, changed = st, True
+    gen = expand_generable(src)
+    if gen is not None:
+        src, changed = gen, True
     qry = expand_query(src)
     if qry is not None:
         src, changed = qry, True
