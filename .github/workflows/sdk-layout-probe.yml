@@ -16,3 +16,15 @@ jobs:
           echo "--- sdk usr/lib/swift"; ls "$SDK/usr/lib/swift" 2>&1 | head -30
           echo "--- find iphoneos swift dirs"; find $TC/lib $SDK/usr/lib -maxdepth 3 -name 'iphoneos*' 2>/dev/null | head
           echo "--- libswiftCore"; find $TC/lib $SDK/usr/lib -maxdepth 4 -name 'Swift.swiftmodule' -o -maxdepth 4 -name 'libswiftCore*' 2>/dev/null | head
+      - run: |
+          SEL=$(ls -d /Applications/Xcode_27*.app | grep -viE 'beta|rc|preview' | sort -V | tail -1)
+          SEL=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$SEL")
+          export DEVELOPER_DIR="$SEL/Contents/Developer"
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          R=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$SDK"); echo "real=$R"
+          P=pack; mkdir -p $P
+          cp -R "$R" "$P/$(basename "$R")"
+          ls -la $P | head
+          (cd $P && zip -qry ../p.zip .)
+          echo "--- zip top-level entries"; unzip -Z1 p.zip | awk -F/ '{print $1}' | sort | uniq -c | head -20
+          unzip -Z1 p.zip | head -5
