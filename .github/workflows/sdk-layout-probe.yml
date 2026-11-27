@@ -8,10 +8,7 @@ jobs:
           SEL=$(ls -d /Applications/Xcode_27*.app | grep -viE 'beta|rc|preview' | sort -V | tail -1)
           export DEVELOPER_DIR="$SEL/Contents/Developer"
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-          TC=$DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr
-          for fw in SwiftUICore SwiftUI Observation Foundation SwiftData; do
-            G=$(find $SDK/System/Library/Frameworks/$fw.framework $SDK/usr/lib/swift/$fw.swiftmodule -name 'arm64e-apple-ios.swiftinterface' 2>/dev/null | head -1)
-            [ -n "$G" ] && { echo "== $fw"; grep -o "public macro [A-Za-z_]*[^=]*" "$G" | cut -c1-110 | sort -u | head -40; }
+          F=$(find $SDK/System/Library/Frameworks/FoundationModels.framework -name 'arm64e-apple-ios.swiftinterface' | head -1); echo "$F"; wc -l "$F"
+          for pat in "protocol Generable" "protocol ConvertibleFromGeneratedContent" "protocol ConvertibleToGeneratedContent" "protocol InstructionsRepresentable" "struct GenerationSchema" "struct DynamicGenerationSchema" "struct GeneratedContent"; do
+            echo "=== $pat"; L=$(grep -n "$pat" "$F" | head -1 | cut -d: -f1); [ -n "$L" ] && sed -n "$((L-3)),$((L+30))p" "$F" | cut -c1-240
           done
-          F=$(find $SDK/System/Library/Frameworks/SwiftUICore.framework -name 'arm64e-apple-ios.swiftinterface' | head -1)
-          echo "--- 8314"; sed -n 8306,8316p "$F" | cut -c1-300
