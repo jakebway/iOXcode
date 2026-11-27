@@ -502,6 +502,9 @@ final class BuildPipeline {
                 }
                 o.defines = (mod["cdefines"] as? [String]) ?? []
                 o.optimize = true
+                // Clang modules only matter for Objective-C (`@import`); plain C files whose headers sit in several include
+                // folders (swift-cmark's extensions) hit 'declaration is not visible' errors when module maps are on.
+                o.modules = cfiles.contains { ["m", "mm"].contains(($0 as NSString).pathExtension.lowercased()) }
                 if let c = mod["cStd"] as? String { o.cStd = c }
                 if let c = mod["cxxStd"] as? String { o.cxxStd = c }
                 o.arc = true   // SwiftPM compiles Objective-C with ARC unless the target says otherwise
