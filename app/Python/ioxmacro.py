@@ -712,7 +712,12 @@ def strip_previews(src):
                         i += 1
                         break
                 i += 1
-            out.append(src[pos:m.start()])
+            # attributes written above the preview (`@available(iOS 17, *)`, `@MainActor`) belong to it: drop them too
+            start = m.start()
+            am = re.search(r"(?:@[A-Za-z_]\w*(?:\([^()]*(?:\([^()]*\)[^()]*)*\))?[ \t\r\n]*)+$", clean[pos:start])
+            if am:
+                start = pos + am.start()
+            out.append(src[pos:start])
             pos = i
             changed = True
     out.append(src[pos:])
