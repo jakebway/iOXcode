@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Gifu  Reference</title>
+    <link rel="stylesheet" type="text/css" href="css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="css/highlight.css" />
+    <meta charset='utf-8'>
+    <script src="js/jquery.min.js" defer></script>
+    <script src="js/jazzy.js" defer></script>
+    
+  </head>
+  <body>
+    <a title="Gifu  Reference"></a>
+    <header>
+      <div class="content-wrapper">
+        <p><a href="index.html">Gifu Docs</a> (100% documented)</p>
+        <p class="header-right"><a href="https://github.com/kaishin/gifu/"><img src="img/gh.png"/>View on GitHub</a></p>
+        <p class="header-right"><a href="dash-feed://https%3A%2F%2Fkaishin%2Egithub%2Eio%2Fdocsets%2FGifu%2Exml"><img src="img/dash.png"/>Install in Dash</a></p>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <p id="breadcrumbs">
+        <a href="index.html">Gifu Reference</a>
+        <img id="carat" src="img/carat.png" />
+        Gifu  Reference
+      </p>
+    </div>
+    <div class="content-wrapper">
+      <nav class="sidebar">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a href="Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a href="Classes/Animator.html">Animator</a>
+              </li>
+              <li class="nav-group-task">
+                <a href="Classes/GIFImageView.html">GIFImageView</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a href="Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a href="Protocols/GIFAnimatable.html">GIFAnimatable</a>
+              </li>
+              <li class="nav-group-task">
+                <a href="Protocols/ImageContainer.html">ImageContainer</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+        <section>
+          <section class="section">
+            
+            <h1 id='img-src-https-github-com-kaishin-gifu-raw-master-header-gif-alt-logo' class='heading'><img src="https://github.com/kaishin/Gifu/raw/master/header.gif" alt="Logo"></h1>
+
+<p><a href="https://github.com/kaishin/Gifu/releases/latest"><img src="https://img.shields.io/github/release/kaishin/Gifu.svg" alt="GitHub release"></a> <img src="https://www.bitrise.io/app/a0eae2c9b6aa754c.svg?token=dDlRyPi2aOlZnvbl4kL8Kw&branch=master" alt="Bitrise"> <a href="https://github.com/Carthage/Carthage"><img src="https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat" alt="Carthage compatible"></a> <img src="https://img.shields.io/badge/Swift-4.0-orange.svg" alt="Swift 4.0"> <img src="https://img.shields.io/badge/platforms-iOS-lightgrey.svg" alt="platforms"></p>
+
+<p>Gifu adds protocol-based, performance-aware animated GIF support to UIKit. (It&rsquo;s also a <a href="https://goo.gl/maps/CCeAc">prefecture in Japan</a>).</p>
+<h2 id='install' class='heading'>Install</h2>
+<h3 id='a-href-https-github-com-carthage-carthage-carthage-a' class='heading'><a href="https://github.com/Carthage/Carthage">Carthage</a></h3>
+
+<ul>
+<li>Add the following to your Cartfile: <code>github &quot;kaishin/Gifu&quot;</code></li>
+<li>Then run <code>carthage update</code></li>
+<li>Follow the current instructions in <a href="https://github.com/Carthage/Carthage#adding-frameworks-to-an-application">Carthage&rsquo;s README</a>
+for up to date installation instructions.</li>
+</ul>
+<h3 id='a-href-http-cocoapods-org-cocoapods-a' class='heading'><a href="http://cocoapods.org">CocoaPods</a></h3>
+
+<ul>
+<li>Add the following to your <a href="http://guides.cocoapods.org/using/the-podfile.html">Podfile</a>: <code>pod &#39;Gifu&#39;</code></li>
+<li>You will also need to make sure you&rsquo;re opting into using frameworks: <code>use_frameworks!</code></li>
+<li>Then run <code>pod install</code> with CocoaPods 0.36 or newer.</li>
+</ul>
+<h2 id='how-it-works' class='heading'>How It Works</h2>
+
+<p><code>Gifu</code> does not require using the built-in <code><a href="Classes/GIFImageView.html">GIFImageView</a></code> subclass. The <code><a href="Classes/Animator.html">Animator</a></code> class does the heavy-lifting, while the <code><a href="Protocols/GIFAnimatable.html">GIFAnimatable</a></code> protocol exposes the functionality to the view classes that conform to it, using protocol extensions.</p>
+
+<p>The <code><a href="Classes/Animator.html">Animator</a></code> has a <code>FrameStore</code> that only keeps a limited number of frames in-memory, effectively creating a buffer for the animation without consuming all the available memory. This approach makes loading large GIFs a lot more resource-friendly.</p>
+
+<p>The figure below summarizes how this works in practice. Given an image
+containing 10 frames, Gifu will load the current frame (red), buffer the next two frames in this example (orange), and empty up all the other frames to free up memory (gray):</p>
+
+<p><img src="https://github.com/kaishin/Gifu/raw/master/gifu-figure.gif" width="300" /></p>
+<h2 id='usage' class='heading'>Usage</h2>
+
+<p>There are two options that should cover any situation:</p>
+
+<ul>
+<li>Use the built-in <code><a href="Classes/GIFImageView.html">GIFImageView</a></code> subclass if you don&rsquo;t need to combine GIF support with another image library.</li>
+<li>If you need more flexibility and composability, make your class conform to <code><a href="Protocols/GIFAnimatable.html">GIFAnimatable</a></code>. In practice, any <code>UIView</code> subclass would do, since you get most of the required properties for free. For best results, make your <code>UIImageView</code> subclass conform to <code><a href="Protocols/GIFAnimatable.html">GIFAnimatable</a></code> to get access to other features such as intrinsic content size.</li>
+</ul>
+<h3 id='gifanimatable' class='heading'>GIFAnimatable</h3>
+
+<p>The bread and butter of Gifu. Through protocol extensions, <code><a href="Protocols/GIFAnimatable.html">GIFAnimatable</a></code> exposes all the APIs of the library, and with very little boilerplate, any class can conform to it.</p>
+<pre class="highlight swift"><code><span class="kd">class</span> <span class="kt">MyImageView</span><span class="p">:</span> <span class="kt">UIImageView</span><span class="p">,</span> <span class="kt">GIFAnimatable</span> <span class="p">{</span>
+  <span class="kd">public</span> <span class="kd">lazy</span> <span class="k">var</span> <span class="nv">animator</span><span class="p">:</span> <span class="kt">Animator</span><span class="p">?</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="kt">Animator</span><span class="p">(</span><span class="nv">withDelegate</span><span class="p">:</span> <span class="k">self</span><span class="p">)</span>
+  <span class="p">}()</span>
+
+  <span class="k">override</span> <span class="kd">public</span> <span class="kd">func</span> <span class="nf">display</span><span class="p">(</span><span class="n">_</span> <span class="nv">layer</span><span class="p">:</span> <span class="kt">CALayer</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nf">updateImageIfNeeded</span><span class="p">()</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+
+<p>That&rsquo;s it. Now <code>MyImageView</code> has access to all these methods and properties:</p>
+
+<ul>
+<li><code>prepareForAnimation(withGIFNamed:)</code> and <code>prepareForAnimation(withGIFData:)</code> to prepare the animator property for animation.</li>
+<li><code>startAnimatingGIF()</code> and <code>stopAnimatingGIF()</code> to control the animation.</li>
+<li><code>animate(withGIFNamed:)</code> and <code>animate(withGIFData:)</code> to prepare for animation and start animating immediately.</li>
+<li><code>frameCount</code>, <code>isAnimatingGIF</code>, and <code>activeFrame</code> to inspect the GIF view.</li>
+<li><code>prepareForReuse()</code> to free up resources.</li>
+<li><code>updateImageIfNeeded()</code> to update the image property if necessary.</li>
+</ul>
+
+<p>Furthermore, you can make any class GIF-animatable, starting with <code>UIView</code> subclasses:</p>
+<pre class="highlight swift"><code><span class="kd">class</span> <span class="kt">CustomAnimatedView</span><span class="p">:</span> <span class="kt">UIView</span><span class="p">,</span> <span class="kt">GIFAnimatable</span> <span class="p">{</span>
+  <span class="kd">public</span> <span class="kd">lazy</span> <span class="k">var</span> <span class="nv">animator</span><span class="p">:</span> <span class="kt">Animator</span><span class="p">?</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="kt">Animator</span><span class="p">(</span><span class="nv">withDelegate</span><span class="p">:</span> <span class="k">self</span><span class="p">)</span>
+  <span class="p">}()</span>
+
+  <span class="k">override</span> <span class="kd">public</span> <span class="kd">func</span> <span class="nf">display</span><span class="p">(</span><span class="n">_</span> <span class="nv">layer</span><span class="p">:</span> <span class="kt">CALayer</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nf">updateImageIfNeeded</span><span class="p">()</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+
+<p>You can also make <code>UIKit</code> classes conform using associated objects may you wish:</p>
+<pre class="highlight swift"><code><span class="kd">import</span> <span class="kt">UIKit</span>
+<span class="kd">import</span> <span class="kt">Gifu</span>
+
+<span class="kd">extension</span> <span class="kt">UIImageView</span><span class="p">:</span> <span class="kt">GIFAnimatable</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">struct</span> <span class="kt">AssociatedKeys</span> <span class="p">{</span>
+    <span class="kd">static</span> <span class="k">var</span> <span class="nv">AnimatorKey</span> <span class="o">=</span> <span class="s">"gifu.animator.key"</span>
+  <span class="p">}</span>
+
+  <span class="k">override</span> <span class="n">open</span> <span class="kd">func</span> <span class="nf">display</span><span class="p">(</span><span class="n">_</span> <span class="nv">layer</span><span class="p">:</span> <span class="kt">CALayer</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nf">updateImageIfNeeded</span><span class="p">()</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="k">var</span> <span class="nv">animator</span><span class="p">:</span> <span class="kt">Animator</span><span class="p">?</span> <span class="p">{</span>
+    <span class="k">get</span> <span class="p">{</span>
+      <span class="k">guard</span> <span class="k">let</span> <span class="nv">animator</span> <span class="o">=</span> <span class="nf">objc_getAssociatedObject</span><span class="p">(</span><span class="k">self</span><span class="p">,</span> <span class="o">&amp;</span><span class="kt">AssociatedKeys</span><span class="o">.</span><span class="kt">AnimatorKey</span><span class="p">)</span> <span class="k">as?</span> <span class="kt">Animator</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">let</span> <span class="nv">animator</span> <span class="o">=</span> <span class="kt">Animator</span><span class="p">(</span><span class="nv">withDelegate</span><span class="p">:</span> <span class="k">self</span><span class="p">)</span>
+        <span class="k">self</span><span class="o">.</span><span class="n">animator</span> <span class="o">=</span> <span class="n">animator</span>
+        <span class="k">return</span> <span class="n">animator</span>
+      <span class="p">}</span>
+
+      <span class="k">return</span> <span class="n">animator</span>
+    <span class="p">}</span>
+
+    <span class="k">set</span> <span class="p">{</span>
+      <span class="nf">objc_setAssociatedObject</span><span class="p">(</span><span class="k">self</span><span class="p">,</span> <span class="o">&amp;</span><span class="kt">AssociatedKeys</span><span class="o">.</span><span class="kt">AnimatorKey</span><span class="p">,</span> <span class="n">newValue</span> <span class="k">as</span> <span class="kt">Animator</span><span class="p">?,</span> <span class="o">.</span><span class="kt">OBJC_ASSOCIATION_RETAIN_NONATOMIC</span><span class="p">)</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+<h3 id='examples' class='heading'>Examples</h3>
+
+<p>The simplest way to get started is initializing a <code><a href="Protocols/GIFAnimatable.html">GIFAnimatable</a></code> class in code or in a storyboard, then calling <code>animate(:)</code> on it.</p>
+<pre class="highlight swift"><code><span class="k">let</span> <span class="nv">imageView</span> <span class="o">=</span> <span class="kt">GIFImageView</span><span class="p">(</span><span class="nv">frame</span><span class="p">:</span> <span class="kt">CGRect</span><span class="p">(</span><span class="nv">x</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">y</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">width</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span> <span class="nv">height</span><span class="p">:</span> <span class="mi">100</span><span class="p">))</span>
+<span class="n">imageView</span><span class="o">.</span><span class="nf">animate</span><span class="p">(</span><span class="nv">withGIFNamed</span><span class="p">:</span> <span class="s">"mugen"</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nf">print</span><span class="p">(</span><span class="s">"It's animating!"</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre>
+
+<p>You can also prepare for the animation when the view loads and only start animating after a user interaction.</p>
+<pre class="highlight swift"><code><span class="c1">// In your view controller..</span>
+
+<span class="k">override</span> <span class="kd">func</span> <span class="nf">viewDidLoad</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">super</span><span class="o">.</span><span class="nf">viewDidLoad</span><span class="p">()</span>
+  <span class="n">imageView</span><span class="o">.</span><span class="nf">prepareForAnimation</span><span class="p">(</span><span class="nv">withGIFNamed</span><span class="p">:</span> <span class="s">"mugen"</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nf">print</span><span class="p">(</span><span class="s">"Ready to animate!"</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">@IBAction</span> <span class="kd">func</span> <span class="nf">toggleAnimation</span><span class="p">(</span><span class="n">_</span> <span class="nv">sender</span><span class="p">:</span> <span class="kt">AnyObject</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="n">imageView</span><span class="o">.</span><span class="n">isAnimatingGIF</span> <span class="p">{</span>
+    <span class="n">imageView</span><span class="o">.</span><span class="nf">stopAnimatingGIF</span><span class="p">()</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">imageView</span><span class="o">.</span><span class="nf">startAnimatingGIF</span><span class="p">()</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+
+<p>If you are using a <code><a href="Protocols/GIFAnimatable.html">GIFAnimatable</a></code> class in a table or collection view, you can call the <code>prepareForReuse()</code> method in your cell subclass:</p>
+<pre class="highlight swift"><code><span class="k">override</span> <span class="kd">func</span> <span class="nf">prepareForReuse</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">super</span><span class="o">.</span><span class="nf">prepareForReuse</span><span class="p">()</span>
+  <span class="n">imageView</span><span class="o">.</span><span class="nf">prepareForReuse</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre>
+<h3 id='demo-app' class='heading'>Demo App</h3>
+
+<p>Clone or download the repository and open <code>Gifu.xcworkspace</code> to check out the demo app.</p>
+<h2 id='documentation' class='heading'>Documentation</h2>
+
+<p>See the <a href="http://kaishin.github.io/Gifu/">full API documentation</a>.</p>
+<h2 id='compatibility' class='heading'>Compatibility</h2>
+
+<ul>
+<li>iOS 9.0+</li>
+<li>Swift 4.0</li>
+<li>Xcode 9.0</li>
+</ul>
+<h2 id='license' class='heading'>License</h2>
+
+<p>See LICENSE.</p>
+
+          </section>
+        </section>
+        <section id="footer">
+          <p>2018 © Reda Lemeden. See LICENSE for more details.</p>
+          <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.0</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+        </section>
+      </article>
+    </div>
+  </body>
+</div>
+</html>

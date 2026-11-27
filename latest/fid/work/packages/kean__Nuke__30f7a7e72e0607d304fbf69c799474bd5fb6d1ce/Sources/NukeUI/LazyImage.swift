@@ -1,0 +1,268 @@
+// The MIT License (MIT)
+//
+// Copyright (c) 2015-2026 Alexander Grebenyuk (github.com/kean).
+
+import Foundation
+import Nuke
+import SwiftUI
+import Combine
+
+public typealias ImageRequest = Nuke.ImageRequest
+
+/// A view that asynchronously loads and displays an image.
+///
+/// ``LazyImage`` is designed to be similar to the native [`AsyncImage`](https://developer.apple.com/documentation/SwiftUI/AsyncImage),
+/// but it uses [Nuke](https://github.com/kean/Nuke) for loading images. You
+/// can take advantage of all of its features, such as caching, prefetching,
+/// task coalescing, smart background decompression, request priorities, and more.
+@MainActor
+public struct LazyImage<Content: View>: View {
+    @StateObject private var viewModel = FetchImage()
+
+    private var context: LazyImageContext?
+    private var makeContent: ((LazyImageState) -> Content)?
+    private var transaction: Transaction
+    private var pipeline: ImagePipeline = .shared
+    private var onStart: (@MainActor @Sendable (ImageTask) -> Void)?
+    private var onDisappearBehavior: DisappearBehavior? = .cancel
+    private var onCompletion: (@MainActor @Sendable (Result<ImageResponse, Error>) -> Void)?
+
+    // MARK: Initializers
+
+    /// Loads and displays an image using `SwiftUI.Image`.
+    ///
+    /// - Parameters:
+    ///   - url: The image URL.
+    public init(url: URL?) where Content == Image {
+        if let url {
+            self.init(request: ImageRequest(url: url))
+        } else {
+            self.init(request: nil)
+        }
+    }
+
+    /// Loads and displays an image using `SwiftUI.Image`.
+    ///
+    /// - Parameters:
+    ///   - request: The image request.
+    public init(request: ImageRequest?) where Content == Image {
+        if let request {
+            self.context = LazyImageContext(request: request)
+        }
+        self.transaction = Transaction(animation: nil)
+    }
+
+    /// Loads an image and displays custom content for each state.
+    ///
+    /// See also ``init(request:transaction:content:)``
+    public init(
+        url: URL?,
+        transaction: Transaction = Transaction(animation: nil),
+        @ViewBuilder content: @escaping (LazyImageState) -> Content
+    ) {
+        if let url {
+            self.init(request: ImageRequest(url: url), transaction: transaction, content: content)
+        } else {
+            self.init(request: nil, transaction: transaction, content: content)
+        }
+    }
+
+    /// Loads an image and displays custom content for each state.
+    ///
+    /// - Parameters:
+    ///   - request: The image request.
+    ///   - transaction: By default, transaction with no animations.
+    ///   - content: The view to show for each of the image loading states.
+    ///
+    /// ```swift
+    /// LazyImage(request: $0) { state in
+    ///     if let image = state.image {
+    ///         image // Displays the loaded image.
+    ///     } else if state.error != nil {
+    ///         Color.red // Indicates an error.
+    ///     } else {
+    ///         Color.blue // Acts as a placeholder.
+    ///     }
+    /// }
+    /// ```
+    public init(
+        request: ImageRequest?,
+        transaction: Transaction = Transaction(animation: nil),
+        @ViewBuilder content: @escaping (LazyImageState) -> Content
+    ) {
+        if let request {
+            self.context = LazyImageContext(request: request)
+        }
+        self.transaction = transaction
+        self.makeContent = content
+    }
+
+    // MARK: Options
+
+    /// Sets processors to be applied to the image.
+    ///
+    /// Processors are only applied if the request does not already define its
+    /// own processors. The request's processors always take priority.
+    public consuming func processors(_ processors: [any ImageProcessing]?) -> Self {
+        map { $0.context?.request.processors = processors ?? [] }
+    }
+
+    /// Sets the priority of the requests.
+    public consuming func priority(_ priority: ImageRequest.Priority?) -> Self {
+        map { $0.context?.request.priority = priority ?? .normal }
+    }
+
+    /// Changes the underlying pipeline used for image loading.
+    public consuming func pipeline(_ pipeline: ImagePipeline) -> Self {
+        map { $0.pipeline = pipeline }
+    }
+
+    /// Defines the behavior when the view disappears.
+    @frozen public enum DisappearBehavior {
+        /// Cancels the current request but keeps the presentation state of
+        /// the already displayed image.
+        case cancel
+        /// Lowers the request's priority to very low.
+        case lowerPriority
+    }
+
+    /// Gets called when the request is started.
+    public consuming func onStart(_ closure: @escaping @MainActor @Sendable (ImageTask) -> Void) -> Self {
+        map { $0.onStart = closure }
+    }
+
+    /// Changes the behavior when the view disappears. By default, the current
+    /// request is canceled. Pass `nil` to disable any behavior on disappear.
+    public consuming func onDisappear(_ behavior: DisappearBehavior?) -> Self {
+        map { $0.onDisappearBehavior = behavior }
+    }
+
+    /// Gets called when the current request is completed.
+    public consuming func onCompletion(_ closure: @escaping @MainActor @Sendable (Result<ImageResponse, Error>) -> Void) -> Self {
+        map { $0.onCompletion = closure }
+    }
+
+    private consuming func map(_ closure: (inout LazyImage) -> Void) -> Self {
+        var copy = self
+        closure(&copy)
+        return copy
+    }
+
+    // MARK: Body
+
+    public var body: some View {
+        ZStack {
+            if let makeContent {
+                makeContent(viewModel)
+            } else {
+                makeDefaultContent(for: viewModel)
+            }
+        }
+        .onAppear { onAppear() }
+        .onDisappear { onDisappear() }
+        .onChange(of: context) {
+            viewModel.load($0?.request)
+        }
+    }
+
+    @ViewBuilder
+    private func makeDefaultContent(for state: LazyImageState) -> some View {
+        if let image = state.image {
+            image
+        } else {
+            Color(.secondarySystemBackground)
+        }
+    }
+
+    private func onAppear() {
+        viewModel.transaction = transaction
+        viewModel.pipeline = pipeline
+        viewModel.onStart = onStart
+        viewModel.onCompletion = onCompletion
+        // Undo the priority lowered by the `.lowerPriority` disappear behavior
+        // so that the requests use their own priorities again.
+        viewModel.priority = nil
+        viewModel.load(context?.request)
+    }
+
+    private func onDisappear() {
+        guard let behavior = onDisappearBehavior else { return }
+        switch behavior {
+        case .cancel:
+            viewModel.cancel()
+        case .lowerPriority:
+            viewModel.priority = .veryLow
+        }
+    }
+}
+
+private struct LazyImageContext: Equatable {
+    var request: ImageRequest
+
+    static func == (lhs: LazyImageContext, rhs: LazyImageContext) -> Bool {
+        let lhs = lhs.request
+        let rhs = rhs.request
+        return lhs.imageID == rhs.imageID &&
+        lhs.priority == rhs.priority &&
+        lhs.processors == rhs.processors &&
+        lhs.priority == rhs.priority &&
+        lhs.options == rhs.options
+    }
+}
+
+#if DEBUG
+struct LazyImage_Previews: PreviewProvider {
+    static var previews: some View {
+        Group {
+            LazyImageDemoView()
+                .previewDisplayName("LazyImage")
+
+            LazyImage(url: URL(string: "https://kean.blog/images/pulse/01.png"))
+                .previewDisplayName("LazyImage (Default)")
+
+            AsyncImage(url: URL(string: "https://kean.blog/images/pulse/01.png"))
+                .previewDisplayName("AsyncImage")
+        }
+    }
+}
+
+// This demonstrates that the view reacts correctly to the URL changes.
+private struct LazyImageDemoView: View {
+    @State var url = URL(string: "https://kean.blog/images/pulse/01.png")
+    @State var isBlured = false
+    @State var imageViewId = UUID()
+
+    var body: some View {
+        VStack {
+            Spacer()
+
+            LazyImage(url: url) { state in
+                if let image = state.image {
+                    image.resizable().aspectRatio(contentMode: .fit)
+                }
+            }
+#if os(iOS) || os(tvOS) || os(macOS) || os(visionOS)
+            .processors(isBlured ? [ImageProcessors.GaussianBlur()] : [])
+#endif
+            .id(imageViewId) // Example of how to implement retry
+
+            Spacer()
+            VStack(alignment: .leading, spacing: 16) {
+                Button("Change Image") {
+                    if url == URL(string: "https://kean.blog/images/pulse/01.png") {
+                        url = URL(string: "https://kean.blog/images/pulse/02.png")
+                    } else {
+                        url = URL(string: "https://kean.blog/images/pulse/01.png")
+                    }
+                }
+                Button("Retry") { imageViewId = UUID() }
+                Toggle("Apply Blur", isOn: $isBlured)
+            }
+            .padding()
+#if os(iOS) || os(tvOS) || os(macOS) || os(visionOS)
+            .background(Material.ultraThick)
+#endif
+        }
+    }
+}
+#endif
