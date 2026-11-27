@@ -1,0 +1,331 @@
+// The MIT License (MIT)
+//
+// Copyright (c) 2015-2026 Alexander Grebenyuk (github.com/kean).
+
+import Testing
+import Foundation
+@testable import Nuke
+
+// Test ResumableData directly to make sure it makes the right decisions based
+// on HTTP flows.
+@Suite(.timeLimit(.minutes(5)))
+struct ResumableDataTests {
+    @Test func resumingRequest() {
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "bytes",
+            "Content-Length": "2000",
+            "ETag": "1234"
+        ])
+        let data = ResumableData(response: response, data: _data)!
+        var request = URLRequest(url: Test.url)
+        data.resume(request: &request)
+
+        // Check that we've set both required "range" filed
+        #expect(request.allHTTPHeaderFields?["Range"] == "bytes=1000-")
+        #expect(request.allHTTPHeaderFields?["If-Range"] == "1234")
+    }
+
+    @Test func resumingRequestUsesLastModifiedWhenNoETag() {
+        // GIVEN resumable data validated by Last-Modified (no ETag)
+        let lastModified = "Wed, 21 Oct 2015 07:28:00 GMT"
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "bytes",
+            "Content-Length": "2000",
+            "Last-Modified": lastModified
+        ])
+        let data = ResumableData(response: response, data: _data)!
+        var request = URLRequest(url: Test.url)
+        data.resume(request: &request)
+
+        // THEN Range header is correct and If-Range contains the Last-Modified value
+        #expect(request.allHTTPHeaderFields?["Range"] == "bytes=1000-")
+        #expect(request.allHTTPHeaderFields?["If-Range"] == lastModified)
+    }
+
+    @Test func checkingResumedResponse() {
+        #expect(ResumableData.isResumedResponse(_makeResponse(statusCode: 206)))
+
+        // Need to load new data
+        #expect(!ResumableData.isResumedResponse(_makeResponse(statusCode: 200)))
+
+        #expect(!ResumableData.isResumedResponse(_makeResponse(statusCode: 404)))
+    }
+
+    // MARK: - Creation (Positive)
+
+    @Test func createWithETag() {
+        // Given
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "bytes",
+            "Content-Length": "2000",
+            "ETag": "1234"
+        ])
+        let data = ResumableData(response: response, data: _data)
+
+        // Then
+        #expect(data != nil)
+        #expect(data?.data.count == 1000)
+        #expect(data?.validator == "1234")
+    }
+
+    @Test func createWithETagSpelledIncorrectly() {
+        // Given
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "bytes",
+            "Content-Length": "2000",
+            "Etag": "1234"
+        ])
+        let data = ResumableData(response: response, data: _data)
+
+        // Then
+        #expect(data != nil)
+        #expect(data?.data.count == 1000)
+        #expect(data?.validator == "1234")
+    }
+
+    @Test func createWithLastModified() {
+        // Given
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "bytes",
+            "Content-Length": "2000",
+            "Last-Modified": "Wed, 21 Oct 2015 07:28:00 GMT"
+        ])
+        let data = ResumableData(response: response, data: _data)
+
+        // Then
+        #expect(data != nil)
+        #expect(data?.data.count == 1000)
+        #expect(data?.validator == "Wed, 21 Oct 2015 07:28:00 GMT")
+    }
+
+    @Test func createWithBothValidators() {
+        // Given
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "bytes",
+            "ETag": "1234",
+            "Content-Length": "2000",
+            "Last-Modified": "Wed, 21 Oct 2015 07:28:00 GMT"
+        ])
+        let data = ResumableData(response: response, data: _data)
+
+        // Then
+        #expect(data != nil)
+        #expect(data?.data.count == 1000)
+        #expect(data?.validator == "1234")
+    }
+
+    // We should store resumable data not just for status code "200 OK", but also
+    // for "206 Partial Content" in case the resumed download fails.
+    @Test func createWithStatusCodePartialContent() {
+        // Given
+        let response = _makeResponse(statusCode: 206, headers: [
+            "Accept-Ranges": "bytes",
+            "Content-Length": "2000",
+            "ETag": "1234"
+        ])
+        let data = ResumableData(response: response, data: _data)
+
+        // Then
+        #expect(data != nil)
+        #expect(data?.data.count == 1000)
+        #expect(data?.validator == "1234")
+    }
+
+    // MARK: - Creation (Negative)
+
+    @Test func createWithEmptyData() {
+        // Given
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "bytes",
+            "Content-Length": "2000",
+            "ETag": "1234"
+        ])
+        let data = ResumableData(response: response, data: Data())
+
+        // Then
+        #expect(data == nil)
+    }
+
+    @Test func createWithNotHTTPResponse() {
+        // Given
+        let response = URLResponse(url: Test.url, mimeType: "jpeg", expectedContentLength: 10000, textEncodingName: nil)
+        let data = ResumableData(response: response, data: _data)
+
+        // Then
+        #expect(data == nil)
+    }
+
+    @Test func createWithInvalidStatusCode() {
+        // Given
+        let response = _makeResponse(statusCode: 304, headers: [
+            "Accept-Ranges": "bytes",
+            "Content-Length": "2000",
+            "ETag": "1234"
+        ])
+        let data = ResumableData(response: response, data: _data)
+
+        // Then
+        #expect(data == nil)
+    }
+
+    @Test func createWithMissingValidator() {
+        // Given
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "bytes",
+            "Content-Length": "2000"
+        ])
+        let data = ResumableData(response: response, data: _data)
+
+        // Then
+        #expect(data == nil)
+    }
+
+    @Test func createWithMissingAcceptRanges() {
+        // Given
+        let response = _makeResponse(headers: [
+            "ETag": "1234",
+            "Content-Length": "2000"
+        ])
+        let data = ResumableData(response: response, data: _data)
+
+        // Then
+        #expect(data == nil)
+    }
+
+    @Test func createWithAcceptRangesNone() {
+        // Given
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "none",
+            "Content-Length": "2000",
+            "ETag": "1234"
+        ])
+        let data = ResumableData(response: response, data: _data)
+
+        // Then
+        #expect(data == nil)
+    }
+
+    @Test func createWhenFullDataIsLoaded() {
+        // Given
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "none",
+            "Content-Length": "1000",
+            "ETag": "1234"
+        ])
+        let data = ResumableData(response: response, data: _data)
+
+        // Then
+        #expect(data == nil)
+    }
+
+    @Test func createWhenDownloadIsCompleteReturnsNil() {
+        // GIVEN data whose length equals the Content-Length (download is complete)
+        let completeData = Data(count: 2000)
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "bytes",
+            "Content-Length": "2000",
+            "ETag": "1234"
+        ])
+
+        // WHEN trying to create resumable data from a fully-downloaded response
+        let data = ResumableData(response: response, data: completeData)
+
+        // THEN no resumable data is created — there is nothing to resume
+        #expect(data == nil)
+    }
+
+    @Test func createWhenDataExceedsContentLengthReturnsNil() {
+        // GIVEN data that exceeds the declared Content-Length (e.g. due to rounding)
+        let oversizedData = Data(count: 2001)
+        let response = _makeResponse(headers: [
+            "Accept-Ranges": "bytes",
+            "Content-Length": "2000",
+            "ETag": "xyz"
+        ])
+
+        let data = ResumableData(response: response, data: oversizedData)
+
+        #expect(data == nil)
+    }
+}
+
+@ImagePipelineActor
+@Suite(.timeLimit(.minutes(5)))
+struct ResumableDataStorageTests {
+    @Test func registerAndUnregister() {
+        let storage = ResumableDataStorage.shared
+
+        let pipeline = ImagePipeline {
+            $0.dataLoader = MockDataLoader()
+        }
+
+        storage.register(pipeline.id)
+        storage.unregister(pipeline.id)
+    }
+
+    @Test func storeAndRemoveResumableData() throws {
+        let storage = ResumableDataStorage.shared
+        let pipeline = ImagePipeline {
+            $0.dataLoader = MockDataLoader()
+        }
+        storage.register(pipeline.id)
+
+        let response = HTTPURLResponse(
+            url: Test.url,
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: [
+                "Accept-Ranges": "bytes",
+                "Content-Length": "2000",
+                "ETag": "abc123"
+            ]
+        )!
+        let resumableData = ResumableData(response: response, data: Data(count: 1000))!
+
+        let request = ImageRequest(url: Test.url)
+        storage.storeResumableData(resumableData, for: request, pipeline: pipeline)
+
+        let retrieved = try #require(storage.removeResumableData(for: request, pipeline: pipeline))
+        #expect(retrieved.data.count == 1000)
+        #expect(retrieved.validator == "abc123")
+
+        // Should be nil after removal
+        #expect(storage.removeResumableData(for: request, pipeline: pipeline) == nil)
+
+        storage.unregister(pipeline.id)
+    }
+
+    @Test func removeAllResponses() {
+        let storage = ResumableDataStorage.shared
+        let pipeline = ImagePipeline {
+            $0.dataLoader = MockDataLoader()
+        }
+        storage.register(pipeline.id)
+
+        let response = HTTPURLResponse(
+            url: Test.url,
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: [
+                "Accept-Ranges": "bytes",
+                "Content-Length": "2000",
+                "ETag": "xyz"
+            ]
+        )!
+        let resumableData = ResumableData(response: response, data: Data(count: 1000))!
+
+        storage.storeResumableData(resumableData, for: ImageRequest(url: Test.url), pipeline: pipeline)
+        storage.removeAllResponses()
+
+        let retrieved = storage.removeResumableData(for: ImageRequest(url: Test.url), pipeline: pipeline)
+        #expect(retrieved == nil)
+
+        storage.unregister(pipeline.id)
+    }
+}
+
+private let _data = Data(count: 1000)
+
+private func _makeResponse(statusCode: Int = 200, headers: [String: String]? = nil) -> HTTPURLResponse {
+    return HTTPURLResponse(url: Test.url, statusCode: statusCode, httpVersion: "HTTP/1.2", headerFields: headers)!
+}
