@@ -1,0 +1,10 @@
+Cacheable calls:   4101 / 4142 (99.01%)
+  Hits:              36 / 4101 ( 0.88%)
+    Direct:          11 /   36 (30.56%)
+    Preprocessed:    25 /   36 (69.44%)
+  Misses:          4065 / 4101 (99.12%)
+Uncacheable calls:   41 / 4142 ( 0.99%)
+Local storage:
+  Cache size (GB):  0.7 /  5.0 (13.74%)
+  Hits:              36 / 4101 ( 0.88%)
+  Misses:          4065 / 4101 (99.12%)
