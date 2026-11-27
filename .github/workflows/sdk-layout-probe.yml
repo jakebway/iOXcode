@@ -1,0 +1,18 @@
+name: SDK layout probe
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: xcode-27
+    steps:
+      - run: |
+          SEL=$(ls -d /Applications/Xcode_27*.app | grep -viE 'beta|rc|preview' | sort -V | tail -1)
+          export DEVELOPER_DIR="$SEL/Contents/Developer"
+          xcodebuild -version
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path); echo "SDK=$SDK"; ls -d "$(python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$SDK")"
+          TC=$DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr
+          echo "--- toolchain lib/swift"; ls $TC/lib/swift | head -50
+          echo "--- toolchain lib/swift-5.0"; ls $TC/lib/swift-5.0 2>&1 | head
+          echo "--- toolchain lib/clang"; ls $TC/lib/clang 2>&1
+          echo "--- sdk usr/lib/swift"; ls "$SDK/usr/lib/swift" 2>&1 | head -30
+          echo "--- find iphoneos swift dirs"; find $TC/lib $SDK/usr/lib -maxdepth 3 -name 'iphoneos*' 2>/dev/null | head
+          echo "--- libswiftCore"; find $TC/lib $SDK/usr/lib -maxdepth 4 -name 'Swift.swiftmodule' -o -maxdepth 4 -name 'libswiftCore*' 2>/dev/null | head
