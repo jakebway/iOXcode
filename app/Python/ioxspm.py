@@ -296,6 +296,20 @@ def load_manifest(pkg_dir):
     for dep in as_list(call.get("dependencies")):
         if isinstance(dep, Call) and dep.name == "package":
             man["deps"].append(parse_dependency(dep))
+    # dependencies added after the declaration: `package.dependencies += [ .package(...) ]` (swift-markdown, swift-argument-parser...)
+    for m in re.finditer(r"\bpackage\.dependencies\s*\+=\s*\[", src):
+        try:
+            extra = _resolve_consts(Parser(tokenize(src[m.end() - 1:])).parse_expr(), consts)
+        except Exception:
+            continue
+        for dep in as_list(extra):
+            if not (isinstance(dep, Call) and dep.name == "package"):
+                continue
+            d = parse_dependency(dep)
+            if d.get("local") and not os.path.isdir(os.path.normpath(os.path.join(pkg_dir, d["url"]))):
+                continue        # the other branch of an `if SWIFTCI_USE_LOCAL_DEPS` check: a checkout we do not have
+            if all(d["url"] != e["url"] for e in man["deps"]):
+                man["deps"].append(d)
     for t in as_list(call.get("targets")):
         if not isinstance(t, Call):
             continue
