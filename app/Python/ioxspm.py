@@ -282,6 +282,17 @@ def load_manifest(pkg_dir):
         if not m:
             return None
         return {"gnucxx": "gnu++", "cxx": "c++", "gnu": "gnu", "c": "c"}[m.group(1)] + m.group(2)
+    tv = re.match(r"\s*//\s*swift-tools-version\s*:?\s*(\d+)(?:\.(\d+))?", src)
+    man["toolsMajor"] = int(tv.group(1)) if tv else 5
+    modes = []
+    for key in ("swiftLanguageModes", "swiftLanguageVersions"):
+        for v in as_list(call.get(key)):
+            n = _name_of(v)
+            mm = re.match(r"v?(\d+)", n) if isinstance(n, str) else None
+            if mm:
+                modes.append(int(mm.group(1)))
+    # SwiftPM: the highest listed mode; without a list, the tools version decides (6.0 and later compile in Swift 6 mode)
+    man["swiftMode"] = max(modes) if modes else (6 if man["toolsMajor"] >= 6 else 5)
     man["cStd"] = _std(call.get("cLanguageStandard"), False)
     man["cxxStd"] = _std(call.get("cxxLanguageStandard"), True)
     for prod in as_list(call.get("products")):
@@ -333,6 +344,13 @@ def load_manifest(pkg_dir):
             elif isinstance(s, Call) and s.name == "unsafeFlags":
                 fl = (s.positional() or [[]])[0]
                 td["flags"] += [x for x in fl if isinstance(x, str)]
+            elif isinstance(s, Call) and s.name == "swiftLanguageMode" and _setting_applies(s):
+                n = _name_of((s.positional() or [None])[0])
+                mm = re.match(r"v?(\d+)", n) if isinstance(n, str) else None
+                if mm:
+                    td["swiftMode"] = int(mm.group(1))
+            elif isinstance(s, Call) and s.name == "defaultIsolation" and _setting_applies(s):
+                td["isolation"] = "MainActor" if "MainActor" in repr((s.positional() or [None])[0]) else "nonisolated"
             elif isinstance(s, Call) and s.name in ("enableUpcomingFeature", "enableExperimentalFeature") and _setting_applies(s):
                 f = (s.positional() or [None])[0]
                 if isinstance(f, str):
@@ -874,6 +892,8 @@ def resolve(request_path):
                     "libs": td.get("libs", []), "frameworks": td.get("fws", []),
                     "cflags": td.get("cflags", []),
                     "features": [list(x) for x in td.get("features", [])],
+                    "swiftMode": td.get("swiftMode") or p["manifest"].get("swiftMode", 5),
+                    "isolation": td.get("isolation"),
                     "cStd": p["manifest"].get("cStd"), "cxxStd": p["manifest"].get("cxxStd"),
                     "headerSearch": [os.path.normpath(os.path.join(root, h)) for h in td.get("headerSearch", [])],
                     "includeDir": os.path.join(root, td.get("publicHeadersPath") or "include") if cfiles else None})

@@ -14,6 +14,10 @@ sys.path.insert(0, os.path.join(HERE, "..", "..", "app", "Python"))
 import ioxspm, ioxmacro   # noqa: E402
 
 
+# macros iOXcode runs itself: the Observation and Swift plugins are bundled in its compiler; @State goes through an alias
+HANDLED = {"State", "Observable", "ObservationIgnored", "ObservationTracked", "DebugDescription", "bundle", "Preview", "Previewable"}
+
+
 def sh(cmd, **kw):
     return subprocess.run(cmd, capture_output=True, text=True, **kw)
 
@@ -67,7 +71,7 @@ def main():
                 continue
             clean = ioxmacro._blank_literals(src)
             for mm in re.finditer(r"(?<![A-Za-z0-9_.])([@#])([A-Za-z][A-Za-z0-9_]*)", clean):
-                if mm.group(2) in macros and not (mm.group(1) == "@" and mm.group(2) in ("State",)):
+                if mm.group(2) in macros and mm.group(2) not in HANDLED:
                     left.setdefault(mm.group(1) + mm.group(2), set()).add(os.path.basename(f))
         if left:
             unemulated[name] = left
@@ -83,10 +87,14 @@ def main():
         if not files:
             continue
         cmd = ["xcrun", "--sdk", "iphoneos", "swiftc", "-emit-module", "-emit-module-path", os.path.join(mods_dir, name + ".swiftmodule"),
-               "-module-name", name, "-parse-as-library", "-target", "arm64-apple-ios17.0", "-swift-version", "5", "-Onone",
+               "-module-name", name, "-parse-as-library", "-target", "arm64-apple-ios18.0", "-swift-version", str(m.get("swiftMode", 5)), "-Onone",
                "-I", mods_dir, "-module-cache-path", os.path.join(out, "mcache"), "-suppress-warnings"] + cargs
         for d in m.get("defines", []):
             cmd += ["-D", d]
+        for f in m.get("features", []):
+            cmd += f
+        if m.get("isolation") == "MainActor":
+            cmd += ["-default-isolation", "MainActor"]
         cmd += files
         r = sh(cmd, timeout=1200)
         if r.returncode == 0:
