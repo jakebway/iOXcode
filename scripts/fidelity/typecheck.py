@@ -15,7 +15,7 @@ import ioxspm, ioxmacro   # noqa: E402
 
 
 # macros iOXcode runs itself: the Observation and Swift plugins are bundled in its compiler; @State goes through an alias
-HANDLED = {"State", "Observable", "ObservationIgnored", "ObservationTracked", "DebugDescription", "bundle", "Preview", "Previewable"}
+HANDLED = {"function", "file", "line", "error", "warning", "column", "filePath", "fileID", "dsohandle", "State", "Observable", "ObservationIgnored", "ObservationTracked", "DebugDescription", "bundle", "Preview", "Previewable"}
 
 
 def sh(cmd, **kw):
