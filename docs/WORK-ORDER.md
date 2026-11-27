@@ -63,3 +63,7 @@ Status: done / building (pushed, not yet verified on device) / todo.
 ## H. Languages
 1. Swift (done), Objective-C/C/C++ (done, verify C++ heavy repos), Rust (in progress), assembly, Swift C++ interop, Swift embedded-mode flags. todo/in progress
 2. Testing: XCTest / Swift Testing build (and run in-process where the framework allows). [WORKAROUND] todo
+
+## Alter IPA tab (added)
+- Open any .ipa: bundle info, build metadata (DTXcode/DTSDK/compiler), permissions, provisioning profile and entitlements, frameworks/extensions, Mach-O load commands. Edit name/bundle id/version/min iOS and re-zip (signature removed; FlareStore signs).
+- Next: show entitlements embedded in the Mach-O code signature, strings/class dump, Info.plist raw editor, icon swap.
