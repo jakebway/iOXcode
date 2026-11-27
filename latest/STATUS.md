@@ -16,3 +16,9 @@ toolchain-sources: ok in 91s
 host-tools: ok in 235s
 
 ## llvm-ios (time left 19614s, disk: 36Gi free)
+llvm-ios: ok in 3030s
+
+## cmark-ios (time left 16584s, disk: 34Gi free)
+cmark-ios: ok in 4s
+
+## swift-ios (time left 16580s, disk: 34Gi free)
