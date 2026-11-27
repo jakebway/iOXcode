@@ -338,13 +338,19 @@ def expand_state(src):
     hits = [m for m in _STATE_RE.finditer(clean)]
     if not hits:
         return None
+    # one alias per file (the name carries a hash of the file so two files of a module never clash). A property cannot be
+    # more visible than its wrapper type, so the alias is public unless the file imports SwiftUI with a narrower access.
+    import hashlib
+    alias = "__iOXState_" + hashlib.sha1(src.encode("utf-8", "replace")).hexdigest()[:8]
+    narrow = re.search(r"(?m)^\s*(?:internal|private|fileprivate|package)\s+import\s+SwiftUI\b", src)
+    access = "" if narrow else "public "
     out, pos = [], 0
     for m in hits:
         out.append(src[pos:m.start()])
-        out.append("@__iOXState")
+        out.append("@" + alias)
         pos = m.end()
     out.append(src[pos:])
-    return "".join(out) + "\n\nfileprivate typealias __iOXState<Value> = SwiftUI.State<Value>\n"
+    return "".join(out) + "\n\n%stypealias %s<Value> = SwiftUI.State<Value>\n" % (access, alias)
 
 
 # ---------------------------------------------------------------- SwiftUI @Entry
