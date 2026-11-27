@@ -12,13 +12,14 @@ permissions:
 
 jobs:
   pack:
-    runs-on: macos-15
+    runs-on: xcode-27   # must match the compiler (Swift 6.4 / Xcode 27): packages gate APIs on the compiler version
     timeout-minutes: 40
     steps:
       - name: Build the pack
         run: |
           set -eu
-          SEL=$(ls -d /Applications/Xcode*.app | grep -viE 'beta|rc|preview' | sort -V | tail -1)
+          SEL=$(ls -d /Applications/Xcode_27*.app /Applications/Xcode*27*.app 2>/dev/null | grep -viE 'beta|rc|preview' | sort -V | tail -1)
+          [ -n "$SEL" ] || { echo "no Xcode 27 on this runner"; exit 1; }
           SEL=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$SEL")
           export DEVELOPER_DIR="$SEL/Contents/Developer"
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
