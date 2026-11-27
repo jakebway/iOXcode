@@ -184,7 +184,7 @@ struct SetupView: View {
                     Text(model.compilerStatus)
                 }
                 Section("iPhone SDK pack") {
-                    Text(model.importing ? model.importMessage : model.sdkStatus)
+                    Text(model.importing || model.importMessage.hasPrefix("Failed") ? model.importMessage : model.sdkStatus)
                     Button("Import SDK pack (.zip)") { FilePicker.present(types: [.zip], copy: true) { model.importSDK($0, scoped: false) } }.disabled(model.importing)
                 }
             }

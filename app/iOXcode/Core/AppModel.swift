@@ -200,13 +200,18 @@ final class AppModel: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async {
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             do {
-                try? FileManager.default.removeItem(at: Paths.sdkRoot)
-                // compiled module caches remember the old SDK files' timestamps and would refuse to load
-                try? FileManager.default.removeItem(at: Paths.caches.appendingPathComponent("ModuleCache", isDirectory: true))
-                Paths.ensure(Paths.sdkRoot)
-                try Zip.extract(url, to: Paths.sdkRoot) { i, n in
+                // unpack next to the old pack and swap at the end, so a failed import keeps the SDK that worked
+                let fm = FileManager.default
+                let staging = Paths.sdkRoot.deletingLastPathComponent().appendingPathComponent("SDK.importing", isDirectory: true)
+                try? fm.removeItem(at: staging)
+                try fm.createDirectory(at: staging, withIntermediateDirectories: true)
+                try Zip.extract(url, to: staging) { i, n in
                     if i % 500 == 0 { DispatchQueue.main.async { self.importMessage = "Unpacking \(i) of \(n)" } }
                 }
+                // compiled module caches remember the old SDK files' timestamps and would refuse to load
+                try? fm.removeItem(at: Paths.caches.appendingPathComponent("ModuleCache", isDirectory: true))
+                try? fm.removeItem(at: Paths.sdkRoot)
+                try fm.moveItem(at: staging, to: Paths.sdkRoot)
                 DispatchQueue.main.async { self.importMessage = "Done"; self.importing = false; self.refresh(); self.notice = "SDK pack stored" }
             } catch {
                 DispatchQueue.main.async { self.importMessage = "Failed: \(error)"; self.importing = false }
