@@ -323,6 +323,30 @@ def expand_model(src):
     return "".join(result) if changed else None
 
 
+# ---------------------------------------------------------------- SwiftUI @State (a macro since the iOS 27 SDK)
+
+_STATE_RE = re.compile(r"@State(?![A-Za-z0-9_])")
+
+
+def expand_state(src):
+    """The iOS 27 SDK declares `State` as both the property wrapper and an attached macro, and `@State` picks the macro,
+    whose plugin (SwiftUIMacros) only exists as a macOS dylib. The wrapper is still there, so name it through an alias:
+    the attribute then cannot resolve to the macro and the property is a plain wrapped property, as before iOS 27."""
+    if "@State" not in src or not re.search(r"(?m)^\s*(?:@\w+\s+)*import\s+SwiftUI\b", src):
+        return None
+    clean = _blank_literals(src)
+    hits = [m for m in _STATE_RE.finditer(clean)]
+    if not hits:
+        return None
+    out, pos = [], 0
+    for m in hits:
+        out.append(src[pos:m.start()])
+        out.append("@__iOXState")
+        pos = m.end()
+    out.append(src[pos:])
+    return "".join(out) + "\n\nfileprivate typealias __iOXState<Value> = SwiftUI.State<Value>\n"
+
+
 # ---------------------------------------------------------------- SwiftUI @Entry
 _ENTRY_KEYS = {
     "EnvironmentValues": "SwiftUI.EnvironmentKey",
@@ -788,6 +812,9 @@ def expand_source(src):
     ent = expand_entry(src)
     if ent is not None:
         src, changed = ent, True
+    st = expand_state(src)
+    if st is not None:
+        src, changed = st, True
     qry = expand_query(src)
     if qry is not None:
         src, changed = qry, True
