@@ -9,9 +9,8 @@ jobs:
           export DEVELOPER_DIR="$SEL/Contents/Developer"
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           TC=$DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr
-          echo "--- host plugins"; ls $TC/lib/swift/host/plugins 2>&1 | head -30
-          echo "--- sdk macro plugins"; find $SDK $DEVELOPER_DIR/Platforms/iPhoneOS.platform -iname '*Macros*' -maxdepth 8 2>/dev/null | head -20
-          M=$(find $SDK/System/Library/Frameworks/SwiftUI.framework -name '*.swiftinterface' | grep -v private | head -3); echo "$M"
-          for f in $M; do echo "=== $f"; grep -n "macro \|@attached\|@freestanding" "$f" | head -60 | cut -c1-260; done
-          F=$(echo "$M" | head -1)
-          echo "--- State decl"; grep -n "struct State\b\|struct State<\|propertyWrapper" "$F" | head -20 | cut -c1-200
+          F=$(find $SDK/System/Library/Frameworks/SwiftUICore.framework -name 'arm64e-apple-ios.swiftinterface' | head -1); echo "$F"
+          grep -n "macro State\|macro Bindable\|macro .*= #externalMacro(module: \"SwiftUIMacros\"" "$F" | cut -c1-400
+          L=$(grep -n "macro State()" "$F" | head -1 | cut -d: -f1); echo "--- around macro State ($L)"; sed -n "$((L-6)),$((L+4))p" "$F" | cut -c1-300
+          echo "--- struct State"; grep -n "struct State<" "$F" | head; L2=$(grep -n "struct State<" "$F" | head -1 | cut -d: -f1); sed -n "$((L2-4)),$((L2+40))p" "$F" | cut -c1-260
+          echo "--- uses of SwiftUIMacros"; grep -n "SwiftUIMacros" "$F" | cut -c1-300 | head -20
