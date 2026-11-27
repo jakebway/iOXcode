@@ -1,0 +1,36 @@
+name: Fidelity - would iOXcode's package pipeline build this project?
+
+# Runs iOXcode's SwiftPM reader and macro emulation over a project, then compiles every module with Apple's real
+# Xcode. Finds emulation bugs and unsupported macros without a round trip through the phone.
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: GitHub repo (owner/name)
+        default: Dimillian/IceCubesApp
+      packages:
+        description: Package folders relative to the repo (space separated; empty = Packages/*)
+        default: ""
+
+jobs:
+  check:
+    runs-on: xcode-27
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 27
+        run: |
+          SEL=$(ls -d /Applications/Xcode_27*.app | grep -viE 'beta|rc|preview' | sort -V | tail -1)
+          echo "DEVELOPER_DIR=$SEL/Contents/Developer" >> "$GITHUB_ENV"
+      - name: Fetch the project
+        run: git clone --depth 1 "https://github.com/${{ inputs.repo }}.git" target
+      - name: Check
+        run: |
+          mkdir -p ci-out
+          PK=""; for p in ${{ inputs.packages }}; do PK="$PK target/$p"; done
+          python3 scripts/fidelity/typecheck.py target ci-out/fid $PK 2>&1 | tee ci-out/fidelity.txt || true
+      - name: Publish the report
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: scripts/ci/push-logs.sh ci-out "fidelity-${{ github.run_id }}"
