@@ -30,7 +30,6 @@ struct RootView: View {
             ProjectsView().tabItem { Label("Projects", systemImage: "folder") }.tag(0)
             if console { ConsoleView().tabItem { Label("Console", systemImage: "terminal") }.tag(1) }
             BuildsView().tabItem { Label("Builds", systemImage: "shippingbox") }.tag(3)
-            AlterIPAView().tabItem { Label("Alter IPA", systemImage: "wand.and.stars") }.tag(4)
             SetupView().tabItem { Label("Setup", systemImage: "gearshape") }.tag(2)
         }
         .navigationViewStyle(.stack)
