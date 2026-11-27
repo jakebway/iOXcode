@@ -1,4 +1,4 @@
-snapshot: 2026-11-26T23:47:53Z  elapsed: 1501s  disk: 35Gi free
+snapshot: 2026-11-27T00:12:56Z  elapsed: 3004s  disk: 34Gi free
 --- configure.log (last 25 lines)
 
   ExternalProject_Add(swift-ios) uses the default configure command without a
