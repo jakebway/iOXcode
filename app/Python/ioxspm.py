@@ -269,6 +269,7 @@ def load_manifest(pkg_dir):
         return None
     with open(path, encoding="utf-8", errors="replace") as f:
         src = f.read()
+    raw_src = src
     # drop #if blocks: keep the first branch (the normal one)
     src = re.sub(r"#if\b[^\n]*\n(.*?)(?:#else.*?)?#endif", lambda m: m.group(1), src, flags=re.S)
     call, consts = extract_package_call(src)
@@ -332,7 +333,10 @@ def load_manifest(pkg_dir):
               "exclude": _strs(t.get("exclude")), "resources": [], "deps": [], "flags": [], "defines": [],
               "publicHeadersPath": (lambda v: v if isinstance(v, str) else None)(t.get("publicHeadersPath"))}
         for d in as_list(t.get("dependencies")):
-            td["deps"].append(parse_target_dep(d))
+            pd = parse_target_dep(d)
+            if pd.get("traits") is not None and not (set(pd["traits"]) & default_traits(raw_src)):
+                continue      # gated on a SwiftPM trait this package does not enable by default
+            td["deps"].append(pd)
         for r in as_list(t.get("resources")):
             if isinstance(r, Call):
                 td["resources"].append({"kind": r.name, "path": (r.positional() or [None])[0]})
@@ -431,13 +435,36 @@ SYSTEM_MODULES = {"Foundation", "Swift", "SwiftUI", "UIKit", "Combine", "Dispatc
                   "_Concurrency", "XCTest", "Testing", "AppKit", "Glibc", "Musl", "WinSDK", "Android", "Bionic", "WASILibc", "ucrt", "CoreImage", "CoreText"}
 
 
+def _cond_traits(cond):
+    """Traits named by a dependency's .when(traits: [...]) condition, or None when it has none."""
+    if isinstance(cond, Call) and cond.name == "when" and cond.get("traits") is not None:
+        return [x for x in as_list(cond.get("traits")) if isinstance(x, str)]
+    return None
+
+
+def default_traits(src):
+    """Traits a package enables by default: .default(enabledTraits: [...]) or the variable it names (last assignment wins,
+    which is the non-Linux branch for the usual `#if os(Linux)` pattern)."""
+    m = re.search(r"\.default\(\s*enabledTraits:\s*([^)]*)\)", src)
+    if not m:
+        return set()
+    arg = m.group(1).strip()
+    if arg.startswith("["):
+        return set(re.findall(r'"([^"]+)"', arg))
+    last = None
+    for a in re.finditer(r"\b" + re.escape(arg) + r"\s*=\s*\[([^\]]*)\]", src):
+        last = a
+    return set(re.findall(r'"([^"]+)"', last.group(1))) if last else set()
+
+
 def parse_target_dep(d):
     if isinstance(d, str):
         return {"kind": "byName", "name": d}      # a bare string may be a target of this package or a product of a dependency
     if isinstance(d, Call):
         pos = d.positional()
         if d.name == "product":
-            return {"kind": "product", "name": d.get("name") or (pos[0] if pos else ""), "package": d.get("package")}
+            return {"kind": "product", "name": d.get("name") or (pos[0] if pos else ""), "package": d.get("package"),
+                    "traits": _cond_traits(d.get("condition"))}
         if d.name == "byName":
             return {"kind": "byName", "name": d.get("name") or (pos[0] if pos else "")}
         if d.name == "target":
@@ -445,13 +472,24 @@ def parse_target_dep(d):
     return {"kind": "unknown", "name": ""}
 
 
+def _vstr(v):
+    """A version written as a string or as Version(3, 9, 1)."""
+    if isinstance(v, Call) and v.name == "Version":
+        pos = v.positional()
+        if pos:
+            return ".".join(str(x) for x in pos[:3])
+        parts = [v.get(k) for k in ("major", "minor", "patch")]
+        return ".".join(str(x) for x in parts if x is not None)
+    return v
+
+
 def parse_dependency(dep):
     url = dep.get("url") or dep.get("path") or ""
     req = {"kind": "branch", "value": "HEAD"}
     if dep.get("from") is not None:
-        req = {"kind": "from", "value": dep.get("from")}
+        req = {"kind": "from", "value": _vstr(dep.get("from"))}
     elif dep.get("exact") is not None:
-        req = {"kind": "exact", "value": dep.get("exact")}
+        req = {"kind": "exact", "value": _vstr(dep.get("exact"))}
     elif dep.get("branch") is not None:
         req = {"kind": "branch", "value": dep.get("branch")}
     elif dep.get("revision") is not None:
@@ -460,7 +498,7 @@ def parse_dependency(dep):
         # .package(url:, .upToNextMajor(from: "1.0.0")) / "1.0.0"..<"2.0.0"
         for k, v in dep.args:
             if k is None and isinstance(v, Call):
-                inner = v.get("from") or (v.positional() or [None])[0]
+                inner = _vstr(v.get("from") or (v.positional() or [None])[0])
                 if v.name in ("upToNextMajor", "upToNextMinor"):
                     req = {"kind": "from" if v.name == "upToNextMajor" else "minor", "value": inner}
                 elif v.name == "exact":
