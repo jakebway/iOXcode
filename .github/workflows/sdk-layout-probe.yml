@@ -7,24 +7,11 @@ jobs:
       - run: |
           SEL=$(ls -d /Applications/Xcode_27*.app | grep -viE 'beta|rc|preview' | sort -V | tail -1)
           export DEVELOPER_DIR="$SEL/Contents/Developer"
-          xcodebuild -version
-          SDK=$(xcrun --sdk iphoneos --show-sdk-path); echo "SDK=$SDK"; ls -d "$(python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$SDK")"
-          TC=$DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr
-          echo "--- toolchain lib/swift"; ls $TC/lib/swift | head -50
-          echo "--- toolchain lib/swift-5.0"; ls $TC/lib/swift-5.0 2>&1 | head
-          echo "--- toolchain lib/clang"; ls $TC/lib/clang 2>&1
-          echo "--- sdk usr/lib/swift"; ls "$SDK/usr/lib/swift" 2>&1 | head -30
-          echo "--- find iphoneos swift dirs"; find $TC/lib $SDK/usr/lib -maxdepth 3 -name 'iphoneos*' 2>/dev/null | head
-          echo "--- libswiftCore"; find $TC/lib $SDK/usr/lib -maxdepth 4 -name 'Swift.swiftmodule' -o -maxdepth 4 -name 'libswiftCore*' 2>/dev/null | head
-      - run: |
-          SEL=$(ls -d /Applications/Xcode_27*.app | grep -viE 'beta|rc|preview' | sort -V | tail -1)
-          SEL=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$SEL")
-          export DEVELOPER_DIR="$SEL/Contents/Developer"
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-          R=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$SDK"); echo "real=$R"
-          P=pack; mkdir -p $P
-          cp -R "$R" "$P/$(basename "$R")"
-          ls -la $P | head
-          (cd $P && zip -qry ../p.zip .)
-          echo "--- zip top-level entries"; unzip -Z1 p.zip | awk -F/ '{print $1}' | sort | uniq -c | head -20
-          unzip -Z1 p.zip | head -5
+          TC=$DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr
+          echo "--- host plugins"; ls $TC/lib/swift/host/plugins 2>&1 | head -30
+          echo "--- sdk macro plugins"; find $SDK $DEVELOPER_DIR/Platforms/iPhoneOS.platform -iname '*Macros*' -maxdepth 8 2>/dev/null | head -20
+          M=$(find $SDK/System/Library/Frameworks/SwiftUI.framework -name '*.swiftinterface' | grep -v private | head -3); echo "$M"
+          for f in $M; do echo "=== $f"; grep -n "macro \|@attached\|@freestanding" "$f" | head -60 | cut -c1-260; done
+          F=$(echo "$M" | head -1)
+          echo "--- State decl"; grep -n "struct State\b\|struct State<\|propertyWrapper" "$F" | head -20 | cut -c1-200
