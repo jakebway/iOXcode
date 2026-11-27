@@ -31,7 +31,15 @@ def main():
     pkgs = sys.argv[3:] or sorted(os.path.dirname(p) for p in glob.glob(project + "/Packages/*/Package.swift"))
     os.makedirs(out, exist_ok=True)
     work = os.path.join(out, "work")
-    req = {"work": work, "root": project, "packages": [{"url": os.path.abspath(p), "req": {"kind": "branch", "value": "HEAD"}} for p in pkgs]}
+    products = []
+    for p in pkgs:
+        man = ioxspm.load_manifest(os.path.abspath(p))
+        for prod in (man or {}).get("products", []):
+            if prod["kind"] == "library":
+                products.append({"name": prod["name"], "package": man["name"]})
+    print("packages: %d, library products: %d" % (len(pkgs), len(products)))
+    req = {"work": work, "root": project, "products": products,
+           "packages": [{"url": os.path.abspath(p), "req": {"kind": "branch", "value": "HEAD"}} for p in pkgs]}
     with open(os.path.join(out, "request.json"), "w") as f:
         json.dump(req, f)
     res = ioxspm.resolve(os.path.join(out, "request.json"))

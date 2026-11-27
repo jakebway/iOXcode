@@ -12,6 +12,9 @@ on:
         description: Package folders relative to the repo (space separated; empty = Packages/*)
         default: ""
 
+permissions:
+  contents: write
+
 jobs:
   check:
     runs-on: xcode-27
