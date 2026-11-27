@@ -1,0 +1,40 @@
+  install prefix at the CMake default; the NEW behavior sets it to
+  <INSTALL_DIR>.
+Call Stack (most recent call first):
+  /opt/homebrew/share/cmake/Modules/ExternalProject.cmake:2833 (_ep_extract_configure_command)
+  /opt/homebrew/share/cmake/Modules/ExternalProject.cmake:3316 (_ep_add_configure_command)
+  CMake/CompilerBuild.cmake:64 (ExternalProject_Add)
+  CMake/CompilerBuild.cmake:98 (toolchain_native_stage)
+  CMakeLists.txt:14 (include)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+CMake Warning (author) at /opt/homebrew/share/cmake/Modules/ExternalProject.cmake:2688 (message):
+  Policy CMP0225 is not set: ExternalProject sets CMAKE_INSTALL_PREFIX to
+  <INSTALL_DIR> in the default configure command.  Run "cmake --help-policy
+  CMP0225" for policy details.  Use the cmake_policy command to set the
+  policy and suppress this warning.
+
+  ExternalProject_Add(swift-ios) uses the default configure command without a
+  CMAKE_INSTALL_PREFIX.  The OLD behavior leaves the external project's
+  install prefix at the CMake default; the NEW behavior sets it to
+  <INSTALL_DIR>.
+Call Stack (most recent call first):
+  /opt/homebrew/share/cmake/Modules/ExternalProject.cmake:2833 (_ep_extract_configure_command)
+  /opt/homebrew/share/cmake/Modules/ExternalProject.cmake:3316 (_ep_add_configure_command)
+  CMake/CompilerBuild.cmake:64 (ExternalProject_Add)
+  CMake/CompilerBuild.cmake:100 (toolchain_native_stage)
+  CMakeLists.txt:14 (include)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+-- Compiler host arm64-apple-ios18.0. Program target arm64-apple-ios16.0.
+-- Native build root /Users/runner/work/iOXcode/iOXcode/.build-compiler/native/build/b5b9514a8dc12f2549fa8aaee40c3d2ba962e203e0be9beca00d67a933871c18/device
+-- Compiler production is explicit. Build toolchain-compiler only with a resource budget.
+-- Configuring done (4.5s)
+-- Generating done (0.0s)
+CMake Warning (unused-cli):
+  Manually-specified variables were not used by the project:
+
+    BUILD_TESTING
+
+
+-- Build files have been written to: /Users/runner/work/iOXcode/iOXcode/.build-compiler
