@@ -1,0 +1,44 @@
+---
+path:            '/Applications/Xcode_27.2.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/27.2/Distributed.swiftmodule/arm64e-apple-ios.swiftmodule'
+dependencies:
+  - mtime:           1795450124392968758
+    path:            '/Applications/Xcode_27.2.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/27.2/Distributed.swiftmodule/arm64e-apple-ios.swiftmodule'
+    size:            85872
+  - mtime:           1795450114820706012
+    path:            'usr/include/_DarwinFoundation2.apinotes'
+    size:            1145
+    sdk_relative:    true
+  - mtime:           1795450124178219855
+    path:            'usr/lib/swift/Swift.swiftmodule/arm64e-apple-ios.swiftinterface'
+    size:            2506063
+    sdk_relative:    true
+  - mtime:           1795450124097746348
+    path:            'usr/lib/swift/_Builtin_float.swiftmodule/arm64e-apple-ios.swiftinterface'
+    size:            4234
+    sdk_relative:    true
+  - mtime:           1795450124084345651
+    path:            'usr/lib/swift/_DarwinFoundation1.swiftmodule/arm64e-apple-ios.swiftinterface'
+    size:            18928
+    sdk_relative:    true
+  - mtime:           1795450124117095684
+    path:            'usr/lib/swift/_DarwinFoundation2.swiftmodule/arm64e-apple-ios.swiftinterface'
+    size:            2656
+    sdk_relative:    true
+  - mtime:           1795450124074479220
+    path:            'usr/lib/swift/_DarwinFoundation3.swiftmodule/arm64e-apple-ios.swiftinterface'
+    size:            1532
+    sdk_relative:    true
+  - mtime:           1795450124098726462
+    path:            'usr/lib/swift/Darwin.swiftmodule/arm64e-apple-ios.swiftinterface'
+    size:            19706
+    sdk_relative:    true
+  - mtime:           1795450124136265139
+    path:            'usr/lib/swift/_Concurrency.swiftmodule/arm64e-apple-ios.swiftinterface'
+    size:            305463
+    sdk_relative:    true
+  - mtime:           1795450124110911385
+    path:            'usr/lib/swift/Distributed.swiftmodule/arm64e-apple-ios.swiftinterface'
+    size:            23967
+    sdk_relative:    true
+version:         1
+...
