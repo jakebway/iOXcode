@@ -1,0 +1,108 @@
+import DesignSystem
+import SwiftUI
+
+/// A SwiftUI TextView implementation that supports both scrolling and auto-sizing layouts
+public struct TextView: View {
+  @Environment(\.layoutDirection) private var layoutDirection
+
+  @Binding private var text: NSMutableAttributedString
+  @Binding private var isEmpty: Bool
+
+  @__iOXState_96c35aa2 private var calculatedHeight: CGFloat = 44
+
+  private var getTextView: ((UITextView) -> Void)?
+
+  var placeholderView: AnyView?
+  var placeholderText: String?
+  var keyboard: UIKeyboardType = .default
+
+  /// Makes a new TextView that supports `NSAttributedString`
+  /// - Parameters:
+  ///   - text: A binding to the attributed text
+  public init(
+    _ text: Binding<NSMutableAttributedString>,
+    getTextView: ((UITextView) -> Void)? = nil
+  ) {
+    _text = text
+    _isEmpty = Binding(
+      get: { text.wrappedValue.string.isEmpty },
+      set: { _ in }
+    )
+
+    self.getTextView = getTextView
+  }
+
+  public var body: some View {
+    Representable(
+      text: $text,
+      calculatedHeight: $calculatedHeight,
+      keyboard: keyboard,
+      getTextView: getTextView
+    )
+    .frame(
+      minHeight: calculatedHeight,
+      maxHeight: calculatedHeight
+    )
+    .accessibilityValue(
+      $text.wrappedValue.string.isEmpty ? (placeholderText ?? "") : $text.wrappedValue.string
+    )
+    .background(
+      placeholderView?
+        .foregroundColor(Color(.placeholderText))
+        .multilineTextAlignment(.leading)
+        .font(.scaledBody)
+        .padding(.horizontal, 0)
+        .padding(.vertical, 0)
+        .opacity(isEmpty ? 1 : 0)
+        .accessibilityHidden(true),
+      alignment: .topLeading
+    )
+  }
+}
+
+/// Hosts the text view so it can dismiss the keyboard before interface rotation.
+final class TextViewController: UIViewController {
+  private let textView: UIKitTextView
+
+  init(textView: UIKitTextView) {
+    self.textView = textView
+    super.init(nibName: nil, bundle: nil)
+  }
+
+  @available(*, unavailable)
+  required init?(coder _: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func loadView() {
+    view = textView
+  }
+
+  override func viewWillTransition(
+    to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator
+  ) {
+    if textView.isFirstResponder {
+      textView.resignFirstResponder()
+    }
+    super.viewWillTransition(to: size, with: coordinator)
+  }
+}
+
+final class UIKitTextView: UITextView {
+  override var keyCommands: [UIKeyCommand]? {
+    (super.keyCommands ?? []) + [
+      UIKeyCommand(
+        input: UIKeyCommand.inputEscape,
+        modifierFlags: [],
+        action: #selector(escape(_:))
+      ),
+    ]
+  }
+
+  @objc private func escape(_: Any) {
+    resignFirstResponder()
+  }
+}
+
+
+public typealias __iOXState_96c35aa2<Value> = SwiftUI.State<Value>

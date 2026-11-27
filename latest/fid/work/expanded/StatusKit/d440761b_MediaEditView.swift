@@ -1,0 +1,190 @@
+import DesignSystem
+import Env
+import Models
+import NetworkClient
+import SwiftUI
+
+extension StatusEditor {
+  @MainActor
+  struct MediaEditView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(Theme.self) private var theme
+    @Environment(CurrentInstance.self) private var currentInstance
+    @Environment(UserPreferences.self) private var preferences
+
+    var store: EditorStore
+    let container: StatusEditor.MediaContainer
+
+    @__iOXState_ee439848 private var imageDescription: String = ""
+    @FocusState private var isFieldFocused: Bool
+
+    @__iOXState_ee439848 private var isUpdating: Bool = false
+
+    @__iOXState_ee439848 private var didAppear: Bool = false
+    @__iOXState_ee439848 private var isGeneratingDescription: Bool = false
+
+    @__iOXState_ee439848 private var showTranslateView: Bool = false
+    @__iOXState_ee439848 private var isTranslating: Bool = false
+
+    var body: some View {
+      NavigationStack {
+        Form {
+          Section {
+            TextField(
+              "status.editor.media.image-description",
+              text: $imageDescription,
+              axis: .vertical
+            )
+            .focused($isFieldFocused)
+            if imageDescription.isEmpty {
+              generateButton
+            }
+            #if canImport(_Translation_SwiftUI)
+              if #available(iOS 17.4, *), !imageDescription.isEmpty {
+                translateButton
+              }
+            #endif
+          } footer: {
+            HStack(spacing: 4) {
+              Text("Use OpenAI API -")
+              Link(
+                "Review Privacy Policy",
+                destination: URL(
+                  string: "https://github.com/Dimillian/IceCubesApp/blob/main/PRIVACY.MD"
+                )!
+              )
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+          }
+          .listRowBackground(theme.primaryBackgroundColor)
+          Section {
+            if let url = container.mediaAttachment?.url {
+              mediaPreview(url: url)
+            }
+          }
+          .listRowBackground(theme.primaryBackgroundColor)
+        }
+        .scrollContentBackground(.hidden)
+        .background(theme.secondaryBackgroundColor)
+        .onAppear {
+          if !didAppear {
+            imageDescription = container.mediaAttachment?.description ?? ""
+            isFieldFocused = true
+            didAppear = true
+          }
+        }
+        .navigationTitle("status.editor.media.edit-image")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItem(placement: .navigationBarTrailing) {
+            Button {
+              if !imageDescription.isEmpty {
+                isUpdating = true
+                if currentInstance.isEditAltTextSupported, store.mode.isEditing {
+                  Task {
+                    await store.editDescription(
+                      container: container, description: imageDescription)
+                    dismiss()
+                    isUpdating = false
+                  }
+                } else {
+                  Task {
+                    await store.addDescription(
+                      container: container, description: imageDescription)
+                    dismiss()
+                    isUpdating = false
+                  }
+                }
+              }
+            } label: {
+              if isUpdating {
+                ProgressView()
+              } else {
+                Text("action.done")
+              }
+            }
+          }
+
+          CancelToolbarItem()
+        }
+        .preferredColorScheme(theme.selectedScheme == .dark ? .dark : .light)
+      }
+    }
+
+    private func mediaPreview(url: URL) -> some View {
+      AsyncImage(url: url) { phase in
+        ZStack {
+          RoundedRectangle(cornerRadius: 8)
+            .fill(Color.gray.opacity(0.2))
+
+          switch phase {
+          case .empty:
+            ProgressView()
+          case .success(let image):
+            image
+              .resizable()
+              .scaledToFit()
+          case .failure:
+            Image(systemName: "photo")
+              .foregroundStyle(.secondary)
+          @unknown default:
+            EmptyView()
+          }
+        }
+      }
+      .frame(maxWidth: .infinity)
+      .frame(height: 200)
+      .clipShape(RoundedRectangle(cornerRadius: 8))
+      .padding(8)
+    }
+
+    @ViewBuilder
+    private var generateButton: some View {
+      if let url = container.mediaAttachment?.url {
+        VStack(alignment: .leading, spacing: 4) {
+          Button {
+            Task {
+              if let description = await generateDescription(url: url) {
+                imageDescription = description
+              }
+            }
+          } label: {
+            if isGeneratingDescription {
+              ProgressView()
+            } else {
+              Text("status.editor.media.generate-description")
+            }
+          }
+        }
+      }
+    }
+
+    @ViewBuilder
+    private var translateButton: some View {
+      Button {
+        showTranslateView = true
+      } label: {
+        if isTranslating {
+          ProgressView()
+        } else {
+          Text("status.action.translate")
+        }
+      }
+      #if canImport(_Translation_SwiftUI)
+        .addTranslateView(isPresented: $showTranslateView, text: imageDescription)
+      #endif
+    }
+
+    private func generateDescription(url: URL) async -> String? {
+      isGeneratingDescription = true
+      let client = OpenAIClient()
+      let response = try? await client.request(.imageDescription(image: url))
+      isGeneratingDescription = false
+      return response?.trimmedText
+    }
+  }
+}
+
+
+public typealias __iOXState_ee439848<Value> = SwiftUI.State<Value>
