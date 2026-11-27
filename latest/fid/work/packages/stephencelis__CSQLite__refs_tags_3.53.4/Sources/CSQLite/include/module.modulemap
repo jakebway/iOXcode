@@ -1,5 +1,0 @@
-
-module SQLiteSwiftCSQLite {
-  header "sqlite3.h"
-  header "sqlite3ext.h"
-}
