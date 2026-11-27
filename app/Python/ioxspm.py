@@ -462,12 +462,12 @@ def parse_target_dep(d):
         return {"kind": "byName", "name": d}      # a bare string may be a target of this package or a product of a dependency
     if isinstance(d, Call):
         pos = d.positional()
-        if d.name == "product":
+        if d.name in ("product", "productItem"):
             return {"kind": "product", "name": d.get("name") or (pos[0] if pos else ""), "package": d.get("package"),
                     "traits": _cond_traits(d.get("condition"))}
-        if d.name == "byName":
+        if d.name in ("byName", "byNameItem"):
             return {"kind": "byName", "name": d.get("name") or (pos[0] if pos else "")}
-        if d.name == "target":
+        if d.name in ("target", "targetItem"):
             return {"kind": "target", "name": d.get("name") or (pos[0] if pos else "")}
     return {"kind": "unknown", "name": ""}
 
