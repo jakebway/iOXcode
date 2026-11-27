@@ -9,8 +9,9 @@ jobs:
           export DEVELOPER_DIR="$SEL/Contents/Developer"
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           TC=$DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr
-          F=$(find $SDK/System/Library/Frameworks/SwiftUICore.framework -name 'arm64e-apple-ios.swiftinterface' | head -1); echo "$F"
-          grep -n "macro State\|macro Bindable\|macro .*= #externalMacro(module: \"SwiftUIMacros\"" "$F" | cut -c1-400
-          L=$(grep -n "macro State()" "$F" | head -1 | cut -d: -f1); echo "--- around macro State ($L)"; sed -n "$((L-6)),$((L+4))p" "$F" | cut -c1-300
-          echo "--- struct State"; grep -n "struct State<" "$F" | head; L2=$(grep -n "struct State<" "$F" | head -1 | cut -d: -f1); sed -n "$((L2-4)),$((L2+40))p" "$F" | cut -c1-260
-          echo "--- uses of SwiftUIMacros"; grep -n "SwiftUIMacros" "$F" | cut -c1-300 | head -20
+          for fw in SwiftUICore SwiftUI Observation Foundation SwiftData; do
+            G=$(find $SDK/System/Library/Frameworks/$fw.framework $SDK/usr/lib/swift/$fw.swiftmodule -name 'arm64e-apple-ios.swiftinterface' 2>/dev/null | head -1)
+            [ -n "$G" ] && { echo "== $fw"; grep -o "public macro [A-Za-z_]*[^=]*" "$G" | cut -c1-110 | sort -u | head -40; }
+          done
+          F=$(find $SDK/System/Library/Frameworks/SwiftUICore.framework -name 'arm64e-apple-ios.swiftinterface' | head -1)
+          echo "--- 8314"; sed -n 8306,8316p "$F" | cut -c1-300
